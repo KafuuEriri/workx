@@ -1644,6 +1644,7 @@ impl App {
                         /*hint*/ None,
                     );
                 }
+                self.chat_widget.dismiss_model_popup();
             }
             AppEvent::OpenPlanReasoningScopePrompt { model, effort } => {
                 self.chat_widget
@@ -2185,6 +2186,7 @@ impl App {
                             message.push_str(&label);
                         }
                         self.chat_widget.add_info_message(message, /*hint*/ None);
+                        self.chat_widget.dismiss_model_popup();
                     }
                     Err(err) => {
                         let error = format_config_error(&err);

@@ -10,6 +10,17 @@ pub(super) const MODEL_SELECTION_VIEW_ID: &str = "model-selection";
 pub(super) const ALL_MODELS_SELECTION_VIEW_ID: &str = "all-models-selection";
 
 impl ChatWidget {
+    pub(crate) fn dismiss_model_popup(&mut self) {
+        self.bottom_pane.dismiss_view_by_id(MODEL_SELECTION_VIEW_ID);
+        self.bottom_pane
+            .dismiss_view_by_id(ALL_MODELS_SELECTION_VIEW_ID);
+        if self.bottom_pane.has_active_view() && self.bottom_pane.active_view_id().is_none() {
+            self.bottom_pane.dismiss_active_view();
+        }
+        self.model_popup_request_id = None;
+        self.request_redraw();
+    }
+
     /// Open a popup to choose a quick auto model. Selecting "All models"
     /// opens the full picker with every available preset.
     pub(crate) fn open_model_popup(&mut self) {

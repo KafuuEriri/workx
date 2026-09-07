@@ -3236,6 +3236,18 @@ async fn model_selection_popup_snapshot() {
     assert_chatwidget_snapshot!("model_selection_popup", popup);
 }
 
+#[tokio::test]
+async fn dismiss_model_popup_closes_reasoning_selection() {
+    let (mut chat, _rx, _op_rx) = make_chatwidget_manual(Some("gpt-5.2")).await;
+    chat.thread_id = Some(ThreadId::new());
+    let preset = get_available_model(&chat, "gpt-5.2");
+    chat.model_catalog = Arc::new(ModelCatalog::new(vec![preset.clone()]));
+    chat.open_reasoning_popup(preset);
+    assert!(!chat.no_modal_or_popup_active());
+    chat.dismiss_model_popup();
+    assert!(chat.no_modal_or_popup_active());
+}
+
 fn apply_model_list_response(chat: &mut ChatWidget, presets: Vec<ModelPreset>) {
     let request_id = chat.model_popup_request_id.expect("pending model request");
     assert!(chat.on_models_loaded(request_id, Ok(presets)));
