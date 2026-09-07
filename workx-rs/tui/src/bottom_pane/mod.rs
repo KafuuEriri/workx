@@ -1386,6 +1386,16 @@ impl BottomPane {
         true
     }
 
+    pub(crate) fn dismiss_active_view(&mut self) -> bool {
+        if self.view_stack.is_empty() {
+            return false;
+        }
+
+        self.pop_active_view_with_completion(None);
+        self.request_redraw();
+        true
+    }
+
     /// Dismiss the newest matching view without disturbing views stacked above it.
     pub(crate) fn dismiss_view_by_id(&mut self, view_id: &'static str) -> bool {
         let Some(index) = self
