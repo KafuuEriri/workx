@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 workx-process-hardening = { workspace = true }
-codex-realtime-webrtc = { workspace = true }
+workx-realtime-webrtc = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
