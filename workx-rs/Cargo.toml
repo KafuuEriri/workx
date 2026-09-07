@@ -157,7 +157,7 @@ license = "Apache-2.0"
 
 [workspace.dependencies]
 # Internal
-codex-realtime-webrtc = { path = "realtime-webrtc" }
+workx-realtime-webrtc = { path = "realtime-webrtc" }
 app_test_support = { path = "app-server/tests/common" }
 workx-analytics = { path = "analytics" }
 workx-agent-graph-store = { path = "agent-graph-store" }

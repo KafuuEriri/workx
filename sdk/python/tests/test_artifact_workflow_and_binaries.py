@@ -880,8 +880,7 @@ def test_stage_sdk_release_preserves_reviewed_runtime_pin(tmp_path: Path) -> Non
     }
     assert '__version__ = "0.0.1"' not in (staged / "src" / "workx" / "__init__.py").read_text()
     assert (
-        'client_version: str = "0.0.1"'
-        not in (staged / "src" / "workx" / "client.py").read_text()
+        'client_version: str = "0.0.1"' not in (staged / "src" / "workx" / "client.py").read_text()
     )
     assert not any((staged / "src" / "workx").glob("bin/**"))
 

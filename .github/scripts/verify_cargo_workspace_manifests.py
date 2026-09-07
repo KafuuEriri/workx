@@ -26,7 +26,6 @@ UTILITY_NAME_EXCEPTIONS = {
     "path-utils": "workx-utils-path",
 }
 MANIFEST_FEATURE_EXCEPTIONS = {
-    "workx-rs/code-mode/Cargo.toml": {"sandbox": ("v8/v8_enable_sandbox",)},
     "workx-rs/v8-poc/Cargo.toml": {"sandbox": ("v8/v8_enable_sandbox",)},
 }
 OPTIONAL_DEPENDENCY_EXCEPTIONS = set()

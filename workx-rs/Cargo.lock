@@ -1896,19 +1896,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "codex-realtime-webrtc"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tokio",
- "workx-install-context",
- "workx-utils-pty",
-]
-
-[[package]]
 name = "color-eyre"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15432,6 +15419,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "workx-realtime-webrtc"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tokio",
+ "workx-install-context",
+ "workx-utils-pty",
+]
+
+[[package]]
 name = "workx-response-debug-context"
 version = "0.0.1"
 dependencies = [
@@ -16210,12 +16210,12 @@ name = "workx-voice-host"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "codex-realtime-webrtc",
  "pretty_assertions",
  "tempfile",
  "tokio",
  "workx-install-context",
  "workx-process-hardening",
+ "workx-realtime-webrtc",
  "workx-utils-cargo-bin",
 ]
 
