@@ -37,9 +37,28 @@ jobs:
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "head=$head" >> "$GITHUB_OUTPUT"
 
-      - name: Check changed blob sizes
+      - name: Resolve comparison base
+        id: base
+        shell: bash
         env:
           BASE_SHA: ${{ steps.range.outputs.base }}
+        run: |
+          set -euo pipefail
+
+          if git rev-parse --verify --quiet "${BASE_SHA}^{commit}" >/dev/null 2>&1; then
+            echo "base-sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Force-pushes orphan the previous tip (github.event.before), so the
+          # provided base may not exist in the checkout. Fall back to comparing
+          # against the first parent of the pushed commit.
+          echo "Warning: base $BASE_SHA not found in history (force push?); comparing against HEAD~1"
+          echo "base-sha=$(git rev-parse 'HEAD~1')" >> "$GITHUB_OUTPUT"
+
+      - name: Check changed blob sizes
+        env:
+          BASE_SHA: ${{ steps.base.outputs.base-sha }}
           HEAD_SHA: ${{ steps.range.outputs.head }}
         run: |
           python3 scripts/check_blob_size.py \
