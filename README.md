@@ -35,12 +35,13 @@ just assemble-workx-package --help
 
 ## 模型 provider
 
-首次启动先选择 provider。OpenAI 保留 ChatGPT 登录、Device Code 和 API key 三种认证方式。
+首次启动先选择 provider；之后用 `/provider` 添加或切换提供商，再用 `/model` 切换模型。
+OpenAI 保留 ChatGPT 登录、Device Code 和 API key 三种认证方式。
 自定义服务直接填写地址和 API key，保存到 `~/.workx/config.toml`，界面遮蔽 key，不需要设置环境变量。
 
 使用 `/provider` 管理来源：
 
-- `n` 添加，`e` 查看或修改所选来源；`Enter` 切换并重新查询模型。
+- `n` 添加，`e` 查看或修改所选来源；`Enter` 保存/切换并弹出模型选择，也可用 `/model` 随时切换模型。
 - 配置 API URL、API key、模型查询地址、协议和可选的默认模型。
 - 模型查询地址默认 `/v1/models`，支持以 `/` 开头的同源路径或完整 HTTP(S) URL。
 - 协议默认 `responses`；只支持 Chat Completions 的服务选择 `chat`。
