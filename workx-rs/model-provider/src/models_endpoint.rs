@@ -85,8 +85,21 @@ impl OpenAiModelsEndpoint {
         let mut api_provider = self.provider_info.to_api_provider(auth_mode)?;
         enforce_managed_residency(&mut api_provider);
         let api_auth = resolve_provider_auth(auth.as_ref(), &self.provider_info)?;
-        let request_url =
-            ModelsClient::<ReqwestTransport>::request_url(&api_provider, client_version);
+        let external = self.provider_info.uses_external_models();
+        let request_url = if external {
+            let base = url::Url::parse(&api_provider.base_url)
+                .map_err(|err| WorkxErr::InvalidRequest(err.to_string()))?;
+            let endpoint = self
+                .provider_info
+                .models_endpoint
+                .as_deref()
+                .unwrap_or("/v1/models");
+            base.join(endpoint)
+                .map_err(|err| WorkxErr::InvalidRequest(err.to_string()))?
+                .to_string()
+        } else {
+            ModelsClient::<ReqwestTransport>::request_url(&api_provider, client_version)
+        };
         let auth_telemetry = auth_header_telemetry(api_auth.as_ref());
         let agent_identity_telemetry = if let Some(WorkxAuth::AgentIdentity(auth)) = auth.as_ref() {
             Some(agent_identity_telemetry(auth))
@@ -107,10 +120,46 @@ impl OpenAiModelsEndpoint {
                 .await?;
             let client = ModelsClient::new(transport, api_provider, api_auth)
                 .with_telemetry(Some(request_telemetry));
-            client
-                .list_models(request_url, HeaderMap::new())
+            if !external {
+                return client
+                    .list_models(request_url, HeaderMap::new())
+                    .await
+                    .map_err(map_api_error);
+            }
+            let (body, etag) = client
+                .list_catalog(request_url, HeaderMap::new())
                 .await
-                .map_err(map_api_error)
+                .map_err(map_api_error)?;
+            if body.get("models").is_some() {
+                let catalog: workx_protocol::openai_models::ModelsResponse =
+                    serde_json::from_value(body).map_err(|err| {
+                        WorkxErr::InvalidRequest(format!("Invalid model catalog: {err}"))
+                    })?;
+                return Ok((catalog.models, etag));
+            }
+            let entries = body["data"].as_array().ok_or_else(|| {
+                WorkxErr::InvalidRequest("Model catalog must contain a data array".to_string())
+            })?;
+            let mut models = Vec::new();
+            for entry in entries {
+                let id = entry["id"]
+                    .as_str()
+                    .filter(|id| !id.trim().is_empty())
+                    .ok_or_else(|| {
+                        WorkxErr::InvalidRequest("Model catalog entry is missing id".to_string())
+                    })?;
+                if models.iter().any(|model: &ModelInfo| model.slug == id) {
+                    continue;
+                }
+                let mut model = workx_models_manager::model_info::model_info_from_slug(id);
+                model.visibility = workx_protocol::openai_models::ModelVisibility::List;
+                model.supports_reasoning_summary_parameter = false;
+                model.context_window = None;
+                model.max_context_window = None;
+                model.used_fallback_model_metadata = false;
+                models.push(model);
+            }
+            Ok((models, etag))
         })
         .await
         .map_err(|_| WorkxErr::Timeout)?
@@ -126,6 +175,17 @@ impl OpenAiModelsEndpoint {
 }
 
 impl ModelsEndpointClient for OpenAiModelsEndpoint {
+    fn is_authoritative(&self) -> bool {
+        self.provider_info.uses_external_models()
+    }
+
+    fn supports_model_discovery(&self) -> bool {
+        self.provider_info.uses_external_models()
+            || self.provider_info.has_command_auth()
+            || self.provider_info.env_key.is_some()
+            || self.provider_info.experimental_bearer_token.is_some()
+    }
+
     fn has_command_auth(&self) -> bool {
         self.provider_info.has_command_auth()
     }
@@ -443,3 +503,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "models_catalog_tests.rs"]
+mod catalog_tests;

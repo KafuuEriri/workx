@@ -1980,13 +1980,20 @@ impl ThreadManagerState {
         } else {
             workx_sandboxing::WindowsSandboxProxySettingsMode::Reconcile
         };
+        let models_manager = if config.model_provider.uses_external_models()
+            || self.models_manager.is_provider_scoped()
+        {
+            build_models_manager(&config, auth_manager.clone())
+        } else {
+            Arc::clone(&self.models_manager)
+        };
         let (session, io) = Session::spawn(SessionSpawnArgs {
             config,
             allow_provider_model_fallback,
             user_instructions,
             installation_id: self.installation_id.clone(),
             auth_manager,
-            models_manager: Arc::clone(&self.models_manager),
+            models_manager,
             git_root_discovery: Arc::clone(&self.git_root_discovery),
             environment_manager: Arc::clone(&self.environment_manager),
             skills_service: Arc::clone(&self.skills_service),

@@ -672,12 +672,6 @@
             "code_mode_prewarm": {
               "type": "boolean"
             },
-            "workx_git_commit": {
-              "type": "boolean"
-            },
-            "workx_hooks": {
-              "type": "boolean"
-            },
             "collab": {
               "type": "boolean"
             },
@@ -1048,6 +1042,12 @@
               "type": "boolean"
             },
             "workspace_owner_usage_nudge": {
+              "type": "boolean"
+            },
+            "workx_git_commit": {
+              "type": "boolean"
+            },
+            "workx_hooks": {
               "type": "boolean"
             },
             "write_stdin_approval": {
@@ -2241,6 +2241,10 @@
           "description": "Additional HTTP headers to include in requests to this provider where the (key, value) pairs are the header name and value.",
           "type": "object"
         },
+        "models_endpoint": {
+          "description": "模型列表地址；支持同源绝对路径或完整 URL，默认 /v1/models。",
+          "type": "string"
+        },
         "name": {
           "default": "",
           "description": "Friendly display name.",
@@ -2299,7 +2303,7 @@
             }
           ],
           "default": "responses",
-          "description": "Which wire protocol this provider expects."
+          "description": "推理协议默认 Responses；显式 Auto 根据端点路径识别。"
         }
       },
       "type": "object"
@@ -5748,16 +5752,13 @@
       "type": "object"
     },
     "WireApi": {
-      "description": "Wire protocol that the provider speaks.",
-      "oneOf": [
-        {
-          "description": "The Responses API exposed by OpenAI at `/v1/responses`.",
-          "enum": [
-            "responses"
-          ],
-          "type": "string"
-        }
-      ]
+      "description": "Configured inference protocol. Auto recognizes endpoint paths and otherwise uses Responses. 推理协议配置。Auto 根据端点路径识别协议，无法识别时使用 Responses。",
+      "enum": [
+        "auto",
+        "responses",
+        "chat"
+      ],
+      "type": "string"
     },
     "WorkspaceRootsToml": {
       "type": "object"
@@ -5995,12 +5996,6 @@
           "type": "boolean"
         },
         "code_mode_prewarm": {
-          "type": "boolean"
-        },
-        "workx_git_commit": {
-          "type": "boolean"
-        },
-        "workx_hooks": {
           "type": "boolean"
         },
         "collab": {
@@ -6373,6 +6368,12 @@
           "type": "boolean"
         },
         "workspace_owner_usage_nudge": {
+          "type": "boolean"
+        },
+        "workx_git_commit": {
+          "type": "boolean"
+        },
+        "workx_hooks": {
           "type": "boolean"
         },
         "write_stdin_approval": {

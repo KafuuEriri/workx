@@ -23,8 +23,8 @@ use workx_client::Request;
 use workx_client::RequestBody;
 use workx_client::RequestTelemetry;
 
-const MULTIPART_BOUNDARY: &str = "codex-realtime-call-boundary";
-const MULTIPART_CONTENT_TYPE: &str = "multipart/form-data; boundary=codex-realtime-call-boundary";
+const MULTIPART_BOUNDARY: &str = "workx-realtime-call-boundary";
+const MULTIPART_CONTENT_TYPE: &str = "multipart/form-data; boundary=workx-realtime-call-boundary";
 
 pub struct RealtimeCallClient<T: HttpTransport> {
     session: EndpointSession<T>,

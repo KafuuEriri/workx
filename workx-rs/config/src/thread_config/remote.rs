@@ -171,6 +171,7 @@ fn model_provider_from_proto(
         }
     };
     let info = ModelProviderInfo {
+        models_endpoint: None,
         name: provider.name,
         base_url: provider.base_url,
         env_key: provider.env_key,

@@ -1,30 +1,11 @@
-use std::sync::Arc;
-
 use workx_app_server_protocol::Model;
 use workx_app_server_protocol::ModelServiceTier;
 use workx_app_server_protocol::ModelUpgradeInfo;
 use workx_app_server_protocol::ReasoningEffortOption;
-use workx_core::ThreadManager;
-use workx_http_client::HttpClientFactory;
-use workx_models_manager::manager::RefreshStrategy;
 use workx_protocol::openai_models::ModelPreset;
 use workx_protocol::openai_models::ReasoningEffortPreset;
 
-pub async fn supported_models(
-    thread_manager: Arc<ThreadManager>,
-    include_hidden: bool,
-    http_client_factory: HttpClientFactory,
-) -> Vec<Model> {
-    thread_manager
-        .list_models(RefreshStrategy::OnlineIfUncached, http_client_factory)
-        .await
-        .into_iter()
-        .filter(|preset| include_hidden || preset.show_in_picker)
-        .map(model_from_preset)
-        .collect()
-}
-
-fn model_from_preset(preset: ModelPreset) -> Model {
+pub(crate) fn model_from_preset(preset: ModelPreset) -> Model {
     Model {
         id: preset.id.to_string(),
         model: preset.model.to_string(),

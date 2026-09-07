@@ -394,20 +394,11 @@ checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 
 [[package]]
 name = "app_test_support"
-version = "0.0.0"
+version = "0.153.4"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "chrono",
- "workx-app-server-protocol",
- "workx-config",
- "workx-core",
- "workx-exec-server",
- "workx-features",
- "workx-login",
- "workx-models-manager",
- "workx-protocol",
- "workx-utils-cargo-bin",
  "core_test_support",
  "pretty_assertions",
  "serde",
@@ -419,6 +410,15 @@ dependencies = [
  "url",
  "uuid",
  "wiremock",
+ "workx-app-server-protocol",
+ "workx-config",
+ "workx-core",
+ "workx-exec-server",
+ "workx-features",
+ "workx-login",
+ "workx-models-manager",
+ "workx-protocol",
+ "workx-utils-cargo-bin",
 ]
 
 [[package]]
@@ -1896,3103 +1896,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "workx-agent-extension"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-core",
- "workx-protocol",
- "core_test_support",
- "pretty_assertions",
- "tokio",
-]
-
-[[package]]
-name = "workx-agent-graph-store"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "workx-state",
- "workx-utils-absolute-path",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "workx-agent-identity"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "chrono",
- "workx-http-client",
- "workx-protocol",
- "crypto_box",
- "ed25519-dalek",
- "http 1.4.0",
- "jsonwebtoken",
- "pretty_assertions",
- "rand 0.9.3",
- "serde",
- "serde_json",
- "sha2 0.10.9",
-]
-
-[[package]]
-name = "workx-agent-roles"
-version = "0.0.0"
-dependencies = [
- "workx-config",
- "workx-file-system",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "serde",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
-]
-
-[[package]]
-name = "workx-analytics"
-version = "0.0.0"
-dependencies = [
- "workx-app-server-protocol",
- "workx-git-utils",
- "workx-login",
- "workx-model-provider",
- "workx-plugin",
- "workx-protocol",
- "workx-state",
- "workx-utils-absolute-path",
- "os_info",
- "pretty_assertions",
- "serde",
- "serde_json",
- "sha1 0.10.6",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-ansi-escape"
-version = "0.0.0"
-dependencies = [
- "ansi-to-tui",
- "ratatui",
- "tracing",
-]
-
-[[package]]
-name = "workx-api"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "assert_matches",
- "async-channel",
- "base64 0.22.1",
- "bytes",
- "chrono",
- "workx-client",
- "workx-http-client",
- "workx-protocol",
- "workx-utils-rustls-provider",
- "workx-websocket-client",
- "eventsource-stream",
- "futures",
- "http 1.4.0",
- "pretty_assertions",
- "regex-lite",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tokio-test",
- "tokio-tungstenite",
- "tokio-util",
- "tracing",
- "tungstenite",
- "url",
- "uuid",
- "wiremock",
-]
-
-[[package]]
-name = "workx-app-server"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "app_test_support",
- "axum",
- "base64 0.22.1",
- "chrono",
- "clap",
- "workx-agent-extension",
- "workx-analytics",
- "workx-app-server-protocol",
- "workx-app-server-transport",
- "workx-arg0",
- "workx-aws-auth",
- "workx-backend-client",
- "workx-chatgpt",
- "workx-cloud-config",
- "workx-code-mode",
- "workx-config",
- "workx-connectors",
- "workx-core",
- "workx-core-plugins",
- "workx-diagnostics",
- "workx-exec-server",
- "workx-extension-api",
- "workx-external-agent-migration",
- "workx-features",
- "workx-feedback",
- "workx-file-search",
- "workx-file-watcher",
- "workx-git-attribution",
- "workx-git-utils",
- "workx-goal-extension",
- "workx-guardian-v2",
- "workx-history-notes-extension",
- "workx-home",
- "workx-hooks",
- "workx-http-client",
- "workx-image-generation-extension",
- "workx-login",
- "workx-mcp",
- "workx-mcp-extension",
- "workx-memories-extension",
- "workx-memories-write",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-otel",
- "workx-plugin",
- "workx-protocol",
- "workx-queue-extension",
- "workx-rmcp-client",
- "workx-rollout",
- "workx-sandboxing",
- "workx-shell-command",
- "workx-skills",
- "workx-skills-extension",
- "workx-state",
- "workx-thread-store",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-cli",
- "workx-utils-json-to-toml",
- "workx-utils-path-uri",
- "workx-utils-pty",
- "workx-web-search-extension",
- "workx-windows-sandbox",
- "core_test_support",
- "flate2",
- "futures",
- "hmac 0.12.1",
- "http 1.4.0",
- "opentelemetry",
- "opentelemetry_sdk",
- "pretty_assertions",
- "rmcp",
- "serde",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "shlex",
- "tar",
- "tempfile",
- "test-case",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
- "toml 0.9.11+spec-1.1.0",
- "toml_edit 0.24.0+spec-1.1.0",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
- "uuid",
- "wiremock",
-]
-
-[[package]]
-name = "workx-app-server-client"
-version = "0.0.0"
-dependencies = [
- "workx-app-server",
- "workx-app-server-protocol",
- "workx-arg0",
- "workx-config",
- "workx-core",
- "workx-exec-server",
- "workx-feedback",
- "workx-protocol",
- "workx-uds",
- "workx-utils-absolute-path",
- "workx-utils-rustls-provider",
- "futures",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-tungstenite",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "workx-app-server-daemon"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-app-server-protocol",
- "workx-app-server-transport",
- "workx-http-client",
- "workx-uds",
- "workx-utils-home-dir",
- "futures",
- "libc",
- "pretty_assertions",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "tokio",
- "tokio-tungstenite",
-]
-
-[[package]]
-name = "workx-app-server-protocol"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-app-server-protocol-noop-macros",
- "workx-experimental-api-macros",
- "workx-extension-items",
- "workx-history",
- "workx-protocol",
- "workx-rollout",
- "workx-secrets",
- "workx-shell-command",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-path-uri",
- "workx-utils-redacted-string",
- "inventory",
- "pretty_assertions",
- "rmcp",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "serde_with",
- "similar",
- "strum_macros 0.28.0",
- "tempfile",
- "thiserror 2.0.18",
- "tracing",
- "ts-rs",
- "uuid",
- "zstd",
-]
-
-[[package]]
-name = "workx-app-server-protocol-noop-macros"
-version = "0.0.0"
-
-[[package]]
-name = "workx-app-server-test-client"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "workx-app-server-protocol",
- "workx-core",
- "workx-otel",
- "workx-protocol",
- "workx-utils-cli",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "tungstenite",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "workx-app-server-transport"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "chrono",
- "clap",
- "workx-api",
- "workx-app-server-protocol",
- "workx-config",
- "workx-core",
- "workx-login",
- "workx-model-provider",
- "workx-protocol",
- "workx-state",
- "workx-uds",
- "workx-utils-absolute-path",
- "workx-utils-rustls-provider",
- "constant_time_eq",
- "futures",
- "gethostname",
- "hmac 0.12.1",
- "httpdate",
- "jsonwebtoken",
- "owo-colors",
- "pretty_assertions",
- "rand 0.9.3",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "time",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
- "tracing",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "workx-apply-patch"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "assert_matches",
- "workx-exec-server",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-path-uri",
- "pretty_assertions",
- "similar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tree-sitter",
- "tree-sitter-bash",
-]
-
-[[package]]
-name = "workx-arg0"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-apply-patch",
- "workx-async-utils",
- "workx-exec-server",
- "workx-install-context",
- "workx-linux-sandbox",
- "workx-sandboxing",
- "workx-shell-escalation",
- "workx-utils-absolute-path",
- "workx-utils-home-dir",
- "workx-windows-sandbox",
- "dotenvy",
- "pathdiff",
- "pretty_assertions",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "workx-async-utils"
-version = "0.0.0"
-dependencies = [
- "pretty_assertions",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
-name = "workx-aws-auth"
-version = "0.0.0"
-dependencies = [
- "aws-config",
- "aws-credential-types",
- "aws-sigv4",
- "aws-types",
- "bytes",
- "http 1.4.0",
- "pretty_assertions",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "workx-backend-client"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-api",
- "workx-backend-openapi-models",
- "workx-http-client",
- "workx-login",
- "workx-model-provider",
- "workx-protocol",
- "http 1.4.0",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tokio",
- "url",
- "wiremock",
-]
-
-[[package]]
-name = "workx-backend-openapi-models"
-version = "0.0.0"
-dependencies = [
- "serde",
- "serde_json",
- "serde_with",
-]
-
-[[package]]
-name = "workx-build-info"
-version = "0.0.0"
-dependencies = [
- "workx-install-context",
- "pretty_assertions",
- "semver",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "workx-bwrap"
-version = "0.0.0"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
-]
-
-[[package]]
-name = "workx-chatgpt"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "workx-connectors",
- "workx-core",
- "workx-git-utils",
- "workx-http-client",
- "workx-login",
- "workx-model-provider",
- "workx-plugin",
- "workx-utils-cargo-bin",
- "workx-utils-cli",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "workx-cli"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "app_test_support",
- "assert_cmd",
- "assert_matches",
- "chrono",
- "clap",
- "clap_complete",
- "workx-api",
- "workx-app-server",
- "workx-app-server-daemon",
- "workx-app-server-protocol",
- "workx-app-server-test-client",
- "workx-arg0",
- "workx-chatgpt",
- "workx-cloud-config",
- "workx-cloud-tasks",
- "workx-config",
- "workx-core",
- "workx-core-plugins",
- "workx-exec",
- "workx-exec-server",
- "workx-execpolicy",
- "workx-extension-api",
- "workx-features",
- "workx-git-attribution",
- "workx-git-utils",
- "workx-history",
- "workx-home",
- "workx-http-client",
- "workx-install-context",
- "workx-login",
- "workx-mcp",
- "workx-mcp-server",
- "workx-memories-write",
- "workx-model-provider",
- "workx-models-manager",
- "workx-plugin",
- "workx-protocol",
- "workx-responses-api-proxy",
- "workx-rmcp-client",
- "workx-rollout",
- "workx-rollout-trace",
- "workx-sandboxing",
- "workx-skills-extension",
- "workx-state",
- "workx-stdio-to-uds",
- "workx-terminal-detection",
- "workx-thread-store",
- "workx-tui",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-cli",
- "workx-utils-path",
- "workx-windows-sandbox",
- "crossterm",
- "flate2",
- "futures",
- "http 1.4.0",
- "insta",
- "libc",
- "os_info",
- "owo-colors",
- "predicates",
- "pretty_assertions",
- "regex-lite",
- "serde",
- "serde_json",
- "sqlx",
- "supports-color 3.0.2",
- "sys-locale",
- "tar",
- "tempfile",
- "tokio",
- "tokio-tungstenite",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "unicode-segmentation",
- "url",
- "which 8.0.0",
- "windows-sys 0.52.0",
- "wiremock",
- "zstd",
-]
-
-[[package]]
-name = "workx-client"
-version = "0.0.0"
-dependencies = [
- "workx-http-client",
- "eventsource-stream",
- "futures",
- "http 1.4.0",
- "rand 0.9.3",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-cloud-config"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "workx-agent-identity",
- "workx-backend-client",
- "workx-config",
- "workx-core",
- "workx-http-client",
- "workx-login",
- "workx-otel",
- "workx-protocol",
- "hmac 0.12.1",
- "pretty_assertions",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-cloud-tasks"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "workx-cloud-tasks-client",
- "workx-cloud-tasks-mock-client",
- "workx-core",
- "workx-git-utils",
- "workx-http-client",
- "workx-login",
- "workx-model-provider",
- "workx-tui",
- "workx-utils-cli",
- "crossterm",
- "http 1.4.0",
- "insta",
- "owo-colors",
- "pretty_assertions",
- "ratatui",
- "serde",
- "serde_json",
- "supports-color 3.0.2",
- "tokio",
- "tokio-stream",
- "tracing",
- "tracing-subscriber",
- "unicode-segmentation",
- "unicode-width 0.2.1",
-]
-
-[[package]]
-name = "workx-cloud-tasks-client"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "workx-api",
- "workx-backend-client",
- "workx-git-utils",
- "workx-http-client",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "workx-cloud-tasks-mock-client"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "workx-cloud-tasks-client",
- "diffy",
-]
-
-[[package]]
-name = "workx-code-mode"
-version = "0.0.0"
-dependencies = [
- "workx-code-mode-protocol",
- "workx-http-client",
- "workx-install-context",
- "workx-otel",
- "workx-protocol",
- "futures",
- "http-body-util",
- "pretty_assertions",
- "prost",
- "reqwest 0.12.28",
- "serde_json",
- "tokio",
- "tokio-util",
- "tonic",
- "tower",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "workx-code-mode-host"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "clap",
- "workx-code-mode",
- "workx-code-mode-protocol",
- "workx-code-mode-runtime",
- "workx-otel",
- "workx-otel-trace-websocket",
- "workx-protocol",
- "workx-utils-cargo-bin",
- "futures",
- "pretty_assertions",
- "prost",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tonic",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "workx-code-mode-protocol"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "glob",
- "pretty_assertions",
- "prost",
- "protoc-bin-vendored",
- "serde",
- "serde_json",
- "tokio",
- "tokio-util",
- "tonic",
- "tonic-prost",
- "tonic-prost-build",
-]
-
-[[package]]
-name = "workx-code-mode-runtime"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "workx-code-mode-protocol",
- "workx-protocol",
- "deno_core_icudata",
- "futures",
- "opentelemetry",
- "pretty_assertions",
- "serde_json",
- "tokio",
- "tokio-util",
- "tracing",
- "v8",
-]
-
-[[package]]
-name = "workx-collaboration-mode-templates"
-version = "0.0.0"
-
-[[package]]
-name = "workx-config"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "workx-execpolicy",
- "workx-features",
- "workx-file-system",
- "workx-git-utils",
- "workx-model-provider-info",
- "workx-network-proxy",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-path",
- "workx-utils-path-uri",
- "workx-utils-redacted-string",
- "core-foundation 0.9.4",
- "dns-lookup",
- "dunce",
- "futures",
- "gethostname",
- "indexmap 2.14.0",
- "libc",
- "multimap",
- "pretty_assertions",
- "prost",
- "regex-lite",
- "schemars 0.8.22",
- "serde",
- "serde_ignored",
- "serde_json",
- "serde_path_to_error",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-stream",
- "toml 0.9.11+spec-1.1.0",
- "toml_edit 0.24.0+spec-1.1.0",
- "tonic",
- "tonic-prost",
- "tonic-prost-build",
- "tracing",
- "wildmatch",
- "winapi-util",
- "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "workx-config-schema"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "workx-config",
-]
-
-[[package]]
-name = "workx-connectors"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "workx-config",
- "workx-login",
- "workx-otel",
- "workx-plugin",
- "workx-protocol",
- "indexmap 2.14.0",
- "pretty_assertions",
- "serde",
- "serde_json",
- "sha1 0.10.6",
- "tempfile",
- "tokio",
- "tracing",
- "urlencoding",
-]
-
-[[package]]
-name = "workx-connectors-extension"
-version = "0.0.0"
-dependencies = [
- "workx-connectors",
- "workx-core-plugins",
- "workx-file-system",
- "workx-plugin",
- "workx-utils-path-uri",
- "serde_json",
- "thiserror 2.0.18",
- "tracing",
-]
-
-[[package]]
-name = "workx-context-fragments"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "workx-utils-string",
-]
-
-[[package]]
-name = "workx-core"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "assert_cmd",
- "assert_matches",
- "async-channel",
- "base64 0.22.1",
- "bm25",
- "chrono",
- "workx-agent-graph-store",
- "workx-agent-roles",
- "workx-analytics",
- "workx-api",
- "workx-app-server-protocol",
- "workx-apply-patch",
- "workx-async-utils",
- "workx-client",
- "workx-code-mode",
- "workx-config",
- "workx-connectors",
- "workx-context-fragments",
- "workx-core-plugins",
- "workx-diagnostics",
- "workx-exec-server",
- "workx-exec-server-test-support",
- "workx-execpolicy",
- "workx-extension-api",
- "workx-extension-items",
- "workx-features",
- "workx-feedback",
- "workx-file-system",
- "workx-git-utils",
- "workx-guardian-context",
- "workx-history",
- "workx-home",
- "workx-hooks",
- "workx-http-client",
- "workx-image-generation-extension",
- "workx-install-context",
- "workx-login",
- "workx-mcp",
- "workx-memories-read",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-network-proxy",
- "workx-otel",
- "workx-plugin",
- "workx-prompts",
- "workx-protocol",
- "workx-response-debug-context",
- "workx-rmcp-client",
- "workx-rollout",
- "workx-rollout-trace",
- "workx-sandboxing",
- "workx-shell-command",
- "workx-shell-escalation",
- "workx-skills",
- "workx-skills-extension",
- "workx-state",
- "workx-terminal-detection",
- "workx-test-binary-support",
- "workx-thread-store",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-audio",
- "workx-utils-cache",
- "workx-utils-cargo-bin",
- "workx-utils-git-discovery",
- "workx-utils-home-dir",
- "workx-utils-image",
- "workx-utils-output-truncation",
- "workx-utils-path",
- "workx-utils-path-uri",
- "workx-utils-plugins",
- "workx-utils-pty",
- "workx-utils-redacted-string",
- "workx-utils-stream-parser",
- "workx-utils-string",
- "workx-web-search-extension",
- "workx-windows-sandbox",
- "core_test_support",
- "ctor 0.6.3",
- "dirs",
- "dunce",
- "eventsource-stream",
- "futures",
- "http 1.4.0",
- "iana-time-zone",
- "image",
- "indexmap 2.14.0",
- "insta",
- "libc",
- "maplit",
- "once_cell",
- "openssl-sys",
- "opentelemetry",
- "opentelemetry_sdk",
- "predicates",
- "pretty_assertions",
- "rand 0.9.3",
- "regex-lite",
- "rmcp",
- "serde",
- "serde_json",
- "serial_test",
- "sha1 0.10.6",
- "shlex",
- "similar",
- "tempfile",
- "test-case",
- "test-log",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
- "toml 0.9.11+spec-1.1.0",
- "toml_edit 0.24.0+spec-1.1.0",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "tracing-test",
- "url",
- "uuid",
- "walkdir",
- "which 8.0.0",
- "whoami 1.6.1",
- "wiremock",
- "zstd",
-]
-
-[[package]]
-name = "workx-core-api"
-version = "0.0.0"
-dependencies = [
- "workx-analytics",
- "workx-app-server-protocol",
- "workx-arg0",
- "workx-config",
- "workx-core",
- "workx-exec-server",
- "workx-extension-api",
- "workx-features",
- "workx-history",
- "workx-home",
- "workx-image-generation-extension",
- "workx-login",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-protocol",
- "workx-state",
- "workx-utils-absolute-path",
-]
-
-[[package]]
-name = "workx-core-plugins"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "workx-analytics",
- "workx-app-server-protocol",
- "workx-config",
- "workx-connectors",
- "workx-exec-server",
- "workx-exec-server-test-support",
- "workx-git-utils",
- "workx-hooks",
- "workx-http-client",
- "workx-login",
- "workx-mcp",
- "workx-model-provider",
- "workx-otel",
- "workx-plugin",
- "workx-protocol",
- "workx-shell-command",
- "workx-skills",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-path",
- "workx-utils-path-uri",
- "workx-utils-plugins",
- "dirs",
- "flate2",
- "futures",
- "http 1.4.0",
- "libc",
- "pretty_assertions",
- "regex",
- "semver",
- "serde",
- "serde_json",
- "serde_with",
- "serde_yaml",
- "sha2 0.10.9",
- "tar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
- "tracing-subscriber",
- "tracing-test",
- "url",
- "uuid",
- "which 8.0.0",
- "wiremock",
- "zip",
-]
-
-[[package]]
-name = "workx-diagnostics"
-version = "0.0.0"
-dependencies = [
- "libc",
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-exec"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "clap",
- "workx-app-server-client",
- "workx-app-server-protocol",
- "workx-apply-patch",
- "workx-arg0",
- "workx-cloud-config",
- "workx-config",
- "workx-core",
- "workx-feedback",
- "workx-git-utils",
- "workx-history",
- "workx-login",
- "workx-model-provider-info",
- "workx-otel",
- "workx-protocol",
- "workx-rollout",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-cli",
- "workx-utils-oss",
- "workx-utils-sandbox-summary",
- "core_test_support",
- "libc",
- "opentelemetry",
- "opentelemetry_sdk",
- "owo-colors",
- "predicates",
- "pretty_assertions",
- "serde",
- "serde_json",
- "supports-color 3.0.2",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "ts-rs",
- "uuid",
- "walkdir",
- "wiremock",
- "zstd",
-]
-
-[[package]]
-name = "workx-exec-server"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "axum",
- "base64 0.22.1",
- "bytes",
- "clatter",
- "workx-api",
- "workx-config",
- "workx-exec-server-protocol",
- "workx-exec-server-test-support",
- "workx-file-system",
- "workx-http-client",
- "workx-network-proxy",
- "workx-otel",
- "workx-protocol",
- "workx-sandboxing",
- "workx-shell-command",
- "workx-test-binary-support",
- "workx-utils-absolute-path",
- "workx-utils-home-dir",
- "workx-utils-path-uri",
- "workx-utils-pty",
- "workx-utils-rustls-provider",
- "workx-websocket-client",
- "ctor 0.6.3",
- "dirs",
- "futures",
- "http 1.4.0",
- "libc",
- "opentelemetry",
- "opentelemetry_sdk",
- "pretty_assertions",
- "prost",
- "rcgen",
- "rustix 1.1.4",
- "rustls",
- "serde",
- "serde_json",
- "serial_test",
- "tempfile",
- "test-case",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
- "uuid",
- "windows-sys 0.52.0",
- "wiremock",
-]
-
-[[package]]
-name = "workx-exec-server-protocol"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "workx-file-system",
- "workx-network-proxy",
- "workx-protocol",
- "workx-shell-command",
- "workx-utils-path-uri",
- "pretty_assertions",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "workx-exec-server-test-support"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-exec-server",
- "workx-http-client",
- "futures",
- "prost",
- "serde_json",
- "tokio",
- "tokio-tungstenite",
- "wiremock",
-]
-
-[[package]]
-name = "workx-execpolicy"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "workx-utils-absolute-path",
- "multimap",
- "pretty_assertions",
- "serde",
- "serde_json",
- "shlex",
- "starlark",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "workx-experimental-api-macros"
-version = "0.0.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "workx-extension-api"
-version = "0.0.0"
-dependencies = [
- "workx-config",
- "workx-context-fragments",
- "workx-exec-server-protocol",
- "workx-mcp",
- "workx-protocol",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "pretty_assertions",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "workx-extension-items"
-version = "0.0.0"
-dependencies = [
- "workx-utils-absolute-path",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "ts-rs",
-]
-
-[[package]]
-name = "workx-external-agent-migration"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "workx-analytics",
- "workx-app-server-protocol",
- "workx-config",
- "workx-core",
- "workx-core-plugins",
- "workx-hooks",
- "workx-login",
- "workx-memories-write",
- "workx-otel",
- "workx-plugin",
- "workx-protocol",
- "workx-rollout",
- "workx-thread-store",
- "workx-utils-output-truncation",
- "pretty_assertions",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2 0.10.9",
- "tempfile",
- "tokio",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
-]
-
-[[package]]
-name = "workx-features"
-version = "0.0.0"
-dependencies = [
- "workx-otel",
- "workx-protocol",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
-]
-
-[[package]]
-name = "workx-feedback"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "bytes",
- "workx-http-client",
- "workx-login",
- "workx-protocol",
- "flate2",
- "http 1.4.0",
- "httpdate",
- "log",
- "mime_guess",
- "pretty_assertions",
- "sentry",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "wiremock",
-]
-
-[[package]]
-name = "workx-file-search"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "crossbeam-channel",
- "ignore",
- "nucleo",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "workx-file-system"
-version = "0.0.0"
-dependencies = [
- "bytes",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "futures",
- "serde",
-]
-
-[[package]]
-name = "workx-file-watcher"
-version = "0.0.0"
-dependencies = [
- "notify",
- "pretty_assertions",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-git-attribution"
-version = "0.0.0"
-dependencies = [
- "workx-backend-client",
- "workx-extension-api",
- "workx-http-client",
- "workx-login",
- "serde_json",
- "tokio",
- "wiremock",
-]
-
-[[package]]
-name = "workx-git-utils"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "workx-file-system",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "workx-utils-pty",
- "futures",
- "gix",
- "once_cell",
- "pretty_assertions",
- "regex",
- "schemars 0.8.22",
- "serde",
- "similar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "ts-rs",
- "walkdir",
-]
-
-[[package]]
-name = "workx-goal-extension"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "workx-analytics",
- "workx-core",
- "workx-extension-api",
- "workx-otel",
- "workx-protocol",
- "workx-rollout",
- "workx-state",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-template",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-guardian-context"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "pretty_assertions",
- "serde_json",
-]
-
-[[package]]
-name = "workx-guardian-v2"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-analytics",
- "workx-api",
- "workx-core",
- "workx-extension-api",
- "workx-features",
- "workx-guardian-context",
- "workx-history",
- "workx-http-client",
- "workx-login",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-network-proxy",
- "workx-protocol",
- "core_test_support",
- "dirs",
- "http 1.4.0",
- "pretty_assertions",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "workx-history"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-protocol",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "workx-history-notes-extension"
-version = "0.0.0"
-dependencies = [
- "workx-api",
- "workx-client",
- "workx-config",
- "workx-core",
- "workx-extension-api",
- "workx-login",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-protocol",
- "workx-tools",
- "workx-utils-output-truncation",
- "core_test_support",
- "http 1.4.0",
- "pretty_assertions",
- "serde_json",
- "tempfile",
- "tokio",
- "wiremock",
-]
-
-[[package]]
-name = "workx-home"
-version = "0.0.0"
-dependencies = [
- "workx-extension-api",
- "workx-utils-absolute-path",
- "pretty_assertions",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "workx-hooks"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "async-channel",
- "chrono",
- "workx-config",
- "workx-plugin",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-output-truncation",
- "workx-utils-path-uri",
- "workx-utils-pty",
- "futures",
- "pretty_assertions",
- "regex",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "workx-http-client"
-version = "0.0.0"
-dependencies = [
- "bytes",
- "workx-utils-cargo-bin",
- "workx-utils-rustls-provider",
- "futures",
- "http 1.4.0",
- "native-tls",
- "opentelemetry",
- "opentelemetry_sdk",
- "pretty_assertions",
- "rcgen",
- "reqwest 0.12.28",
- "rustls",
- "rustls-native-certs",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "system-configuration",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "windows-sys 0.52.0",
- "zstd",
-]
-
-[[package]]
-name = "workx-image-generation-extension"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "workx-api",
- "workx-core",
- "workx-exec-server",
- "workx-extension-api",
- "workx-extension-items",
- "workx-login",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-protocol",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-image",
- "workx-utils-path-uri",
- "http 1.4.0",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-install-context"
-version = "0.0.0"
-dependencies = [
- "workx-utils-absolute-path",
- "workx-utils-home-dir",
- "pretty_assertions",
- "semver",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "workx-keyring-store"
-version = "0.0.0"
-dependencies = [
- "keyring",
- "tracing",
-]
-
-[[package]]
-name = "workx-linux-sandbox"
-version = "0.0.0"
-dependencies = [
- "clap",
- "workx-core",
- "workx-install-context",
- "workx-network-proxy",
- "workx-process-hardening",
- "workx-protocol",
- "workx-sandboxing",
- "workx-utils-absolute-path",
- "globset",
- "landlock",
- "libc",
- "pretty_assertions",
- "rustix 1.1.4",
- "seccompiler",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "test-case",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "workx-lmstudio"
-version = "0.0.0"
-dependencies = [
- "workx-core",
- "workx-http-client",
- "workx-model-provider-info",
- "serde_json",
- "tokio",
- "tracing",
- "which 8.0.0",
- "wiremock",
-]
-
-[[package]]
-name = "workx-login"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "chrono",
- "workx-agent-identity",
- "workx-config",
- "workx-http-client",
- "workx-keyring-store",
- "workx-model-provider-info",
- "workx-otel",
- "workx-protocol",
- "workx-secrets",
- "workx-terminal-detection",
- "workx-utils-template",
- "workx-workload-identity",
- "core_test_support",
- "http 1.4.0",
- "jsonwebtoken",
- "keyring",
- "once_cell",
- "os_info",
- "pretty_assertions",
- "rand 0.9.3",
- "regex-lite",
- "serde",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.18",
- "tiny_http",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
- "urlencoding",
- "webbrowser",
- "wiremock",
-]
-
-[[package]]
-name = "workx-mcp"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "assert_matches",
- "async-channel",
- "workx-api",
- "workx-async-utils",
- "workx-config",
- "workx-connectors",
- "workx-diagnostics",
- "workx-exec-server",
- "workx-exec-server-test-support",
- "workx-login",
- "workx-model-provider",
- "workx-otel",
- "workx-plugin",
- "workx-protocol",
- "workx-rmcp-client",
- "workx-utils-path-uri",
- "workx-utils-plugins",
- "futures",
- "insta",
- "lru",
- "pretty_assertions",
- "regex-lite",
- "rmcp",
- "serde",
- "serde_json",
- "sha1 0.10.6",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "workx-mcp-extension"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "workx-config",
- "workx-connectors",
- "workx-connectors-extension",
- "workx-core",
- "workx-core-plugins",
- "workx-exec-server",
- "workx-exec-server-test-support",
- "workx-extension-api",
- "workx-features",
- "workx-login",
- "workx-mcp",
- "workx-plugin",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "futures",
- "pretty_assertions",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
-name = "workx-mcp-server"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "app_test_support",
- "workx-arg0",
- "workx-config",
- "workx-core",
- "workx-exec-server",
- "workx-extension-api",
- "workx-features",
- "workx-git-attribution",
- "workx-home",
- "workx-image-generation-extension",
- "workx-login",
- "workx-otel",
- "workx-protocol",
- "workx-shell-command",
- "workx-skills-extension",
- "workx-utils-absolute-path",
- "workx-utils-cli",
- "workx-utils-json-to-toml",
- "core_test_support",
- "mcp_test_support",
- "os_info",
- "pretty_assertions",
- "rmcp",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "shlex",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "wiremock",
-]
-
-[[package]]
-name = "workx-memories-extension"
-version = "0.0.0"
-dependencies = [
- "workx-core",
- "workx-extension-api",
- "workx-features",
- "workx-otel",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-output-truncation",
- "workx-utils-template",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "workx-memories-read"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "workx-shell-command",
- "workx-utils-absolute-path",
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-memories-write"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "workx-backend-client",
- "workx-config",
- "workx-core",
- "workx-features",
- "workx-git-utils",
- "workx-login",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-otel",
- "workx-protocol",
- "workx-rollout",
- "workx-rollout-trace",
- "workx-secrets",
- "workx-state",
- "workx-terminal-detection",
- "workx-utils-absolute-path",
- "workx-utils-output-truncation",
- "workx-utils-template",
- "core_test_support",
- "futures",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "uuid",
- "wiremock",
-]
-
-[[package]]
-name = "workx-message-history"
-version = "0.0.0"
-dependencies = [
- "workx-config",
- "memchr",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-model-provider"
-version = "0.0.0"
-dependencies = [
- "workx-agent-identity",
- "workx-api",
- "workx-aws-auth",
- "workx-feedback",
- "workx-http-client",
- "workx-login",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-otel",
- "workx-protocol",
- "workx-response-debug-context",
- "workx-utils-redacted-string",
- "http 1.4.0",
- "pretty_assertions",
- "serde_json",
- "tokio",
- "tracing",
- "wiremock",
-]
-
-[[package]]
-name = "workx-model-provider-info"
-version = "0.0.0"
-dependencies = [
- "workx-api",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-redacted-string",
- "http 1.4.0",
- "maplit",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "tempfile",
- "toml 0.9.11+spec-1.1.0",
-]
-
-[[package]]
-name = "workx-models-manager"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "workx-collaboration-mode-templates",
- "workx-http-client",
- "workx-login",
- "workx-otel",
- "workx-protocol",
- "workx-utils-output-truncation",
- "workx-utils-template",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-network-proxy"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "chrono",
- "clap",
- "workx-utils-absolute-path",
- "workx-utils-home-dir",
- "workx-utils-rustls-provider",
- "workx-windows-sandbox",
- "globset",
- "pretty_assertions",
- "rama-core",
- "rama-http",
- "rama-http-backend",
- "rama-net",
- "rama-socks5",
- "rama-tcp",
- "rama-tls-rustls",
- "rama-unix",
- "rand 0.9.3",
- "rustls-native-certs",
- "schannel",
- "security-framework 3.5.1",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tracing",
- "url",
- "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "workx-ollama"
-version = "0.0.0"
-dependencies = [
- "assert_matches",
- "async-stream",
- "bytes",
- "workx-core",
- "workx-http-client",
- "workx-model-provider-info",
- "futures",
- "memchr",
- "pretty_assertions",
- "semver",
- "serde_json",
- "tokio",
- "tracing",
- "wiremock",
-]
-
-[[package]]
-name = "workx-otel"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "workx-api",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-string",
- "eventsource-stream",
- "gethostname",
- "http 1.4.0",
- "libc",
- "opentelemetry",
- "opentelemetry-appender-tracing",
- "opentelemetry-otlp",
- "opentelemetry-semantic-conventions",
- "opentelemetry_sdk",
- "os_info",
- "pretty_assertions",
- "reqwest 0.12.28",
- "seccompiler",
- "serde",
- "serde_json",
- "strum_macros 0.28.0",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "workx-otel-trace-websocket"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "futures",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-plugin"
-version = "0.0.0"
-dependencies = [
- "workx-config",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "workx-utils-plugins",
- "pretty_assertions",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "workx-process-hardening"
-version = "0.0.0"
-dependencies = [
- "libc",
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-prompts"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-context-fragments",
- "workx-execpolicy",
- "workx-git-utils",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-template",
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-protocol"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chardetng",
- "chrono",
- "workx-async-utils",
- "workx-execpolicy",
- "workx-extension-items",
- "workx-http-client",
- "workx-network-proxy",
- "workx-utils-absolute-path",
- "workx-utils-image",
- "workx-utils-path-uri",
- "workx-utils-redacted-string",
- "workx-utils-string",
- "encoding_rs",
- "gix-url",
- "globset",
- "http 1.4.0",
- "icu_decimal",
- "icu_locale_core",
- "icu_provider",
- "landlock",
- "pretty_assertions",
- "quick-xml 0.41.0",
- "schemars 0.8.22",
- "seccompiler",
- "serde",
- "serde_json",
- "serde_with",
- "strum 0.27.2",
- "strum_macros 0.28.0",
- "sys-locale",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "ts-rs",
- "uuid",
- "wildmatch",
-]
-
-[[package]]
-name = "workx-queue-extension"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-core",
- "workx-extension-api",
- "workx-protocol",
- "workx-state",
- "workx-thread-store",
- "workx-utils-absolute-path",
- "core_test_support",
- "pretty_assertions",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "codex-realtime-webrtc"
-version = "0.0.0"
+version = "0.153.4"
 dependencies = [
  "anyhow",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tokio",
  "workx-install-context",
  "workx-utils-pty",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "workx-response-debug-context"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "workx-api",
- "http 1.4.0",
- "pretty_assertions",
- "serde_json",
-]
-
-[[package]]
-name = "workx-responses-api-proxy"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "workx-process-hardening",
- "ctor 0.6.3",
- "libc",
- "pretty_assertions",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tiny_http",
- "zeroize",
-]
-
-[[package]]
-name = "workx-rmcp-client"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "bytes",
- "workx-api",
- "workx-config",
- "workx-exec-server",
- "workx-http-client",
- "workx-keyring-store",
- "workx-network-proxy",
- "workx-protocol",
- "workx-secrets",
- "workx-utils-cargo-bin",
- "workx-utils-home-dir",
- "workx-utils-path-uri",
- "workx-utils-pty",
- "futures",
- "http 1.4.0",
- "keyring",
- "libc",
- "memchr",
- "oauth2",
- "pretty_assertions",
- "rmcp",
- "serde",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "sse-stream",
- "tempfile",
- "thiserror 2.0.18",
- "tiny_http",
- "tokio",
- "tracing",
- "url",
- "urlencoding",
- "webbrowser",
- "which 8.0.0",
- "windows-sys 0.52.0",
- "wiremock",
-]
-
-[[package]]
-name = "workx-rollout"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "workx-extension-items",
- "workx-file-search",
- "workx-git-utils",
- "workx-history",
- "workx-otel",
- "workx-protocol",
- "workx-state",
- "workx-utils-absolute-path",
- "workx-utils-path",
- "pretty_assertions",
- "regex",
- "serde",
- "serde_json",
- "tempfile",
- "time",
- "tokio",
- "tracing",
- "uuid",
- "zstd",
-]
-
-[[package]]
-name = "workx-rollout-trace"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-code-mode",
- "workx-protocol",
- "http 1.4.0",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "workx-sandboxing"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "appcontainer_common",
- "workx-network-proxy",
- "workx-otel",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-home-dir",
- "workx-utils-path-uri",
- "workx-utils-pty",
- "workx-windows-sandbox",
- "dunce",
- "libc",
- "pretty_assertions",
- "regex-lite",
- "serde_json",
- "tempfile",
- "tokio",
- "tracelogging",
- "tracing",
- "url",
- "which 8.0.0",
-]
-
-[[package]]
-name = "workx-secrets"
-version = "0.0.0"
-dependencies = [
- "age",
- "anyhow",
- "base64 0.22.1",
- "workx-git-utils",
- "workx-keyring-store",
- "keyring",
- "pretty_assertions",
- "rand 0.9.3",
- "regex",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "tracing",
-]
-
-[[package]]
-name = "workx-shell-command"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "workx-protocol",
- "workx-utils-absolute-path",
- "libc",
- "once_cell",
- "pretty_assertions",
- "regex",
- "serde",
- "serde_json",
- "shlex",
- "tempfile",
- "tree-sitter",
- "tree-sitter-bash",
- "tree-sitter-powershell",
- "url",
- "which 8.0.0",
-]
-
-[[package]]
-name = "workx-shell-escalation"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "workx-protocol",
- "workx-utils-absolute-path",
- "libc",
- "pretty_assertions",
- "serde",
- "serde_json",
- "socket2 0.6.3",
- "tempfile",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "workx-skills"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "workx-shell-command",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "include_dir",
- "pretty_assertions",
- "serde",
- "serde_yaml",
- "shlex",
- "thiserror 2.0.18",
- "tracing",
-]
-
-[[package]]
-name = "workx-skills-extension"
-version = "0.0.0"
-dependencies = [
- "assert_matches",
- "workx-analytics",
- "workx-config",
- "workx-exec-server",
- "workx-extension-api",
- "workx-mcp",
- "workx-models-manager",
- "workx-otel",
- "workx-protocol",
- "workx-skills",
- "workx-tools",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-path-uri",
- "workx-utils-plugins",
- "workx-utils-string",
- "dirs",
- "dunce",
- "futures",
- "insta",
- "opentelemetry_sdk",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "tokio",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "workx-state"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chrono",
- "workx-git-utils",
- "workx-history",
- "workx-protocol",
- "workx-utils-absolute-path",
- "libsqlite3-sys",
- "log",
- "pretty_assertions",
- "scopeguard",
- "serde",
- "serde_json",
- "sqlx",
- "strum 0.27.2",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "workx-stdio-to-uds"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-uds",
- "workx-utils-cargo-bin",
- "pretty_assertions",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "workx-terminal-detection"
-version = "0.0.0"
-dependencies = [
- "pretty_assertions",
- "tracing",
-]
-
-[[package]]
-name = "workx-test-binary-support"
-version = "0.0.0"
-dependencies = [
- "workx-arg0",
- "tempfile",
-]
-
-[[package]]
-name = "workx-thread-manager-sample"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "workx-core-api",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "workx-thread-store"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "workx-app-server-protocol",
- "workx-extension-items",
- "workx-git-utils",
- "workx-install-context",
- "workx-otel",
- "workx-protocol",
- "workx-rollout",
- "workx-state",
- "workx-utils-absolute-path",
- "workx-utils-path",
- "workx-utils-path-uri",
- "futures",
- "pretty_assertions",
- "pulldown-cmark",
- "serde",
- "serde_json",
- "sqlx",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
- "zstd",
-]
-
-[[package]]
-name = "workx-tools"
-version = "0.0.0"
-dependencies = [
- "bitflags 2.13.1",
- "workx-code-mode",
- "workx-connectors",
- "workx-extension-items",
- "workx-features",
- "workx-file-system",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-output-truncation",
- "workx-utils-string",
- "jsonptr",
- "pretty_assertions",
- "rmcp",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tracing",
- "urlencoding",
-]
-
-[[package]]
-name = "workx-tui"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "app_test_support",
- "arboard",
- "assert_matches",
- "axum",
- "base64 0.22.1",
- "chrono",
- "clap",
- "workx-ansi-escape",
- "workx-app-server-client",
- "workx-app-server-protocol",
- "workx-arg0",
- "workx-cloud-config",
- "workx-config",
- "workx-connectors",
- "workx-core-plugins",
- "workx-exec-server",
- "workx-features",
- "workx-feedback",
- "workx-file-search",
- "workx-git-utils",
- "workx-history",
- "workx-http-client",
- "workx-install-context",
- "workx-login",
- "workx-mcp",
- "workx-message-history",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-otel",
- "workx-plugin",
- "workx-protocol",
- "workx-rollout",
- "workx-sandboxing",
- "workx-shell-command",
- "workx-state",
- "workx-terminal-detection",
- "workx-utils-absolute-path",
- "workx-utils-approval-presets",
- "workx-utils-cargo-bin",
- "workx-utils-cli",
- "workx-utils-elapsed",
- "workx-utils-fuzzy-match",
- "workx-utils-home-dir",
- "workx-utils-oss",
- "workx-utils-path",
- "workx-utils-path-uri",
- "workx-utils-plugins",
- "workx-utils-sandbox-summary",
- "workx-utils-sleep-inhibitor",
- "workx-utils-string",
- "workx-windows-sandbox",
- "color-eyre",
- "core_test_support",
- "crossterm",
- "derive_more 2.1.1",
- "diffy",
- "dirs",
- "dunce",
- "futures",
- "http 1.4.0",
- "image",
- "insta",
- "itertools 0.14.0",
- "lazy_static",
- "libc",
- "pathdiff",
- "pretty_assertions",
- "pulldown-cmark",
- "rand 0.9.3",
- "ratatui",
- "ratatui-macros",
- "regex-lite",
- "rmcp",
- "serde",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "shlex",
- "strum 0.27.2",
- "strum_macros 0.28.0",
- "supports-color 3.0.2",
- "syntect",
- "tempfile",
- "textwrap 0.16.2",
- "thiserror 2.0.18",
- "tokio",
- "tokio-stream",
- "tokio-tungstenite",
- "tokio-util",
- "toml 0.9.11+spec-1.1.0",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "two-face",
- "unicode-segmentation",
- "unicode-width 0.2.1",
- "url",
- "urlencoding",
- "uuid",
- "vt100",
- "webbrowser",
- "which 8.0.0",
- "windows-sys 0.52.0",
- "winsplit",
- "wiremock",
-]
-
-[[package]]
-name = "workx-uds"
-version = "0.0.0"
-dependencies = [
- "async-io",
- "pretty_assertions",
- "tempfile",
- "tokio",
- "tokio-util",
- "uds_windows",
-]
-
-[[package]]
-name = "workx-utils-absolute-path"
-version = "0.0.0"
-dependencies = [
- "dirs",
- "dunce",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "tempfile",
- "ts-rs",
-]
-
-[[package]]
-name = "workx-utils-approval-presets"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
-]
-
-[[package]]
-name = "workx-utils-audio"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "workx-protocol",
- "workx-utils-cache",
- "workx-utils-string",
- "pretty_assertions",
- "symphonia",
- "thiserror 2.0.18",
- "tracing",
-]
-
-[[package]]
-name = "workx-utils-cache"
-version = "0.0.0"
-dependencies = [
- "lru",
- "sha1 0.10.6",
- "tokio",
-]
-
-[[package]]
-name = "workx-utils-cargo-bin"
-version = "0.0.0"
-dependencies = [
- "assert_cmd",
- "runfiles",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "workx-utils-cli"
-version = "0.0.0"
-dependencies = [
- "clap",
- "workx-protocol",
- "workx-shell-command",
- "pretty_assertions",
- "serde",
- "toml 0.9.11+spec-1.1.0",
-]
-
-[[package]]
-name = "workx-utils-elapsed"
-version = "0.0.0"
-
-[[package]]
-name = "workx-utils-fuzzy-match"
-version = "0.0.0"
-
-[[package]]
-name = "workx-utils-git-discovery"
-version = "0.0.0"
-dependencies = [
- "workx-git-utils",
- "workx-utils-absolute-path",
- "futures",
- "pretty_assertions",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "workx-utils-home-dir"
-version = "0.0.0"
-dependencies = [
- "workx-utils-absolute-path",
- "dirs",
- "pretty_assertions",
- "tempfile",
-]
-
-[[package]]
-name = "workx-utils-image"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "workx-utils-cache",
- "divan",
- "image",
- "mime_guess",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "workx-utils-json-to-toml"
-version = "0.0.0"
-dependencies = [
- "pretty_assertions",
- "serde_json",
- "toml 0.9.11+spec-1.1.0",
-]
-
-[[package]]
-name = "workx-utils-oss"
-version = "0.0.0"
-dependencies = [
- "workx-core",
- "workx-lmstudio",
- "workx-model-provider-info",
- "workx-ollama",
-]
-
-[[package]]
-name = "workx-utils-output-truncation"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "workx-utils-string",
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-utils-path"
-version = "0.0.0"
-dependencies = [
- "workx-utils-absolute-path",
- "dunce",
- "pretty_assertions",
- "tempfile",
-]
-
-[[package]]
-name = "workx-utils-path-uri"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "workx-utils-absolute-path",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "ts-rs",
- "url",
- "urlencoding",
-]
-
-[[package]]
-name = "workx-utils-plugins"
-version = "0.0.0"
-dependencies = [
- "workx-exec-server",
- "workx-exec-server-protocol",
- "workx-utils-absolute-path",
- "workx-utils-path-uri",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "workx-utils-pty"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "filedescriptor",
- "lazy_static",
- "libc",
- "log",
- "portable-pty",
- "pretty_assertions",
- "shared_library",
- "tokio",
- "winapi",
-]
-
-[[package]]
-name = "workx-utils-readiness"
-version = "0.0.0"
-dependencies = [
- "assert_matches",
- "thiserror 2.0.18",
- "time",
- "tokio",
-]
-
-[[package]]
-name = "workx-utils-redacted-string"
-version = "0.0.0"
-dependencies = [
- "schemars 0.8.22",
- "serde",
-]
-
-[[package]]
-name = "workx-utils-rustls-provider"
-version = "0.0.0"
-dependencies = [
- "rustls",
-]
-
-[[package]]
-name = "workx-utils-sandbox-summary"
-version = "0.0.0"
-dependencies = [
- "workx-protocol",
- "workx-utils-absolute-path",
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-utils-sleep-inhibitor"
-version = "0.0.0"
-dependencies = [
- "core-foundation 0.9.4",
- "libc",
- "tracing",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "workx-utils-stream-parser"
-version = "0.0.0"
-dependencies = [
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-utils-string"
-version = "0.0.0"
-dependencies = [
- "pretty_assertions",
- "regex-lite",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "workx-utils-template"
-version = "0.0.0"
-dependencies = [
- "pretty_assertions",
-]
-
-[[package]]
-name = "workx-v8-poc"
-version = "0.0.0"
-dependencies = [
- "pretty_assertions",
- "v8",
-]
-
-[[package]]
-name = "workx-voice-host"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-install-context",
- "workx-process-hardening",
- "codex-realtime-webrtc",
- "workx-utils-cargo-bin",
- "pretty_assertions",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "workx-web-search-extension"
-version = "0.0.0"
-dependencies = [
- "workx-api",
- "workx-core",
- "workx-extension-api",
- "workx-extension-items",
- "workx-login",
- "workx-model-provider",
- "workx-model-provider-info",
- "workx-otel",
- "workx-protocol",
- "workx-tools",
- "http 1.4.0",
- "pretty_assertions",
- "schemars 0.8.22",
- "serde_json",
- "url",
-]
-
-[[package]]
-name = "workx-websocket-client"
-version = "0.0.0"
-dependencies = [
- "workx-http-client",
- "workx-utils-rustls-provider",
- "futures",
- "pretty_assertions",
- "rcgen",
- "rustls",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite",
- "url",
-]
-
-[[package]]
-name = "workx-windows-sandbox"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "chrono",
- "workx-otel",
- "workx-protocol",
- "workx-utils-absolute-path",
- "workx-utils-pty",
- "workx-utils-string",
- "dirs-next",
- "dunce",
- "glob",
- "pretty_assertions",
- "rand 0.8.6",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing-appender",
- "windows 0.58.0",
- "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "workx-workload-identity"
-version = "0.0.0"
-dependencies = [
- "workx-http-client",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "url",
- "wiremock",
-]
-
-[[package]]
-name = "workx-worktree"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "workx-git-utils",
- "workx-protocol",
- "dunce",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tempfile",
 ]
 
 [[package]]
@@ -5222,28 +2135,11 @@ dependencies = [
 
 [[package]]
 name = "core_test_support"
-version = "0.0.0"
+version = "0.153.4"
 dependencies = [
  "anyhow",
  "assert_cmd",
  "base64 0.22.1",
- "workx-arg0",
- "workx-config",
- "workx-core",
- "workx-exec-server",
- "workx-extension-api",
- "workx-features",
- "workx-home",
- "workx-hooks",
- "workx-http-client",
- "workx-login",
- "workx-model-provider-info",
- "workx-models-manager",
- "workx-protocol",
- "workx-thread-store",
- "workx-utils-absolute-path",
- "workx-utils-cargo-bin",
- "workx-utils-path-uri",
  "ctor 0.6.3",
  "futures",
  "notify",
@@ -5262,6 +2158,23 @@ dependencies = [
  "tracing-subscriber",
  "walkdir",
  "wiremock",
+ "workx-arg0",
+ "workx-config",
+ "workx-core",
+ "workx-exec-server",
+ "workx-extension-api",
+ "workx-features",
+ "workx-home",
+ "workx-hooks",
+ "workx-http-client",
+ "workx-login",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-protocol",
+ "workx-thread-store",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-path-uri",
  "zstd",
 ]
 
@@ -9520,13 +6433,9 @@ dependencies = [
 
 [[package]]
 name = "mcp_test_support"
-version = "0.0.0"
+version = "0.153.4"
 dependencies = [
  "anyhow",
- "workx-login",
- "workx-mcp-server",
- "workx-terminal-detection",
- "workx-utils-cargo-bin",
  "core_test_support",
  "os_info",
  "pretty_assertions",
@@ -9535,6 +6444,10 @@ dependencies = [
  "shlex",
  "tokio",
  "wiremock",
+ "workx-login",
+ "workx-mcp-server",
+ "workx-terminal-detection",
+ "workx-utils-cargo-bin",
 ]
 
 [[package]]
@@ -16308,6 +13221,3094 @@ dependencies = [
  "wayland-client",
  "wayland-protocols",
  "wayland-protocols-wlr",
+]
+
+[[package]]
+name = "workx-agent-extension"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "core_test_support",
+ "pretty_assertions",
+ "tokio",
+ "workx-core",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-agent-graph-store"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "workx-protocol",
+ "workx-state",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-agent-identity"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "crypto_box",
+ "ed25519-dalek",
+ "http 1.4.0",
+ "jsonwebtoken",
+ "pretty_assertions",
+ "rand 0.9.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "workx-http-client",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-agent-roles"
+version = "0.153.4"
+dependencies = [
+ "serde",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "workx-config",
+ "workx-file-system",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-analytics"
+version = "0.153.4"
+dependencies = [
+ "os_info",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "sha1 0.10.6",
+ "tokio",
+ "tracing",
+ "workx-app-server-protocol",
+ "workx-git-utils",
+ "workx-login",
+ "workx-model-provider",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-state",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-ansi-escape"
+version = "0.153.4"
+dependencies = [
+ "ansi-to-tui",
+ "ratatui",
+ "tracing",
+]
+
+[[package]]
+name = "workx-api"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "async-channel",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "eventsource-stream",
+ "futures",
+ "http 1.4.0",
+ "pretty_assertions",
+ "regex-lite",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-test",
+ "tokio-tungstenite",
+ "tokio-util",
+ "tracing",
+ "tungstenite",
+ "url",
+ "uuid",
+ "wiremock",
+ "workx-client",
+ "workx-http-client",
+ "workx-protocol",
+ "workx-utils-rustls-provider",
+ "workx-websocket-client",
+]
+
+[[package]]
+name = "workx-app-server"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "app_test_support",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "core_test_support",
+ "flate2",
+ "futures",
+ "hmac 0.12.1",
+ "http 1.4.0",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "pretty_assertions",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sha2 0.10.9",
+ "shlex",
+ "tar",
+ "tempfile",
+ "test-case",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tokio-tungstenite",
+ "tokio-util",
+ "toml 0.9.11+spec-1.1.0",
+ "toml_edit 0.24.0+spec-1.1.0",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "wiremock",
+ "workx-agent-extension",
+ "workx-analytics",
+ "workx-app-server-protocol",
+ "workx-app-server-transport",
+ "workx-arg0",
+ "workx-aws-auth",
+ "workx-backend-client",
+ "workx-chatgpt",
+ "workx-cloud-config",
+ "workx-code-mode",
+ "workx-config",
+ "workx-connectors",
+ "workx-core",
+ "workx-core-plugins",
+ "workx-diagnostics",
+ "workx-exec-server",
+ "workx-extension-api",
+ "workx-external-agent-migration",
+ "workx-features",
+ "workx-feedback",
+ "workx-file-search",
+ "workx-file-watcher",
+ "workx-git-attribution",
+ "workx-git-utils",
+ "workx-goal-extension",
+ "workx-guardian-v2",
+ "workx-history-notes-extension",
+ "workx-home",
+ "workx-hooks",
+ "workx-http-client",
+ "workx-image-generation-extension",
+ "workx-login",
+ "workx-mcp",
+ "workx-mcp-extension",
+ "workx-memories-extension",
+ "workx-memories-write",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-otel",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-queue-extension",
+ "workx-rmcp-client",
+ "workx-rollout",
+ "workx-sandboxing",
+ "workx-shell-command",
+ "workx-skills",
+ "workx-skills-extension",
+ "workx-state",
+ "workx-thread-store",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-cli",
+ "workx-utils-json-to-toml",
+ "workx-utils-path-uri",
+ "workx-utils-pty",
+ "workx-web-search-extension",
+ "workx-windows-sandbox",
+]
+
+[[package]]
+name = "workx-app-server-client"
+version = "0.153.4"
+dependencies = [
+ "futures",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-tungstenite",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "url",
+ "workx-app-server",
+ "workx-app-server-protocol",
+ "workx-arg0",
+ "workx-config",
+ "workx-core",
+ "workx-exec-server",
+ "workx-feedback",
+ "workx-protocol",
+ "workx-uds",
+ "workx-utils-absolute-path",
+ "workx-utils-rustls-provider",
+]
+
+[[package]]
+name = "workx-app-server-daemon"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "futures",
+ "libc",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tokio-tungstenite",
+ "workx-app-server-protocol",
+ "workx-app-server-transport",
+ "workx-http-client",
+ "workx-uds",
+ "workx-utils-home-dir",
+]
+
+[[package]]
+name = "workx-app-server-protocol"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "inventory",
+ "pretty_assertions",
+ "rmcp",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "similar",
+ "strum_macros 0.28.0",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tracing",
+ "ts-rs",
+ "uuid",
+ "workx-app-server-protocol-noop-macros",
+ "workx-experimental-api-macros",
+ "workx-extension-items",
+ "workx-history",
+ "workx-protocol",
+ "workx-rollout",
+ "workx-secrets",
+ "workx-shell-command",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-path-uri",
+ "workx-utils-redacted-string",
+ "zstd",
+]
+
+[[package]]
+name = "workx-app-server-protocol-noop-macros"
+version = "0.153.4"
+
+[[package]]
+name = "workx-app-server-test-client"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "tungstenite",
+ "url",
+ "uuid",
+ "workx-app-server-protocol",
+ "workx-core",
+ "workx-otel",
+ "workx-protocol",
+ "workx-utils-cli",
+]
+
+[[package]]
+name = "workx-app-server-transport"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "constant_time_eq",
+ "futures",
+ "gethostname",
+ "hmac 0.12.1",
+ "httpdate",
+ "jsonwebtoken",
+ "owo-colors",
+ "pretty_assertions",
+ "rand 0.9.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "time",
+ "tokio",
+ "tokio-tungstenite",
+ "tokio-util",
+ "tracing",
+ "url",
+ "uuid",
+ "workx-api",
+ "workx-app-server-protocol",
+ "workx-config",
+ "workx-core",
+ "workx-login",
+ "workx-model-provider",
+ "workx-protocol",
+ "workx-state",
+ "workx-uds",
+ "workx-utils-absolute-path",
+ "workx-utils-rustls-provider",
+]
+
+[[package]]
+name = "workx-apply-patch"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "assert_matches",
+ "pretty_assertions",
+ "similar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tree-sitter",
+ "tree-sitter-bash",
+ "workx-exec-server",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-arg0"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "dotenvy",
+ "pathdiff",
+ "pretty_assertions",
+ "tempfile",
+ "tokio",
+ "workx-apply-patch",
+ "workx-async-utils",
+ "workx-exec-server",
+ "workx-install-context",
+ "workx-linux-sandbox",
+ "workx-sandboxing",
+ "workx-shell-escalation",
+ "workx-utils-absolute-path",
+ "workx-utils-home-dir",
+ "workx-windows-sandbox",
+]
+
+[[package]]
+name = "workx-async-utils"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "workx-aws-auth"
+version = "0.153.4"
+dependencies = [
+ "aws-config",
+ "aws-credential-types",
+ "aws-sigv4",
+ "aws-types",
+ "bytes",
+ "http 1.4.0",
+ "pretty_assertions",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
+name = "workx-backend-client"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "http 1.4.0",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tokio",
+ "url",
+ "wiremock",
+ "workx-api",
+ "workx-backend-openapi-models",
+ "workx-http-client",
+ "workx-login",
+ "workx-model-provider",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-backend-openapi-models"
+version = "0.153.4"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_with",
+]
+
+[[package]]
+name = "workx-build-info"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "workx-install-context",
+]
+
+[[package]]
+name = "workx-bwrap"
+version = "0.153.4"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+]
+
+[[package]]
+name = "workx-chatgpt"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "workx-connectors",
+ "workx-core",
+ "workx-git-utils",
+ "workx-http-client",
+ "workx-login",
+ "workx-model-provider",
+ "workx-plugin",
+ "workx-utils-cargo-bin",
+ "workx-utils-cli",
+]
+
+[[package]]
+name = "workx-cli"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "app_test_support",
+ "assert_cmd",
+ "assert_matches",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "crossterm",
+ "flate2",
+ "futures",
+ "http 1.4.0",
+ "insta",
+ "libc",
+ "os_info",
+ "owo-colors",
+ "predicates",
+ "pretty_assertions",
+ "regex-lite",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "supports-color 3.0.2",
+ "sys-locale",
+ "tar",
+ "tempfile",
+ "tokio",
+ "tokio-tungstenite",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "unicode-segmentation",
+ "url",
+ "which 8.0.0",
+ "windows-sys 0.52.0",
+ "wiremock",
+ "workx-api",
+ "workx-app-server",
+ "workx-app-server-daemon",
+ "workx-app-server-protocol",
+ "workx-app-server-test-client",
+ "workx-arg0",
+ "workx-chatgpt",
+ "workx-cloud-config",
+ "workx-cloud-tasks",
+ "workx-config",
+ "workx-core",
+ "workx-core-plugins",
+ "workx-exec",
+ "workx-exec-server",
+ "workx-execpolicy",
+ "workx-extension-api",
+ "workx-features",
+ "workx-git-attribution",
+ "workx-git-utils",
+ "workx-history",
+ "workx-home",
+ "workx-http-client",
+ "workx-install-context",
+ "workx-login",
+ "workx-mcp",
+ "workx-mcp-server",
+ "workx-memories-write",
+ "workx-model-provider",
+ "workx-models-manager",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-responses-api-proxy",
+ "workx-rmcp-client",
+ "workx-rollout",
+ "workx-rollout-trace",
+ "workx-sandboxing",
+ "workx-skills-extension",
+ "workx-state",
+ "workx-stdio-to-uds",
+ "workx-terminal-detection",
+ "workx-thread-store",
+ "workx-tui",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-cli",
+ "workx-utils-path",
+ "workx-windows-sandbox",
+ "zstd",
+]
+
+[[package]]
+name = "workx-client"
+version = "0.153.4"
+dependencies = [
+ "eventsource-stream",
+ "futures",
+ "http 1.4.0",
+ "rand 0.9.3",
+ "tokio",
+ "tracing",
+ "workx-http-client",
+]
+
+[[package]]
+name = "workx-cloud-config"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "hmac 0.12.1",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "workx-agent-identity",
+ "workx-backend-client",
+ "workx-config",
+ "workx-core",
+ "workx-http-client",
+ "workx-login",
+ "workx-otel",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-cloud-tasks"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "crossterm",
+ "http 1.4.0",
+ "insta",
+ "owo-colors",
+ "pretty_assertions",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "supports-color 3.0.2",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-subscriber",
+ "unicode-segmentation",
+ "unicode-width 0.2.1",
+ "workx-cloud-tasks-client",
+ "workx-cloud-tasks-mock-client",
+ "workx-core",
+ "workx-git-utils",
+ "workx-http-client",
+ "workx-login",
+ "workx-model-provider",
+ "workx-tui",
+ "workx-utils-cli",
+]
+
+[[package]]
+name = "workx-cloud-tasks-client"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "workx-api",
+ "workx-backend-client",
+ "workx-git-utils",
+ "workx-http-client",
+]
+
+[[package]]
+name = "workx-cloud-tasks-mock-client"
+version = "0.153.4"
+dependencies = [
+ "chrono",
+ "diffy",
+ "workx-cloud-tasks-client",
+]
+
+[[package]]
+name = "workx-code-mode"
+version = "0.153.4"
+dependencies = [
+ "futures",
+ "http-body-util",
+ "pretty_assertions",
+ "prost",
+ "reqwest 0.12.28",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tonic",
+ "tower",
+ "tracing",
+ "uuid",
+ "workx-code-mode-protocol",
+ "workx-http-client",
+ "workx-install-context",
+ "workx-otel",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-code-mode-host"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap",
+ "futures",
+ "pretty_assertions",
+ "prost",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tonic",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "workx-code-mode",
+ "workx-code-mode-protocol",
+ "workx-code-mode-runtime",
+ "workx-otel",
+ "workx-otel-trace-websocket",
+ "workx-protocol",
+ "workx-utils-cargo-bin",
+]
+
+[[package]]
+name = "workx-code-mode-protocol"
+version = "0.153.4"
+dependencies = [
+ "glob",
+ "pretty_assertions",
+ "prost",
+ "protoc-bin-vendored",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-code-mode-runtime"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "deno_core_icudata",
+ "futures",
+ "opentelemetry",
+ "pretty_assertions",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "v8",
+ "workx-code-mode-protocol",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-collaboration-mode-templates"
+version = "0.153.4"
+
+[[package]]
+name = "workx-config"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "core-foundation 0.9.4",
+ "dns-lookup",
+ "dunce",
+ "futures",
+ "gethostname",
+ "indexmap 2.14.0",
+ "libc",
+ "multimap",
+ "pretty_assertions",
+ "prost",
+ "regex-lite",
+ "schemars 0.8.22",
+ "serde",
+ "serde_ignored",
+ "serde_json",
+ "serde_path_to_error",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-stream",
+ "toml 0.9.11+spec-1.1.0",
+ "toml_edit 0.24.0+spec-1.1.0",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "tracing",
+ "wildmatch",
+ "winapi-util",
+ "windows-sys 0.52.0",
+ "workx-execpolicy",
+ "workx-features",
+ "workx-file-system",
+ "workx-git-utils",
+ "workx-model-provider-info",
+ "workx-network-proxy",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-path",
+ "workx-utils-path-uri",
+ "workx-utils-redacted-string",
+]
+
+[[package]]
+name = "workx-config-schema"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "workx-config",
+]
+
+[[package]]
+name = "workx-connectors"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "indexmap 2.14.0",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "sha1 0.10.6",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "urlencoding",
+ "workx-config",
+ "workx-login",
+ "workx-otel",
+ "workx-plugin",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-connectors-extension"
+version = "0.153.4"
+dependencies = [
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
+ "workx-connectors",
+ "workx-core-plugins",
+ "workx-file-system",
+ "workx-plugin",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-context-fragments"
+version = "0.153.4"
+dependencies = [
+ "workx-protocol",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-core"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "assert_cmd",
+ "assert_matches",
+ "async-channel",
+ "base64 0.22.1",
+ "bm25",
+ "chrono",
+ "core_test_support",
+ "ctor 0.6.3",
+ "dirs",
+ "dunce",
+ "eventsource-stream",
+ "futures",
+ "http 1.4.0",
+ "iana-time-zone",
+ "image",
+ "indexmap 2.14.0",
+ "insta",
+ "libc",
+ "maplit",
+ "once_cell",
+ "openssl-sys",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "predicates",
+ "pretty_assertions",
+ "rand 0.9.3",
+ "regex-lite",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sha1 0.10.6",
+ "shlex",
+ "similar",
+ "tempfile",
+ "test-case",
+ "test-log",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite",
+ "tokio-util",
+ "toml 0.9.11+spec-1.1.0",
+ "toml_edit 0.24.0+spec-1.1.0",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "tracing-test",
+ "url",
+ "uuid",
+ "walkdir",
+ "which 8.0.0",
+ "whoami 1.6.1",
+ "wiremock",
+ "workx-agent-graph-store",
+ "workx-agent-roles",
+ "workx-analytics",
+ "workx-api",
+ "workx-app-server-protocol",
+ "workx-apply-patch",
+ "workx-async-utils",
+ "workx-client",
+ "workx-code-mode",
+ "workx-config",
+ "workx-connectors",
+ "workx-context-fragments",
+ "workx-core-plugins",
+ "workx-diagnostics",
+ "workx-exec-server",
+ "workx-exec-server-test-support",
+ "workx-execpolicy",
+ "workx-extension-api",
+ "workx-extension-items",
+ "workx-features",
+ "workx-feedback",
+ "workx-file-system",
+ "workx-git-utils",
+ "workx-guardian-context",
+ "workx-history",
+ "workx-home",
+ "workx-hooks",
+ "workx-http-client",
+ "workx-image-generation-extension",
+ "workx-install-context",
+ "workx-login",
+ "workx-mcp",
+ "workx-memories-read",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-network-proxy",
+ "workx-otel",
+ "workx-plugin",
+ "workx-prompts",
+ "workx-protocol",
+ "workx-response-debug-context",
+ "workx-rmcp-client",
+ "workx-rollout",
+ "workx-rollout-trace",
+ "workx-sandboxing",
+ "workx-shell-command",
+ "workx-shell-escalation",
+ "workx-skills",
+ "workx-skills-extension",
+ "workx-state",
+ "workx-terminal-detection",
+ "workx-test-binary-support",
+ "workx-thread-store",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-audio",
+ "workx-utils-cache",
+ "workx-utils-cargo-bin",
+ "workx-utils-git-discovery",
+ "workx-utils-home-dir",
+ "workx-utils-image",
+ "workx-utils-output-truncation",
+ "workx-utils-path",
+ "workx-utils-path-uri",
+ "workx-utils-plugins",
+ "workx-utils-pty",
+ "workx-utils-redacted-string",
+ "workx-utils-stream-parser",
+ "workx-utils-string",
+ "workx-web-search-extension",
+ "workx-windows-sandbox",
+ "zstd",
+]
+
+[[package]]
+name = "workx-core-api"
+version = "0.153.4"
+dependencies = [
+ "workx-analytics",
+ "workx-app-server-protocol",
+ "workx-arg0",
+ "workx-config",
+ "workx-core",
+ "workx-exec-server",
+ "workx-extension-api",
+ "workx-features",
+ "workx-history",
+ "workx-home",
+ "workx-image-generation-extension",
+ "workx-login",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-protocol",
+ "workx-state",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-core-plugins"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dirs",
+ "flate2",
+ "futures",
+ "http 1.4.0",
+ "libc",
+ "pretty_assertions",
+ "regex",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "serde_yaml",
+ "sha2 0.10.9",
+ "tar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-test",
+ "url",
+ "uuid",
+ "which 8.0.0",
+ "wiremock",
+ "workx-analytics",
+ "workx-app-server-protocol",
+ "workx-config",
+ "workx-connectors",
+ "workx-exec-server",
+ "workx-exec-server-test-support",
+ "workx-git-utils",
+ "workx-hooks",
+ "workx-http-client",
+ "workx-login",
+ "workx-mcp",
+ "workx-model-provider",
+ "workx-otel",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-shell-command",
+ "workx-skills",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-path",
+ "workx-utils-path-uri",
+ "workx-utils-plugins",
+ "zip",
+]
+
+[[package]]
+name = "workx-diagnostics"
+version = "0.153.4"
+dependencies = [
+ "libc",
+ "pretty_assertions",
+]
+
+[[package]]
+name = "workx-exec"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "clap",
+ "core_test_support",
+ "libc",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "owo-colors",
+ "predicates",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "supports-color 3.0.2",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "ts-rs",
+ "uuid",
+ "walkdir",
+ "wiremock",
+ "workx-app-server-client",
+ "workx-app-server-protocol",
+ "workx-apply-patch",
+ "workx-arg0",
+ "workx-cloud-config",
+ "workx-config",
+ "workx-core",
+ "workx-feedback",
+ "workx-git-utils",
+ "workx-history",
+ "workx-login",
+ "workx-model-provider-info",
+ "workx-otel",
+ "workx-protocol",
+ "workx-rollout",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-cli",
+ "workx-utils-oss",
+ "workx-utils-sandbox-summary",
+ "zstd",
+]
+
+[[package]]
+name = "workx-exec-server"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "axum",
+ "base64 0.22.1",
+ "bytes",
+ "clatter",
+ "ctor 0.6.3",
+ "dirs",
+ "futures",
+ "http 1.4.0",
+ "libc",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "pretty_assertions",
+ "prost",
+ "rcgen",
+ "rustix 1.1.4",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "tempfile",
+ "test-case",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite",
+ "tokio-util",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "windows-sys 0.52.0",
+ "wiremock",
+ "workx-api",
+ "workx-config",
+ "workx-exec-server-protocol",
+ "workx-exec-server-test-support",
+ "workx-file-system",
+ "workx-http-client",
+ "workx-network-proxy",
+ "workx-otel",
+ "workx-protocol",
+ "workx-sandboxing",
+ "workx-shell-command",
+ "workx-test-binary-support",
+ "workx-utils-absolute-path",
+ "workx-utils-home-dir",
+ "workx-utils-path-uri",
+ "workx-utils-pty",
+ "workx-utils-rustls-provider",
+ "workx-websocket-client",
+]
+
+[[package]]
+name = "workx-exec-server-protocol"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "workx-file-system",
+ "workx-network-proxy",
+ "workx-protocol",
+ "workx-shell-command",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-exec-server-test-support"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "futures",
+ "prost",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+ "wiremock",
+ "workx-exec-server",
+ "workx-http-client",
+]
+
+[[package]]
+name = "workx-execpolicy"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "multimap",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "shlex",
+ "starlark",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-experimental-api-macros"
+version = "0.153.4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "workx-extension-api"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "serde_json",
+ "tokio",
+ "workx-config",
+ "workx-context-fragments",
+ "workx-exec-server-protocol",
+ "workx-mcp",
+ "workx-protocol",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-extension-items"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "ts-rs",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-external-agent-migration"
+version = "0.153.4"
+dependencies = [
+ "chrono",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "workx-analytics",
+ "workx-app-server-protocol",
+ "workx-config",
+ "workx-core",
+ "workx-core-plugins",
+ "workx-hooks",
+ "workx-login",
+ "workx-memories-write",
+ "workx-otel",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-rollout",
+ "workx-thread-store",
+ "workx-utils-output-truncation",
+]
+
+[[package]]
+name = "workx-features"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "workx-otel",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-feedback"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "flate2",
+ "http 1.4.0",
+ "httpdate",
+ "log",
+ "mime_guess",
+ "pretty_assertions",
+ "sentry",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "wiremock",
+ "workx-http-client",
+ "workx-login",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-file-search"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "crossbeam-channel",
+ "ignore",
+ "nucleo",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "workx-file-system"
+version = "0.153.4"
+dependencies = [
+ "bytes",
+ "futures",
+ "serde",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-file-watcher"
+version = "0.153.4"
+dependencies = [
+ "notify",
+ "pretty_assertions",
+ "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "workx-git-attribution"
+version = "0.153.4"
+dependencies = [
+ "serde_json",
+ "tokio",
+ "wiremock",
+ "workx-backend-client",
+ "workx-extension-api",
+ "workx-http-client",
+ "workx-login",
+]
+
+[[package]]
+name = "workx-git-utils"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "futures",
+ "gix",
+ "once_cell",
+ "pretty_assertions",
+ "regex",
+ "schemars 0.8.22",
+ "serde",
+ "similar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "ts-rs",
+ "walkdir",
+ "workx-file-system",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+ "workx-utils-pty",
+]
+
+[[package]]
+name = "workx-goal-extension"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "workx-analytics",
+ "workx-core",
+ "workx-extension-api",
+ "workx-otel",
+ "workx-protocol",
+ "workx-rollout",
+ "workx-state",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-template",
+]
+
+[[package]]
+name = "workx-guardian-context"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "serde_json",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-guardian-v2"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "core_test_support",
+ "dirs",
+ "http 1.4.0",
+ "pretty_assertions",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workx-analytics",
+ "workx-api",
+ "workx-core",
+ "workx-extension-api",
+ "workx-features",
+ "workx-guardian-context",
+ "workx-history",
+ "workx-http-client",
+ "workx-login",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-network-proxy",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-history"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-history-notes-extension"
+version = "0.153.4"
+dependencies = [
+ "core_test_support",
+ "http 1.4.0",
+ "pretty_assertions",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "wiremock",
+ "workx-api",
+ "workx-client",
+ "workx-config",
+ "workx-core",
+ "workx-extension-api",
+ "workx-login",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-protocol",
+ "workx-tools",
+ "workx-utils-output-truncation",
+]
+
+[[package]]
+name = "workx-home"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "tempfile",
+ "tokio",
+ "workx-extension-api",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-hooks"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "chrono",
+ "futures",
+ "pretty_assertions",
+ "regex",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workx-config",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-output-truncation",
+ "workx-utils-path-uri",
+ "workx-utils-pty",
+]
+
+[[package]]
+name = "workx-http-client"
+version = "0.153.4"
+dependencies = [
+ "bytes",
+ "futures",
+ "http 1.4.0",
+ "native-tls",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "pretty_assertions",
+ "rcgen",
+ "reqwest 0.12.28",
+ "rustls",
+ "rustls-native-certs",
+ "rustls-pki-types",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "system-configuration",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "windows-sys 0.52.0",
+ "workx-utils-cargo-bin",
+ "workx-utils-rustls-provider",
+ "zstd",
+]
+
+[[package]]
+name = "workx-image-generation-extension"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "http 1.4.0",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "workx-api",
+ "workx-core",
+ "workx-exec-server",
+ "workx-extension-api",
+ "workx-extension-items",
+ "workx-login",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-protocol",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-image",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-install-context"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "workx-utils-absolute-path",
+ "workx-utils-home-dir",
+]
+
+[[package]]
+name = "workx-keyring-store"
+version = "0.153.4"
+dependencies = [
+ "keyring",
+ "tracing",
+]
+
+[[package]]
+name = "workx-linux-sandbox"
+version = "0.153.4"
+dependencies = [
+ "clap",
+ "globset",
+ "landlock",
+ "libc",
+ "pretty_assertions",
+ "rustix 1.1.4",
+ "seccompiler",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "test-case",
+ "tokio",
+ "url",
+ "workx-core",
+ "workx-install-context",
+ "workx-network-proxy",
+ "workx-process-hardening",
+ "workx-protocol",
+ "workx-sandboxing",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-lmstudio"
+version = "0.153.4"
+dependencies = [
+ "serde_json",
+ "tokio",
+ "tracing",
+ "which 8.0.0",
+ "wiremock",
+ "workx-core",
+ "workx-http-client",
+ "workx-model-provider-info",
+]
+
+[[package]]
+name = "workx-login"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "core_test_support",
+ "http 1.4.0",
+ "jsonwebtoken",
+ "keyring",
+ "once_cell",
+ "os_info",
+ "pretty_assertions",
+ "rand 0.9.3",
+ "regex-lite",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tiny_http",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "urlencoding",
+ "webbrowser",
+ "wiremock",
+ "workx-agent-identity",
+ "workx-config",
+ "workx-http-client",
+ "workx-keyring-store",
+ "workx-model-provider-info",
+ "workx-otel",
+ "workx-protocol",
+ "workx-secrets",
+ "workx-terminal-detection",
+ "workx-utils-template",
+ "workx-workload-identity",
+]
+
+[[package]]
+name = "workx-mcp"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "assert_matches",
+ "async-channel",
+ "futures",
+ "insta",
+ "lru",
+ "pretty_assertions",
+ "regex-lite",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "sha1 0.10.6",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "url",
+ "workx-api",
+ "workx-async-utils",
+ "workx-config",
+ "workx-connectors",
+ "workx-diagnostics",
+ "workx-exec-server",
+ "workx-exec-server-test-support",
+ "workx-login",
+ "workx-model-provider",
+ "workx-otel",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-rmcp-client",
+ "workx-utils-path-uri",
+ "workx-utils-plugins",
+]
+
+[[package]]
+name = "workx-mcp-extension"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "axum",
+ "futures",
+ "pretty_assertions",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "workx-config",
+ "workx-connectors",
+ "workx-connectors-extension",
+ "workx-core",
+ "workx-core-plugins",
+ "workx-exec-server",
+ "workx-exec-server-test-support",
+ "workx-extension-api",
+ "workx-features",
+ "workx-login",
+ "workx-mcp",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-mcp-server"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "app_test_support",
+ "core_test_support",
+ "mcp_test_support",
+ "os_info",
+ "pretty_assertions",
+ "rmcp",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "shlex",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "wiremock",
+ "workx-arg0",
+ "workx-config",
+ "workx-core",
+ "workx-exec-server",
+ "workx-extension-api",
+ "workx-features",
+ "workx-git-attribution",
+ "workx-home",
+ "workx-image-generation-extension",
+ "workx-login",
+ "workx-otel",
+ "workx-protocol",
+ "workx-shell-command",
+ "workx-skills-extension",
+ "workx-utils-absolute-path",
+ "workx-utils-cli",
+ "workx-utils-json-to-toml",
+]
+
+[[package]]
+name = "workx-memories-extension"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "workx-core",
+ "workx-extension-api",
+ "workx-features",
+ "workx-otel",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-output-truncation",
+ "workx-utils-template",
+]
+
+[[package]]
+name = "workx-memories-read"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "workx-protocol",
+ "workx-shell-command",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-memories-write"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "core_test_support",
+ "futures",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+ "wiremock",
+ "workx-backend-client",
+ "workx-config",
+ "workx-core",
+ "workx-features",
+ "workx-git-utils",
+ "workx-login",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-otel",
+ "workx-protocol",
+ "workx-rollout",
+ "workx-rollout-trace",
+ "workx-secrets",
+ "workx-state",
+ "workx-terminal-detection",
+ "workx-utils-absolute-path",
+ "workx-utils-output-truncation",
+ "workx-utils-template",
+]
+
+[[package]]
+name = "workx-message-history"
+version = "0.153.4"
+dependencies = [
+ "memchr",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "workx-config",
+]
+
+[[package]]
+name = "workx-model-provider"
+version = "0.153.4"
+dependencies = [
+ "http 1.4.0",
+ "pretty_assertions",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "url",
+ "wiremock",
+ "workx-agent-identity",
+ "workx-api",
+ "workx-aws-auth",
+ "workx-feedback",
+ "workx-http-client",
+ "workx-login",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-otel",
+ "workx-protocol",
+ "workx-response-debug-context",
+ "workx-utils-redacted-string",
+]
+
+[[package]]
+name = "workx-model-provider-info"
+version = "0.153.4"
+dependencies = [
+ "http 1.4.0",
+ "maplit",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "tempfile",
+ "toml 0.9.11+spec-1.1.0",
+ "workx-api",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-redacted-string",
+]
+
+[[package]]
+name = "workx-models-manager"
+version = "0.153.4"
+dependencies = [
+ "chrono",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "workx-collaboration-mode-templates",
+ "workx-http-client",
+ "workx-login",
+ "workx-otel",
+ "workx-protocol",
+ "workx-utils-output-truncation",
+ "workx-utils-template",
+]
+
+[[package]]
+name = "workx-network-proxy"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "globset",
+ "pretty_assertions",
+ "rama-core",
+ "rama-http",
+ "rama-http-backend",
+ "rama-net",
+ "rama-socks5",
+ "rama-tcp",
+ "rama-tls-rustls",
+ "rama-unix",
+ "rand 0.9.3",
+ "rustls-native-certs",
+ "schannel",
+ "security-framework 3.5.1",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tracing",
+ "url",
+ "windows-sys 0.52.0",
+ "workx-utils-absolute-path",
+ "workx-utils-home-dir",
+ "workx-utils-rustls-provider",
+ "workx-windows-sandbox",
+]
+
+[[package]]
+name = "workx-ollama"
+version = "0.153.4"
+dependencies = [
+ "assert_matches",
+ "async-stream",
+ "bytes",
+ "futures",
+ "memchr",
+ "pretty_assertions",
+ "semver",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "wiremock",
+ "workx-core",
+ "workx-http-client",
+ "workx-model-provider-info",
+]
+
+[[package]]
+name = "workx-otel"
+version = "0.153.4"
+dependencies = [
+ "chrono",
+ "eventsource-stream",
+ "gethostname",
+ "http 1.4.0",
+ "libc",
+ "opentelemetry",
+ "opentelemetry-appender-tracing",
+ "opentelemetry-otlp",
+ "opentelemetry-semantic-conventions",
+ "opentelemetry_sdk",
+ "os_info",
+ "pretty_assertions",
+ "reqwest 0.12.28",
+ "seccompiler",
+ "serde",
+ "serde_json",
+ "strum_macros 0.28.0",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "workx-api",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-otel-trace-websocket"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "axum",
+ "futures",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "workx-plugin"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "serde_json",
+ "thiserror 2.0.18",
+ "workx-config",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+ "workx-utils-plugins",
+]
+
+[[package]]
+name = "workx-process-hardening"
+version = "0.153.4"
+dependencies = [
+ "libc",
+ "pretty_assertions",
+]
+
+[[package]]
+name = "workx-prompts"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "pretty_assertions",
+ "workx-context-fragments",
+ "workx-execpolicy",
+ "workx-git-utils",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-template",
+]
+
+[[package]]
+name = "workx-protocol"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chardetng",
+ "chrono",
+ "encoding_rs",
+ "gix-url",
+ "globset",
+ "http 1.4.0",
+ "icu_decimal",
+ "icu_locale_core",
+ "icu_provider",
+ "landlock",
+ "pretty_assertions",
+ "quick-xml 0.41.0",
+ "schemars 0.8.22",
+ "seccompiler",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "strum 0.27.2",
+ "strum_macros 0.28.0",
+ "sys-locale",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "ts-rs",
+ "uuid",
+ "wildmatch",
+ "workx-async-utils",
+ "workx-execpolicy",
+ "workx-extension-items",
+ "workx-http-client",
+ "workx-network-proxy",
+ "workx-utils-absolute-path",
+ "workx-utils-image",
+ "workx-utils-path-uri",
+ "workx-utils-redacted-string",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-queue-extension"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "core_test_support",
+ "pretty_assertions",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workx-core",
+ "workx-extension-api",
+ "workx-protocol",
+ "workx-state",
+ "workx-thread-store",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-response-debug-context"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "http 1.4.0",
+ "pretty_assertions",
+ "serde_json",
+ "workx-api",
+]
+
+[[package]]
+name = "workx-responses-api-proxy"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "ctor 0.6.3",
+ "libc",
+ "pretty_assertions",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tiny_http",
+ "workx-process-hardening",
+ "zeroize",
+]
+
+[[package]]
+name = "workx-rmcp-client"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "bytes",
+ "futures",
+ "http 1.4.0",
+ "keyring",
+ "libc",
+ "memchr",
+ "oauth2",
+ "pretty_assertions",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sha2 0.10.9",
+ "sse-stream",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tiny_http",
+ "tokio",
+ "tracing",
+ "url",
+ "urlencoding",
+ "webbrowser",
+ "which 8.0.0",
+ "windows-sys 0.52.0",
+ "wiremock",
+ "workx-api",
+ "workx-config",
+ "workx-exec-server",
+ "workx-http-client",
+ "workx-keyring-store",
+ "workx-network-proxy",
+ "workx-protocol",
+ "workx-secrets",
+ "workx-utils-cargo-bin",
+ "workx-utils-home-dir",
+ "workx-utils-path-uri",
+ "workx-utils-pty",
+]
+
+[[package]]
+name = "workx-rollout"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "pretty_assertions",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "time",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workx-extension-items",
+ "workx-file-search",
+ "workx-git-utils",
+ "workx-history",
+ "workx-otel",
+ "workx-protocol",
+ "workx-state",
+ "workx-utils-absolute-path",
+ "workx-utils-path",
+ "zstd",
+]
+
+[[package]]
+name = "workx-rollout-trace"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "http 1.4.0",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tracing",
+ "uuid",
+ "workx-code-mode",
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-sandboxing"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "appcontainer_common",
+ "dunce",
+ "libc",
+ "pretty_assertions",
+ "regex-lite",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracelogging",
+ "tracing",
+ "url",
+ "which 8.0.0",
+ "workx-network-proxy",
+ "workx-otel",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-home-dir",
+ "workx-utils-path-uri",
+ "workx-utils-pty",
+ "workx-windows-sandbox",
+]
+
+[[package]]
+name = "workx-secrets"
+version = "0.153.4"
+dependencies = [
+ "age",
+ "anyhow",
+ "base64 0.22.1",
+ "keyring",
+ "pretty_assertions",
+ "rand 0.9.3",
+ "regex",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tracing",
+ "workx-git-utils",
+ "workx-keyring-store",
+]
+
+[[package]]
+name = "workx-shell-command"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "libc",
+ "once_cell",
+ "pretty_assertions",
+ "regex",
+ "serde",
+ "serde_json",
+ "shlex",
+ "tempfile",
+ "tree-sitter",
+ "tree-sitter-bash",
+ "tree-sitter-powershell",
+ "url",
+ "which 8.0.0",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-shell-escalation"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "libc",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "socket2 0.6.3",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-skills"
+version = "0.153.4"
+dependencies = [
+ "include_dir",
+ "pretty_assertions",
+ "serde",
+ "serde_yaml",
+ "shlex",
+ "thiserror 2.0.18",
+ "tracing",
+ "workx-protocol",
+ "workx-shell-command",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-skills-extension"
+version = "0.153.4"
+dependencies = [
+ "assert_matches",
+ "dirs",
+ "dunce",
+ "futures",
+ "insta",
+ "opentelemetry_sdk",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "tokio",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "url",
+ "workx-analytics",
+ "workx-config",
+ "workx-exec-server",
+ "workx-extension-api",
+ "workx-mcp",
+ "workx-models-manager",
+ "workx-otel",
+ "workx-protocol",
+ "workx-skills",
+ "workx-tools",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-path-uri",
+ "workx-utils-plugins",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-state"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "libsqlite3-sys",
+ "log",
+ "pretty_assertions",
+ "scopeguard",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "strum 0.27.2",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "workx-git-utils",
+ "workx-history",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-stdio-to-uds"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "pretty_assertions",
+ "tempfile",
+ "tokio",
+ "workx-uds",
+ "workx-utils-cargo-bin",
+]
+
+[[package]]
+name = "workx-terminal-detection"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "tracing",
+]
+
+[[package]]
+name = "workx-test-binary-support"
+version = "0.153.4"
+dependencies = [
+ "tempfile",
+ "workx-arg0",
+]
+
+[[package]]
+name = "workx-thread-manager-sample"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "clap",
+ "serde_json",
+ "tracing",
+ "workx-core-api",
+]
+
+[[package]]
+name = "workx-thread-store"
+version = "0.153.4"
+dependencies = [
+ "chrono",
+ "futures",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workx-app-server-protocol",
+ "workx-extension-items",
+ "workx-git-utils",
+ "workx-install-context",
+ "workx-otel",
+ "workx-protocol",
+ "workx-rollout",
+ "workx-state",
+ "workx-utils-absolute-path",
+ "workx-utils-path",
+ "workx-utils-path-uri",
+ "zstd",
+]
+
+[[package]]
+name = "workx-tools"
+version = "0.153.4"
+dependencies = [
+ "bitflags 2.13.1",
+ "jsonptr",
+ "pretty_assertions",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
+ "urlencoding",
+ "workx-code-mode",
+ "workx-connectors",
+ "workx-extension-items",
+ "workx-features",
+ "workx-file-system",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-cargo-bin",
+ "workx-utils-output-truncation",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-tui"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "app_test_support",
+ "arboard",
+ "assert_matches",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "color-eyre",
+ "core_test_support",
+ "crossterm",
+ "derive_more 2.1.1",
+ "diffy",
+ "dirs",
+ "dunce",
+ "futures",
+ "http 1.4.0",
+ "image",
+ "insta",
+ "itertools 0.14.0",
+ "lazy_static",
+ "libc",
+ "pathdiff",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "rand 0.9.3",
+ "ratatui",
+ "ratatui-macros",
+ "regex-lite",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sha2 0.10.9",
+ "shlex",
+ "strum 0.27.2",
+ "strum_macros 0.28.0",
+ "supports-color 3.0.2",
+ "syntect",
+ "tempfile",
+ "textwrap 0.16.2",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite",
+ "tokio-util",
+ "toml 0.9.11+spec-1.1.0",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "two-face",
+ "unicode-segmentation",
+ "unicode-width 0.2.1",
+ "url",
+ "urlencoding",
+ "uuid",
+ "vt100",
+ "webbrowser",
+ "which 8.0.0",
+ "windows-sys 0.52.0",
+ "winsplit",
+ "wiremock",
+ "workx-ansi-escape",
+ "workx-app-server-client",
+ "workx-app-server-protocol",
+ "workx-arg0",
+ "workx-cloud-config",
+ "workx-config",
+ "workx-connectors",
+ "workx-core-plugins",
+ "workx-exec-server",
+ "workx-features",
+ "workx-feedback",
+ "workx-file-search",
+ "workx-git-utils",
+ "workx-history",
+ "workx-http-client",
+ "workx-install-context",
+ "workx-login",
+ "workx-mcp",
+ "workx-message-history",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-models-manager",
+ "workx-otel",
+ "workx-plugin",
+ "workx-protocol",
+ "workx-rollout",
+ "workx-sandboxing",
+ "workx-shell-command",
+ "workx-state",
+ "workx-terminal-detection",
+ "workx-utils-absolute-path",
+ "workx-utils-approval-presets",
+ "workx-utils-cargo-bin",
+ "workx-utils-cli",
+ "workx-utils-elapsed",
+ "workx-utils-fuzzy-match",
+ "workx-utils-home-dir",
+ "workx-utils-oss",
+ "workx-utils-path",
+ "workx-utils-path-uri",
+ "workx-utils-plugins",
+ "workx-utils-sandbox-summary",
+ "workx-utils-sleep-inhibitor",
+ "workx-utils-string",
+ "workx-windows-sandbox",
+]
+
+[[package]]
+name = "workx-uds"
+version = "0.153.4"
+dependencies = [
+ "async-io",
+ "pretty_assertions",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "uds_windows",
+]
+
+[[package]]
+name = "workx-utils-absolute-path"
+version = "0.153.4"
+dependencies = [
+ "dirs",
+ "dunce",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
+]
+
+[[package]]
+name = "workx-utils-approval-presets"
+version = "0.153.4"
+dependencies = [
+ "workx-protocol",
+]
+
+[[package]]
+name = "workx-utils-audio"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "pretty_assertions",
+ "symphonia",
+ "thiserror 2.0.18",
+ "tracing",
+ "workx-protocol",
+ "workx-utils-cache",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-utils-cache"
+version = "0.153.4"
+dependencies = [
+ "lru",
+ "sha1 0.10.6",
+ "tokio",
+]
+
+[[package]]
+name = "workx-utils-cargo-bin"
+version = "0.153.4"
+dependencies = [
+ "assert_cmd",
+ "runfiles",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "workx-utils-cli"
+version = "0.153.4"
+dependencies = [
+ "clap",
+ "pretty_assertions",
+ "serde",
+ "toml 0.9.11+spec-1.1.0",
+ "workx-protocol",
+ "workx-shell-command",
+]
+
+[[package]]
+name = "workx-utils-elapsed"
+version = "0.153.4"
+
+[[package]]
+name = "workx-utils-fuzzy-match"
+version = "0.153.4"
+
+[[package]]
+name = "workx-utils-git-discovery"
+version = "0.153.4"
+dependencies = [
+ "futures",
+ "pretty_assertions",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "workx-git-utils",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-utils-home-dir"
+version = "0.153.4"
+dependencies = [
+ "dirs",
+ "pretty_assertions",
+ "tempfile",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-utils-image"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "divan",
+ "image",
+ "mime_guess",
+ "thiserror 2.0.18",
+ "tokio",
+ "workx-utils-cache",
+]
+
+[[package]]
+name = "workx-utils-json-to-toml"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "serde_json",
+ "toml 0.9.11+spec-1.1.0",
+]
+
+[[package]]
+name = "workx-utils-oss"
+version = "0.153.4"
+dependencies = [
+ "workx-core",
+ "workx-lmstudio",
+ "workx-model-provider-info",
+ "workx-ollama",
+]
+
+[[package]]
+name = "workx-utils-output-truncation"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "workx-protocol",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-utils-path"
+version = "0.153.4"
+dependencies = [
+ "dunce",
+ "pretty_assertions",
+ "tempfile",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-utils-path-uri"
+version = "0.153.4"
+dependencies = [
+ "base64 0.22.1",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "ts-rs",
+ "url",
+ "urlencoding",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-utils-plugins"
+version = "0.153.4"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "workx-exec-server",
+ "workx-exec-server-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-path-uri",
+]
+
+[[package]]
+name = "workx-utils-pty"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "filedescriptor",
+ "lazy_static",
+ "libc",
+ "log",
+ "portable-pty",
+ "pretty_assertions",
+ "shared_library",
+ "tokio",
+ "winapi",
+]
+
+[[package]]
+name = "workx-utils-readiness"
+version = "0.153.4"
+dependencies = [
+ "assert_matches",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+]
+
+[[package]]
+name = "workx-utils-redacted-string"
+version = "0.153.4"
+dependencies = [
+ "schemars 0.8.22",
+ "serde",
+]
+
+[[package]]
+name = "workx-utils-rustls-provider"
+version = "0.153.4"
+dependencies = [
+ "rustls",
+]
+
+[[package]]
+name = "workx-utils-sandbox-summary"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+]
+
+[[package]]
+name = "workx-utils-sleep-inhibitor"
+version = "0.153.4"
+dependencies = [
+ "core-foundation 0.9.4",
+ "libc",
+ "tracing",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "workx-utils-stream-parser"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+]
+
+[[package]]
+name = "workx-utils-string"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "regex-lite",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "workx-utils-template"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+]
+
+[[package]]
+name = "workx-v8-poc"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "v8",
+]
+
+[[package]]
+name = "workx-voice-host"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "codex-realtime-webrtc",
+ "pretty_assertions",
+ "tempfile",
+ "tokio",
+ "workx-install-context",
+ "workx-process-hardening",
+ "workx-utils-cargo-bin",
+]
+
+[[package]]
+name = "workx-web-search-extension"
+version = "0.153.4"
+dependencies = [
+ "http 1.4.0",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde_json",
+ "url",
+ "workx-api",
+ "workx-core",
+ "workx-extension-api",
+ "workx-extension-items",
+ "workx-login",
+ "workx-model-provider",
+ "workx-model-provider-info",
+ "workx-otel",
+ "workx-protocol",
+ "workx-tools",
+]
+
+[[package]]
+name = "workx-websocket-client"
+version = "0.153.4"
+dependencies = [
+ "futures",
+ "pretty_assertions",
+ "rcgen",
+ "rustls",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "url",
+ "workx-http-client",
+ "workx-utils-rustls-provider",
+]
+
+[[package]]
+name = "workx-windows-sandbox"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "dirs-next",
+ "dunce",
+ "glob",
+ "pretty_assertions",
+ "rand 0.8.6",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing-appender",
+ "windows 0.58.0",
+ "windows-sys 0.52.0",
+ "workx-otel",
+ "workx-protocol",
+ "workx-utils-absolute-path",
+ "workx-utils-pty",
+ "workx-utils-string",
+]
+
+[[package]]
+name = "workx-workload-identity"
+version = "0.153.4"
+dependencies = [
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "url",
+ "wiremock",
+ "workx-http-client",
+]
+
+[[package]]
+name = "workx-worktree"
+version = "0.153.4"
+dependencies = [
+ "anyhow",
+ "dunce",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "workx-git-utils",
+ "workx-protocol",
 ]
 
 [[package]]

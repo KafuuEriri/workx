@@ -25,12 +25,13 @@ workx-otel = { workspace = true }
 workx-protocol = { workspace = true }
 workx-response-debug-context = { workspace = true }
 http = { workspace = true }
+serde_json = { workspace = true }
+url = { workspace = true }
 tokio = { workspace = true, features = ["process", "sync", "time"] }
 tracing = { workspace = true, features = ["log"] }
 
 [dev-dependencies]
 workx-utils-redacted-string = { workspace = true }
 pretty_assertions = { workspace = true }
-serde_json = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 wiremock = { workspace = true }

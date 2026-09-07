@@ -81,6 +81,8 @@ mod headless_chatgpt_login;
 
 #[derive(Clone)]
 pub(crate) enum SignInState {
+    Provider(super::provider::ProviderSetup),
+    ProviderConfigured,
     PickMode,
     ChatGptContinueInBrowser(ContinueInBrowserState),
     #[allow(dead_code)]
@@ -182,6 +184,17 @@ impl ContinueWithDeviceCodeState {
 
 impl KeyboardHandler for AuthModeWidget {
     fn handle_key_event(&mut self, key_event: KeyEvent) {
+        if self.handle_provider_key_event(&key_event) {
+            return;
+        }
+        if keys::CANCEL.is_pressed(key_event)
+            && matches!(*self.sign_in_state.read().unwrap(), SignInState::PickMode)
+        {
+            *self.sign_in_state.write().unwrap() =
+                SignInState::Provider(super::provider::ProviderSetup::Select(0));
+            self.request_frame.schedule_frame();
+            return;
+        }
         if self.handle_bedrock_key_event(&key_event) {
             return;
         }
@@ -233,6 +246,11 @@ impl KeyboardHandler for AuthModeWidget {
     }
 
     fn handle_paste(&mut self, pasted: String) {
+        if let SignInState::Provider(setup) = &mut *self.sign_in_state.write().unwrap() {
+            setup.paste(&pasted);
+            self.request_frame.schedule_frame();
+            return;
+        }
         let sign_in_state = self.sign_in_state.read().unwrap();
         match &*sign_in_state {
             SignInState::Bedrock(_) => {
@@ -312,6 +330,7 @@ impl AuthModeWidget {
     /// Returns whether the auth flow is currently accepting text input.
     pub(crate) fn is_text_entry_active(&self) -> bool {
         self.sign_in_state.read().is_ok_and(|guard| match &*guard {
+            SignInState::Provider(state) => state.is_text_entry(),
             SignInState::ApiKeyEntry(_) => true,
             SignInState::Bedrock(state) => state.is_text_entry_active(),
             _ => false,
@@ -324,6 +343,7 @@ impl AuthModeWidget {
     /// Bedrock fields accept printable input from their first character.
     pub(crate) fn should_suppress_printable_quit(&self) -> bool {
         self.sign_in_state.read().is_ok_and(|guard| match &*guard {
+            SignInState::Provider(state) => state.is_text_entry(),
             SignInState::ApiKeyEntry(state) => !state.value.is_empty(),
             SignInState::Bedrock(state) => state.is_text_entry_active(),
             _ => false,
@@ -1034,12 +1054,14 @@ impl StepStateProvider for AuthModeWidget {
         let sign_in_state = self.sign_in_state.read().unwrap();
         match &*sign_in_state {
             SignInState::PickMode
+            | SignInState::Provider(_)
             | SignInState::ApiKeyEntry(_)
             | SignInState::ChatGptContinueInBrowser(_)
             | SignInState::ChatGptDeviceCode(_)
             | SignInState::ChatGptSuccessMessage
             | SignInState::Bedrock(_) => StepState::InProgress,
             SignInState::ChatGptSuccess
+            | SignInState::ProviderConfigured
             | SignInState::ApiKeyConfigured
             | SignInState::BedrockConfigured => StepState::Complete,
         }
@@ -1050,6 +1072,10 @@ impl WidgetRef for AuthModeWidget {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         let sign_in_state = self.sign_in_state.read().unwrap();
         match &*sign_in_state {
+            SignInState::Provider(state) => state.render(area, buf, self.error_message()),
+            SignInState::ProviderConfigured => {
+                Paragraph::new("✓ Model provider configured".green()).render(area, buf)
+            }
             SignInState::PickMode => {
                 self.render_pick_mode(area, buf);
             }
@@ -1094,7 +1120,7 @@ pub(super) fn maybe_open_auth_url_in_browser(request_handle: &AppServerRequestHa
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use crate::legacy_core::config::ConfigBuilder;
     use pretty_assertions::assert_eq;
@@ -1122,7 +1148,7 @@ mod tests {
         "originator=workx_cli_rs"
     );
 
-    async fn widget_forced_chatgpt() -> (AuthModeWidget, TempDir) {
+    pub(in crate::onboarding) async fn widget_forced_chatgpt() -> (AuthModeWidget, TempDir) {
         let workx_home = TempDir::new().unwrap();
         let workx_home_path = workx_home.path().to_path_buf();
         let config = ConfigBuilder::default()

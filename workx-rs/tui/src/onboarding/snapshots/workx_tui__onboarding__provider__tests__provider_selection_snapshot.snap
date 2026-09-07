@@ -1,0 +1,15 @@
+---
+source: tui/src/onboarding/provider_tests.rs
+expression: "render(&ProviderSetup::Select(0))"
+---
+  Choose a model provider
+
+> 1. OpenAI — ChatGPT, device code, or API key
+
+  2. Custom endpoint — Responses (default)
+
+  3. Custom endpoint — detect protocol from URL
+
+  4. Chat Completions-compatible endpoint
+
+  ↑/↓ choose · Enter continue

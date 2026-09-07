@@ -367,6 +367,11 @@ pub(crate) enum AppEvent {
     },
 
     /// Start a new session, optionally assigning it a name.
+    SaveProvider {
+        id: String,
+        provider: workx_model_provider_info::ModelProviderInfo,
+        model: Option<String>,
+    },
     NewSession {
         name: Option<String>,
     },

@@ -1,0 +1,10 @@
+---
+source: tui/src/bottom_pane/provider_view_tests.rs
+expression: screen
+---
+Model providers                                                                           
+                                                                                          
+> example (active) — https://example.test/v1                                              
+                                                                                          
+Enter switch/refresh · n add · e view/edit · Esc close                                    
+Switching starts a new session; existing sessions remain saved.

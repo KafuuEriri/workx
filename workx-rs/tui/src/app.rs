@@ -228,6 +228,7 @@ mod permission_shortcuts;
 mod pets;
 mod platform_actions;
 mod plugin_mentions;
+mod providers;
 mod rate_limit_refresh;
 mod recap;
 mod reconnect;

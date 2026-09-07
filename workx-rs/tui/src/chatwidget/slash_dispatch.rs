@@ -293,6 +293,14 @@ impl ChatWidget {
                     .counter("workx.thread.rename", /*inc*/ 1, &[]);
                 self.show_rename_prompt();
             }
+            SlashCommand::Provider => {
+                self.bottom_pane
+                    .show_view(Box::new(crate::bottom_pane::ProviderView::new(
+                        self.config.model_providers.clone(),
+                        self.config.model_provider_id.clone(),
+                        self.app_event_tx.clone(),
+                    )));
+            }
             SlashCommand::Model => {
                 self.open_model_popup();
                 self.defer_input_until_settings_applied();
@@ -1168,6 +1176,7 @@ impl ChatWidget {
             | SlashCommand::Init
             | SlashCommand::Compact
             | SlashCommand::Review
+            | SlashCommand::Provider
             | SlashCommand::Model
             | SlashCommand::Personality
             | SlashCommand::Plan

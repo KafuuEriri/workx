@@ -64,7 +64,12 @@ pub fn parse_rate_limit_for_limit(
         .unwrap_or("workx")
         .to_ascii_lowercase()
         .replace('_', "-");
-    let prefix = format!("x-{normalized_limit}");
+    // OpenAI headers retain their service namespace; Workx limit aliases remain local.
+    // OpenAI 响应头保留服务命名空间；Workx 限额别名仅用于本地。
+    let wire_limit = normalized_limit
+        .strip_prefix("workx")
+        .map(|suffix| format!("codex{suffix}"));
+    let prefix = format!("x-{}", wire_limit.as_deref().unwrap_or(&normalized_limit));
     let primary = parse_rate_limit_window(
         headers,
         &format!("{prefix}-primary-used-percent"),
@@ -262,7 +267,11 @@ fn header_name_to_limit_id(header_name: &str) -> Option<String> {
     let suffix = "-primary-used-percent";
     let prefix = header_name.strip_suffix(suffix)?;
     let limit = prefix.strip_prefix("x-")?;
-    Some(normalize_limit_id(limit.to_string()))
+    let limit = limit
+        .strip_prefix("codex")
+        .map(|suffix| format!("workx{suffix}"))
+        .unwrap_or_else(|| limit.to_string());
+    Some(normalize_limit_id(limit))
 }
 
 fn normalize_limit_id(name: impl Into<String>) -> String {

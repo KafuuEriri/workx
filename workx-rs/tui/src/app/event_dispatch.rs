@@ -65,6 +65,11 @@ impl App {
             AppEvent::SkillsListLoaded { ref cwd, .. }
             | AppEvent::PluginMentionsLoaded { ref cwd, .. }
                 if cwds_differ(cwd, self.config.cwd.as_path()) => {}
+            AppEvent::SaveProvider { id, provider, model } => {
+                if let Err(err) = self.save_provider(tui, app_server, id, provider, model).await {
+                    self.chat_widget.add_error_message(format!("Provider setup failed: {err}"));
+                }
+            }
             AppEvent::NewSession { name } => {
                 self.start_fresh_session_with_summary_hint(
                     tui, app_server, /*session_start_source*/ None,

@@ -358,3 +358,67 @@ async fn list_models_rejects_invalid_cursor() -> Result<()> {
     assert_eq!(error.error.message, "invalid cursor: invalid");
     Ok(())
 }
+
+#[tokio::test]
+async fn custom_model_catalog_reloads_provider_after_config_write() -> Result<()> {
+    use wiremock::Mock;
+    use wiremock::ResponseTemplate;
+    use wiremock::matchers::header;
+    use wiremock::matchers::method;
+    use wiremock::matchers::path;
+    use workx_app_server_protocol::ConfigBatchWriteParams;
+    use workx_app_server_protocol::ConfigEdit;
+    use workx_app_server_protocol::ConfigWriteResponse;
+    use workx_app_server_protocol::MergeStrategy;
+    let home = TempDir::new()?;
+    let server = MockServer::start().await;
+    for (endpoint, id) in [
+        ("/v1/models", "first-model"),
+        ("/other/models", "second-model"),
+    ] {
+        Mock::given(method("GET"))
+            .and(path(endpoint))
+            .and(header("authorization", "Bearer test-saved-key"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"data":[{"id":id}]})))
+            .mount(&server)
+            .await;
+    }
+    let mut app = TestAppServer::builder()
+        .with_workx_home(home.path())
+        .without_auto_env()
+        .build_initialized()
+        .await?;
+    for (provider, endpoint, expected) in [
+        ("first", "/v1/models", "first-model"),
+        ("second", "/other/models", "second-model"),
+    ] {
+        let _: ConfigWriteResponse = app.request(|request_id| ClientRequest::ConfigBatchWrite {
+            request_id,
+            params: ConfigBatchWriteParams {
+                edits: vec![
+                    ConfigEdit { key_path: format!("model_providers.{provider}"), value: json!({"name":provider,"base_url":server.uri(),"models_endpoint":endpoint,"experimental_bearer_token":"test-saved-key","wire_api":"responses"}), merge_strategy:MergeStrategy::Replace },
+                    ConfigEdit { key_path:"model_provider".into(), value:json!(provider), merge_strategy:MergeStrategy::Replace },
+                ], file_path:None, expected_version:None, reload_user_config:true,
+            }
+        }).await?;
+        let response: ModelListResponse = app
+            .request(|request_id| ClientRequest::ModelList {
+                request_id,
+                params: ModelListParams {
+                    cursor: None,
+                    limit: None,
+                    include_hidden: None,
+                },
+            })
+            .await?;
+        assert_eq!(
+            response
+                .data
+                .iter()
+                .map(|model| model.model.as_str())
+                .collect::<Vec<_>>(),
+            vec![expected]
+        );
+    }
+    Ok(())
+}

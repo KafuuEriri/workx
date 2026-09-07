@@ -170,13 +170,24 @@ impl CatalogRequestProcessor {
         &self,
         params: ModelListParams,
     ) -> Result<Option<ClientResponsePayload>, JSONRPCErrorError> {
-        Self::list_models(
-            self.thread_manager.clone(),
-            self.config.http_client_factory(),
-            params,
-        )
-        .await
-        .map(|response| Some(response.into()))
+        let config = self.load_latest_config(None).await?;
+        let manager = workx_core::build_models_manager(&config, self.thread_manager.auth_manager());
+        let models = manager
+            .list_models(
+                if config.model_provider.uses_external_models() {
+                    workx_models_manager::manager::RefreshStrategy::Online
+                } else {
+                    workx_models_manager::manager::RefreshStrategy::OnlineIfUncached
+                },
+                config.http_client_factory(),
+            )
+            .await;
+        let models = models
+            .into_iter()
+            .filter(|preset| params.include_hidden.unwrap_or(false) || preset.show_in_picker)
+            .map(crate::models::model_from_preset)
+            .collect();
+        Self::paginate_models(models, params).map(|response| Some(response.into()))
     }
 
     pub(crate) async fn experimental_feature_list(
@@ -240,22 +251,11 @@ impl CatalogRequestProcessor {
             .map_err(|err| internal_error(format!("failed to reload config: {err}")))
     }
 
-    async fn list_models(
-        thread_manager: Arc<ThreadManager>,
-        http_client_factory: workx_http_client::HttpClientFactory,
+    fn paginate_models(
+        models: Vec<workx_app_server_protocol::Model>,
         params: ModelListParams,
     ) -> Result<ModelListResponse, JSONRPCErrorError> {
-        let ModelListParams {
-            limit,
-            cursor,
-            include_hidden,
-        } = params;
-        let models = supported_models(
-            thread_manager,
-            include_hidden.unwrap_or(false),
-            http_client_factory,
-        )
-        .await;
+        let ModelListParams { limit, cursor, .. } = params;
         let total = models.len();
 
         if total == 0 {

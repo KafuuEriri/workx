@@ -9,9 +9,11 @@ impl ChatWidget {
         [MODEL_SELECTION_VIEW_ID, ALL_MODELS_SELECTION_VIEW_ID]
             .into_iter()
             .find(|view_id| {
-                self.bottom_pane
-                    .selected_index_for_present_view(view_id)
-                    .is_some()
+                self.bottom_pane.active_view_id() == Some(*view_id)
+                    || self
+                        .bottom_pane
+                        .selected_index_for_present_view(view_id)
+                        .is_some()
             })
     }
 
@@ -28,11 +30,20 @@ impl ChatWidget {
             return false;
         }
         self.model_popup_request_id = None;
-        let Ok(presets) = result else {
-            return false;
+        let external = self.config.model_provider.uses_external_models();
+        let presets = match result {
+            Ok(presets) => presets,
+            Err(error) if external => {
+                self.add_error_message(format!(
+                    "Could not refresh provider models: {error}. Check /provider."
+                ));
+                Vec::new()
+            }
+            Err(_) => return false,
         };
-        if presets.is_empty()
-            || self.model_catalog.try_list_models().ok().as_ref() == Some(&presets)
+        if !external
+            && (presets.is_empty()
+                || self.model_catalog.try_list_models().ok().as_ref() == Some(&presets))
         {
             return false;
         }

@@ -50,6 +50,7 @@ pub struct ResponsesClient<T: HttpTransport> {
     session: EndpointSession<T>,
     sse_telemetry: Option<Arc<dyn SseTelemetry>>,
     endpoint: ResponsesEndpoint,
+    protocol: Option<&'static dyn crate::InferenceProtocol>,
 }
 
 #[derive(Default)]
@@ -68,12 +69,22 @@ impl<T: HttpTransport> ResponsesClient<T> {
             session: EndpointSession::new(transport, provider, auth),
             sse_telemetry: None,
             endpoint: ResponsesEndpoint::Responses,
+            protocol: None,
         }
     }
 
     /// Selects a Responses-compatible backend route for subsequent requests.
     pub fn with_endpoint(mut self, endpoint: ResponsesEndpoint) -> Self {
         self.endpoint = endpoint;
+        self
+    }
+
+    /// Selects the protocol for regular inference; backend-specific routes retain their native wire format.
+    /// 为普通推理选择协议；后端专用路由保留原生格式。
+    pub fn with_protocol(mut self, protocol: &'static dyn crate::InferenceProtocol) -> Self {
+        if self.endpoint == ResponsesEndpoint::Responses {
+            self.protocol = Some(protocol);
+        }
         self
     }
 
@@ -86,6 +97,7 @@ impl<T: HttpTransport> ResponsesClient<T> {
             session: self.session.with_request_telemetry(request),
             sse_telemetry: sse,
             endpoint: self.endpoint,
+            protocol: self.protocol,
         }
     }
 
@@ -113,8 +125,12 @@ impl<T: HttpTransport> ResponsesClient<T> {
             turn_state,
         } = options;
 
-        let body = EncodedJsonBody::encode(&request)
-            .map_err(|e| ApiError::Stream(format!("failed to encode responses request: {e}")))?;
+        let body = match self.protocol {
+            Some(protocol) => protocol.encode_request(&request)?,
+            None => EncodedJsonBody::encode(&request).map_err(|e| {
+                ApiError::Stream(format!("failed to encode responses request: {e}"))
+            })?,
+        };
 
         let mut headers = extra_headers;
         if let Some(ref thread_id) = thread_id {
@@ -125,6 +141,35 @@ impl<T: HttpTransport> ResponsesClient<T> {
             insert_header(&mut headers, "x-openai-subagent", &subagent);
         }
 
+        if let Some(protocol) = self.protocol {
+            headers.extend(protocol.headers());
+            let response = self
+                .session
+                .stream_encoded_json_with(
+                    Method::POST,
+                    protocol.endpoint(),
+                    headers,
+                    Some(body),
+                    |req| {
+                        req.headers.insert(
+                            http::header::ACCEPT,
+                            HeaderValue::from_static("text/event-stream"),
+                        );
+                        req.compression = match compression {
+                            Compression::None => RequestCompression::None,
+                            Compression::Zstd => RequestCompression::Zstd,
+                        };
+                    },
+                )
+                .await?;
+            return Ok(protocol.stream_response(
+                response,
+                self.session.provider().stream_idle_timeout,
+                self.sse_telemetry.clone(),
+                turn_state,
+                &request,
+            ));
+        }
         self.stream_encoded(body, headers, compression, turn_state)
             .await
     }

@@ -145,7 +145,9 @@ impl OnboardingScreen {
                     request_frame: tui.frame_requester(),
                     highlighted_mode,
                     error: Arc::new(RwLock::new(None)),
-                    sign_in_state: Arc::new(RwLock::new(SignInState::PickMode)),
+                    sign_in_state: Arc::new(RwLock::new(SignInState::Provider(
+                        super::provider::ProviderSetup::Select(0),
+                    ))),
                     login_status,
                     app_server_request_handle,
                     auth_config,

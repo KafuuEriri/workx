@@ -12,7 +12,6 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::fmt;
 use std::num::NonZeroU64;
 use std::time::Duration;
 use workx_api::Provider as ApiProvider;
@@ -55,41 +54,10 @@ pub const AMAZON_BEDROCK_DEFAULT_BASE_URL: &str =
     "https://bedrock-mantle.us-east-1.api.aws/openai/v1";
 const AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_HEADER: &str = "x-amzn-mantle-client-agent";
 const AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_VALUE: &str = "workx";
-const CHAT_WIRE_API_REMOVED_ERROR: &str = "`wire_api = \"chat\"` is no longer supported.\nHow to fix: set `wire_api = \"responses\"` in your provider config.\nMore info: https://github.com/openai/codex/discussions/7782";
 pub const LEGACY_OLLAMA_CHAT_PROVIDER_ID: &str = "ollama-chat";
 pub const OLLAMA_CHAT_PROVIDER_REMOVED_ERROR: &str = "`ollama-chat` is no longer supported.\nHow to fix: replace `ollama-chat` with `ollama` in `model_provider`, `oss_provider`, or `--local-provider`.\nMore info: https://github.com/openai/codex/discussions/7782";
 
-/// Wire protocol that the provider speaks.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum WireApi {
-    /// The Responses API exposed by OpenAI at `/v1/responses`.
-    #[default]
-    Responses,
-}
-
-impl fmt::Display for WireApi {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let value = match self {
-            Self::Responses => "responses",
-        };
-        f.write_str(value)
-    }
-}
-
-impl<'de> Deserialize<'de> for WireApi {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = String::deserialize(deserializer)?;
-        match value.as_str() {
-            "responses" => Ok(Self::Responses),
-            "chat" => Err(serde::de::Error::custom(CHAT_WIRE_API_REMOVED_ERROR)),
-            _ => Err(serde::de::Error::unknown_variant(&value, &["responses"])),
-        }
-    }
-}
+pub use workx_api::WireApi;
 
 /// Serializable representation of a provider definition.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
@@ -100,6 +68,8 @@ pub struct ModelProviderInfo {
     pub name: String,
     /// Base URL for the provider's OpenAI-compatible API.
     pub base_url: Option<String>,
+    /// 模型列表地址；支持同源绝对路径或完整 URL，默认 /v1/models。
+    pub models_endpoint: Option<String>,
     /// Environment variable that stores the user's API key for this provider.
     pub env_key: Option<String>,
 
@@ -109,12 +79,13 @@ pub struct ModelProviderInfo {
     /// Value to use with `Authorization: Bearer <token>` header. Use of this
     /// config is discouraged in favor of `env_key` for security reasons, but
     /// this may be necessary when using this programmatically.
+    #[serde(alias = "api_key")]
     pub experimental_bearer_token: Option<RedactedString>,
     /// Command-backed bearer-token configuration for this provider.
     pub auth: Option<ModelProviderAuthInfo>,
     /// AWS SigV4 auth configuration for this provider.
     pub aws: Option<ModelProviderAwsAuthInfo>,
-    /// Which wire protocol this provider expects.
+    /// 推理协议默认 Responses；显式 Auto 根据端点路径识别。
     #[serde(default)]
     pub wire_api: WireApi,
     /// Optional query parameters to append to the base URL.
@@ -191,6 +162,18 @@ fn default_aws_auth_refresh_timeout_ms() -> NonZeroU64 {
 }
 
 impl ModelProviderInfo {
+    /// 自定义来源使用独立的远端模型目录。
+    pub fn uses_external_models(&self) -> bool {
+        self.models_endpoint.is_some()
+            || (!self.is_openai()
+                && !self.requires_openai_auth
+                && self.aws.is_none()
+                && !matches!(
+                    self.name.as_str(),
+                    AMAZON_BEDROCK_PROVIDER_NAME | AMAZON_BEDROCK_RUNTIME_PROVIDER_NAME
+                ))
+    }
+
     pub fn validate(&self) -> std::result::Result<(), String> {
         if self.aws.is_some() {
             if self.supports_websockets {
@@ -321,7 +304,7 @@ impl ModelProviderInfo {
 
         Ok(ApiProvider {
             name: self.name.clone(),
-            base_url,
+            base_url: workx_api::inference_base_url(&base_url),
             query_params: self.query_params.clone().map(|params| {
                 params
                     .into_iter()
@@ -389,6 +372,7 @@ impl ModelProviderInfo {
             base_url,
             env_key: None,
             env_key_instructions: None,
+            models_endpoint: None,
             experimental_bearer_token: None,
             auth: None,
             aws: None,
@@ -432,6 +416,7 @@ impl ModelProviderInfo {
             base_url: None,
             env_key: None,
             env_key_instructions: None,
+            models_endpoint: None,
             experimental_bearer_token: None,
             auth: None,
             aws: Some(aws.unwrap_or(ModelProviderAwsAuthInfo {
@@ -615,6 +600,7 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         base_url: Some(base_url.into()),
         env_key: None,
         env_key_instructions: None,
+        models_endpoint: None,
         experimental_bearer_token: None,
         auth: None,
         aws: None,

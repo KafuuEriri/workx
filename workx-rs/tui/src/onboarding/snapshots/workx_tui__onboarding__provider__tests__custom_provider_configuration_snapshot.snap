@@ -1,0 +1,23 @@
+---
+source: tui/src/onboarding/provider_tests.rs
+expression: "render(&ProviderSetup::Configure\n{\n    protocol: WireApi::ChatCompletions, values:\n    [\"https://gateway.example/v1\".to_string(), \"my-model\".to_string(),\n    \"secret-test-key\".to_string(), \"/v1/models\".to_string()], field: 2,\n})"
+---
+  Choose a model provider
+
+  Protocol: chat
+
+  Base URL or complete endpoint URL
+  https://gateway.example/v1
+
+  Model ID (optional; otherwise use the fetched list)
+  my-model
+
+  API key (optional, saved locally)
+> •••••••••••••••
+
+  Models endpoint (default /v1/models)
+  /v1/models
+
+  The API key is saved locally and hidden in this screen.
+  Auto: /chat/completions selects Chat; other URLs use Responses.
+  Tab/↑/↓ switch field · Enter continue/save · Esc back

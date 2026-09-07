@@ -1,0 +1,19 @@
+---
+source: tui/src/bottom_pane/provider_view_tests.rs
+expression: screen
+---
+Model providers                                                                           
+                                                                                          
+> Provider ID: example                                                                    
+                                                                                          
+  API URL: https://example.test/v1                                                        
+                                                                                          
+  API key (saved locally): •••••••••••••••                                                
+                                                                                          
+  Models endpoint: /v1/models                                                             
+                                                                                          
+  Protocol (responses / chat): responses                                                  
+                                                                                          
+  Default model (blank: first available):                                                 
+                                                                                          
+Tab switch · Ctrl-U clear · Enter next/save · Esc back

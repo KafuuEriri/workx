@@ -37,6 +37,7 @@ use workx_api::AuthProvider;
 use workx_api::CompactClient as ApiCompactClient;
 use workx_api::CompactionInput as ApiCompactionInput;
 use workx_api::Compression;
+use workx_api::InferenceClient as ApiResponsesClient;
 use workx_api::MemoriesClient as ApiMemoriesClient;
 use workx_api::MemorySummarizeInput as ApiMemorySummarizeInput;
 use workx_api::MemorySummarizeOutput as ApiMemorySummarizeOutput;
@@ -50,7 +51,6 @@ use workx_api::RequestTelemetry;
 use workx_api::ReqwestTransport;
 use workx_api::ResponseCreateWsRequest;
 use workx_api::ResponsesApiRequest;
-use workx_api::ResponsesClient as ApiResponsesClient;
 use workx_api::ResponsesEndpoint;
 use workx_api::ResponsesOptions as ApiResponsesOptions;
 use workx_api::ResponsesWebsocketClient as ApiWebSocketResponsesClient;
@@ -1047,7 +1047,14 @@ impl ModelClient {
     ///
     /// WebSocket use is controlled by provider capability and session-scoped fallback state.
     pub fn responses_websocket_enabled(&self) -> bool {
-        if !self.state.provider.info().supports_websockets
+        if self
+            .state
+            .provider
+            .info()
+            .wire_api
+            .resolve(self.state.provider.info().base_url.as_deref())
+            != WireApi::Responses
+            || !self.state.provider.info().supports_websockets
             || self.state.disable_websockets.load(Ordering::Relaxed)
         {
             return false;
@@ -1646,6 +1653,10 @@ impl ModelClientSession {
                 client_setup.api_auth,
             )
             .with_endpoint(endpoint)
+            .with_protocol(workx_api::inference_protocol(
+                self.client.state.provider.info().wire_api,
+                self.client.state.provider.info().base_url.as_deref(),
+            ))
             .with_telemetry(Some(request_telemetry), Some(sse_telemetry));
             let stream_result = client.stream_request(request, options).await;
 
@@ -2026,7 +2037,7 @@ impl ModelClientSession {
     ) -> Result<ResponseStream> {
         let wire_api = self.client.state.provider.info().wire_api;
         match wire_api {
-            WireApi::Responses => {
+            WireApi::Responses | WireApi::Auto | WireApi::ChatCompletions => {
                 if self.client.responses_websocket_enabled() {
                     let request_trace = current_span_w3c_trace_context();
                     match self

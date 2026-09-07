@@ -120,3 +120,10 @@ pub use crate::telemetry::SseTelemetry;
 pub use crate::telemetry::WebsocketTelemetry;
 pub use workx_protocol::protocol::RealtimeAudioFrame;
 pub use workx_protocol::protocol::RealtimeEvent;
+
+mod inference;
+pub use inference::InferenceProtocol;
+pub use inference::WireApi;
+pub use inference::inference_base_url;
+pub use inference::inference_protocol;
+pub type InferenceClient<T> = ResponsesClient<T>;

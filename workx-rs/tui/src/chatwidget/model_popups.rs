@@ -33,7 +33,20 @@ impl ChatWidget {
         };
         let request_id = uuid::Uuid::new_v4();
         self.model_popup_request_id = Some(request_id);
-        self.open_model_popup_with_presets(presets);
+        if self.config.model_provider.uses_external_models() {
+            self.show_model_selection_view(SelectionViewParams {
+                view_id: Some(MODEL_SELECTION_VIEW_ID),
+                title: Some("Loading provider models".to_string()),
+                items: vec![SelectionItem {
+                    name: "Fetching the current provider's model catalog…".to_string(),
+                    is_disabled: true,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            });
+        } else {
+            self.open_model_popup_with_presets(presets);
+        }
         // Show cached choices immediately and update any still-present picker when the reply arrives.
         self.app_event_tx.send(AppEvent::FetchModels { request_id });
     }

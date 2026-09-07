@@ -35,8 +35,19 @@ const DEFAULT_MODEL_CACHE_TTL: Duration = Duration::from_secs(300);
 /// manager owns refresh policy, cache behavior, and catalog merging; it calls
 /// this endpoint only when it decides a remote refresh should happen.
 pub trait ModelsEndpointClient: fmt::Debug + Send + Sync {
+    /// 远端目录是否为唯一模型来源。
+    fn is_authoritative(&self) -> bool {
+        false
+    }
+
     /// Returns whether this provider can authenticate command-scoped requests.
     fn has_command_auth(&self) -> bool;
+
+    /// Returns whether provider-owned authentication permits remote model discovery.
+    /// 返回 provider 自有认证是否允许远端模型发现。
+    fn supports_model_discovery(&self) -> bool {
+        self.has_command_auth()
+    }
 
     /// Returns whether the currently resolved auth can use Workx backend-only models.
     fn uses_workx_backend(&self) -> ModelsEndpointFuture<'_, bool>;
@@ -82,6 +93,11 @@ type SharedModelsEndpointClient = Arc<dyn ModelsEndpointClient>;
 
 /// Coordinates model discovery plus cached metadata on disk.
 pub trait ModelsManager: fmt::Debug + Send + Sync {
+    /// 目录是否仅适用于创建它的 provider。
+    fn is_provider_scoped(&self) -> bool {
+        false
+    }
+
     /// List all available models, refreshing according to the specified strategy.
     ///
     /// Returns model presets sorted by priority and filtered by auth mode and visibility.
@@ -273,7 +289,16 @@ impl OpenAiModelsManager {
         endpoint_client: Arc<dyn ModelsEndpointClient>,
         auth_manager: Option<Arc<AuthManager>>,
     ) -> Self {
-        let remote_models = load_remote_models_from_file().unwrap_or_default();
+        let remote_models = if endpoint_client.is_authoritative() {
+            Vec::new()
+        } else {
+            load_remote_models_from_file().unwrap_or_default()
+        };
+        let cache = if endpoint_client.is_authoritative() {
+            None
+        } else {
+            cache
+        };
         Self {
             remote_models: RwLock::new(remote_models),
             etag: RwLock::new(None),
@@ -295,6 +320,10 @@ impl StaticModelsManager {
 }
 
 impl ModelsManager for OpenAiModelsManager {
+    fn is_provider_scoped(&self) -> bool {
+        self.endpoint_client.is_authoritative()
+    }
+
     fn raw_model_catalog(
         &self,
         refresh_strategy: RefreshStrategy,
@@ -435,7 +464,8 @@ impl OpenAiModelsManager {
     }
 
     async fn should_refresh_models(&self) -> bool {
-        self.endpoint_client.uses_workx_backend().await || self.endpoint_client.has_command_auth()
+        self.endpoint_client.uses_workx_backend().await
+            || self.endpoint_client.supports_model_discovery()
     }
 
     async fn get_etag(&self) -> Option<String> {
@@ -446,15 +476,16 @@ impl OpenAiModelsManager {
     async fn apply_remote_models(&self, models: Vec<ModelInfo>) {
         // Use the remote models list as the source of truth if it contains at least one
         // non-hidden model and the user is using ChatGPT auth.
-        let should_use_remote_models_only = !models.is_empty()
-            && models
-                .iter()
-                .any(|model| model.visibility == ModelVisibility::List)
-            && self.auth_manager.as_ref().is_some_and(|auth_manager| {
-                auth_manager
-                    .auth_mode()
-                    .is_some_and(AuthMode::has_chatgpt_account)
-            });
+        let should_use_remote_models_only = self.endpoint_client.is_authoritative()
+            || !models.is_empty()
+                && models
+                    .iter()
+                    .any(|model| model.visibility == ModelVisibility::List)
+                && self.auth_manager.as_ref().is_some_and(|auth_manager| {
+                    auth_manager
+                        .auth_mode()
+                        .is_some_and(AuthMode::has_chatgpt_account)
+                });
         if should_use_remote_models_only {
             *self.remote_models.write().await = models;
             return;

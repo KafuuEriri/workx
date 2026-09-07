@@ -1,0 +1,9 @@
+---
+source: tui/src/chatwidget/tests/external_model_picker_tests.rs
+expression: "render_bottom_popup(&chat, 80)"
+---
+  Loading provider models
+
+›    Fetching the current provider's model catalog…
+
+  Press enter to confirm or esc to go back

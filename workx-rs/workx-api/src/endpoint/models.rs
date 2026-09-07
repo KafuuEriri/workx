@@ -48,6 +48,18 @@ impl<T: HttpTransport> ModelsClient<T> {
         request_url: String,
         extra_headers: HeaderMap,
     ) -> Result<(Vec<ModelInfo>, Option<String>), ApiError> {
+        let (body, header_etag) = self.list_catalog(request_url, extra_headers).await?;
+        let ModelsResponse { models } = serde_json::from_value::<ModelsResponse>(body)
+            .map_err(|e| ApiError::Stream(format!("failed to decode models response: {e}")))?;
+
+        Ok((models, header_etag))
+    }
+    /// 获取模型目录，具体目录格式由 provider 解释。
+    pub async fn list_catalog(
+        &self,
+        request_url: String,
+        extra_headers: HeaderMap,
+    ) -> Result<(serde_json::Value, Option<String>), ApiError> {
         let resp = self
             .session
             .execute_with(
@@ -67,15 +79,9 @@ impl<T: HttpTransport> ModelsClient<T> {
             .and_then(|value| value.to_str().ok())
             .map(ToString::to_string);
 
-        let ModelsResponse { models } = serde_json::from_slice::<ModelsResponse>(&resp.body)
-            .map_err(|e| {
-                ApiError::Stream(format!(
-                    "failed to decode models response: {e}; body: {}",
-                    String::from_utf8_lossy(&resp.body)
-                ))
-            })?;
-
-        Ok((models, header_etag))
+        let body = serde_json::from_slice(&resp.body)
+            .map_err(|err| ApiError::Stream(format!("failed to decode models catalog: {err}")))?;
+        Ok((body, header_etag))
     }
 }
 

@@ -337,7 +337,13 @@ struct ConfiguredModelProvider {
 
 impl ConfiguredModelProvider {
     fn new(provider_info: ModelProviderInfo, auth_manager: Option<Arc<AuthManager>>) -> Self {
-        let auth_manager = auth_manager_for_provider(auth_manager, &provider_info);
+        let auth_manager = if provider_uses_first_party_auth_path(&provider_info)
+            || provider_info.auth.is_some()
+        {
+            auth_manager_for_provider(auth_manager, &provider_info)
+        } else {
+            None
+        };
         Self {
             info: provider_info,
             auth_manager,
@@ -351,6 +357,20 @@ impl ModelProvider for ConfiguredModelProvider {
     }
 
     fn capabilities(&self) -> ProviderCapabilities {
+        if self.info.wire_api.resolve(self.info.base_url.as_deref())
+            == workx_api::WireApi::ChatCompletions
+            || (!self.info.is_openai()
+                && !self.info.requires_openai_auth
+                && !is_azure_responses_provider(&self.info.name, self.info.base_url.as_deref()))
+        {
+            return ProviderCapabilities {
+                namespace_tools: false,
+                image_generation: false,
+                web_search: false,
+                external_web_access: false,
+                remote_compaction: RemoteCompactionSupport::Unsupported,
+            };
+        }
         let remote_compaction = if self.info.is_openai()
             || is_azure_responses_provider(&self.info.name, self.info.base_url.as_deref())
         {
@@ -547,6 +567,7 @@ mod tests {
 
     fn provider_info_with_command_auth() -> ModelProviderInfo {
         ModelProviderInfo {
+            models_endpoint: None,
             auth: Some(ModelProviderAuthInfo {
                 command: "print-token".to_string(),
                 args: Vec::new(),
@@ -568,6 +589,7 @@ mod tests {
 
     fn provider_for(base_url: String) -> ModelProviderInfo {
         ModelProviderInfo {
+            models_endpoint: None,
             name: "mock".into(),
             base_url: Some(base_url),
             env_key: None,
@@ -1172,7 +1194,7 @@ mod tests {
         let remote_models = vec![remote_model("provider-model")];
 
         Mock::given(method("GET"))
-            .and(path("/models"))
+            .and(path("/v1/models"))
             .and(header_regex("Authorization", "Bearer provider-token"))
             .respond_with(
                 ResponseTemplate::new(200)
@@ -1193,6 +1215,8 @@ mod tests {
                 WorkxAuth::create_dummy_chatgpt_auth_for_testing(),
             )),
         );
+
+        assert!(provider.auth().await.is_none());
 
         let manager =
             provider.models_manager(test_workx_home(), /*config_model_catalog*/ None);
