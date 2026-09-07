@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- 项目版本从 `0.0.1` 开始，统一 Rust、npm CLI、SDK 和 Python runtime 的版本。
+
 ### Changed
 
 - 首次启动先选择 provider，再进入 OpenAI 认证或自定义端点配置；保留三种 OpenAI 登录方式。

@@ -41,7 +41,7 @@ jobs:
           if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:b[0-9]+)?", sdk_version):
               raise SystemExit(
                   "Python SDK release tags must identify a stable or beta release, "
-                  "for example python-v0.147.0 or python-v0.1.0b1."
+                  "for example python-v0.0.1 or python-v0.1.0b1."
               )
 
           pyproject = tomllib.loads(Path("sdk/python/pyproject.toml").read_text())

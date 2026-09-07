@@ -279,7 +279,7 @@ wheels = [
 
 [[package]]
 name = "workx"
-version = "0.0.0.dev0"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "workx-cli-bin" },
@@ -303,7 +303,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "workx-cli-bin", specifier = "==0.0.0.dev0", directory = "../python-runtime" },
+    { name = "workx-cli-bin", specifier = "==0.0.1", directory = "../python-runtime" },
     { name = "pydantic", specifier = ">=2.12" },
 ]
 
@@ -322,7 +322,7 @@ test = [
 
 [[package]]
 name = "workx-cli-bin"
-version = "0.0.0.dev0"
+version = "0.0.1"
 source = { directory = "../python-runtime" }
 
 [[package]]

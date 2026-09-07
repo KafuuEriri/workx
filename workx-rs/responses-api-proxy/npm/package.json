@@ -1,6 +1,6 @@
 {
   "name": "@ronanxiao/workx-responses-api-proxy",
-  "version": "0.0.0-dev",
+  "version": "0.0.1",
   "license": "Apache-2.0",
   "bin": {
     "workx-responses-api-proxy": "bin/workx-responses-api-proxy.js"
