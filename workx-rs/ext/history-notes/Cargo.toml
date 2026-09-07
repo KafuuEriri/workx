@@ -1,0 +1,35 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-history-notes-extension"
+version.workspace = true
+
+[lib]
+name = "workx_history_notes_extension"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-api = { workspace = true }
+workx-client = { workspace = true }
+workx-core = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-login = { workspace = true }
+workx-model-provider = { workspace = true }
+workx-protocol = { workspace = true }
+workx-tools = { workspace = true }
+workx-utils-output-truncation = { workspace = true }
+http = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+workx-config = { workspace = true }
+workx-model-provider-info = { workspace = true }
+core_test_support = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }
+wiremock = { workspace = true }

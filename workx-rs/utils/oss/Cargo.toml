@@ -1,0 +1,17 @@
+[package]
+name = "workx-utils-oss"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-core = { workspace = true }
+workx-lmstudio = { workspace = true }
+workx-model-provider-info = { workspace = true }
+workx-ollama = { workspace = true }
+
+[lib]
+doctest = false

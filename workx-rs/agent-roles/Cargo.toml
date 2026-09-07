@@ -1,0 +1,23 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-agent-roles"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "workx_agent_roles"
+path = "src/lib.rs"
+test = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-config = { workspace = true }
+workx-file-system = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+toml = { workspace = true, features = ["preserve_order"] }
+tracing = { workspace = true }

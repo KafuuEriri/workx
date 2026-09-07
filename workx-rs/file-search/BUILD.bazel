@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "file-search",
+    crate_name = "workx_file_search",
+)

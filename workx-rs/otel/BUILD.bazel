@@ -1,0 +1,7 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "otel",
+    crate_name = "workx_otel",
+    integration_test_args = ["--test-threads=1"],
+)

@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "model-provider",
+    crate_name = "workx_model_provider",
+)

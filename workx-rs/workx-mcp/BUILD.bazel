@@ -1,0 +1,7 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "workx-mcp",
+    crate_name = "workx_mcp",
+    test_data_extra = glob(["src/**/snapshots/**"]),
+)

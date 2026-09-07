@@ -1,0 +1,35 @@
+[package]
+name = "workx-arg0"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "workx_arg0"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+workx-apply-patch = { workspace = true }
+workx-async-utils = { workspace = true }
+workx-exec-server = { workspace = true }
+workx-install-context = { workspace = true }
+workx-linux-sandbox = { workspace = true }
+workx-sandboxing = { workspace = true }
+workx-shell-escalation = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-home-dir = { workspace = true }
+dotenvy = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[target.'cfg(windows)'.dependencies]
+workx-windows-sandbox = { workspace = true }
+pathdiff = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

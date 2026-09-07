@@ -1,0 +1,7 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "config",
+    compile_data = ["defaults.toml"],
+    crate_name = "workx_config",
+)

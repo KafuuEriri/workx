@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "absolute-path",
+    crate_name = "workx_utils_absolute_path",
+)

@@ -1,0 +1,29 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-skills"
+version.workspace = true
+build = "build.rs"
+
+[lib]
+doctest = false
+name = "workx_skills"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-protocol = { workspace = true }
+workx-shell-command = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+include_dir = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_yaml = { workspace = true }
+shlex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

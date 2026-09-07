@@ -1,0 +1,7 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "workx-experimental-api-macros",
+    crate_name = "workx_experimental_api_macros",
+    proc_macro = True,
+)

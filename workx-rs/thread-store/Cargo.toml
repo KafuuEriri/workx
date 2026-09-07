@@ -1,0 +1,43 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-thread-store"
+version.workspace = true
+
+[lib]
+name = "workx_thread_store"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { workspace = true, features = ["serde"] }
+workx-app-server-protocol = { workspace = true }
+workx-extension-items = { workspace = true }
+workx-git-utils = { workspace = true }
+workx-install-context = { workspace = true }
+workx-otel = { workspace = true }
+workx-protocol = { workspace = true }
+workx-rollout = { workspace = true }
+workx-state = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-path = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+futures = { workspace = true }
+pulldown-cmark = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+zstd = { workspace = true }
+
+[dev-dependencies]
+workx-utils-absolute-path = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+uuid = { workspace = true }

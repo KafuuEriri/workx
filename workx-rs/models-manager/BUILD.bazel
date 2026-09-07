@@ -1,0 +1,10 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "models-manager",
+    compile_data = [
+        "models.json",
+        "prompt.md",
+    ],
+    crate_name = "workx_models_manager",
+)

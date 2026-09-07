@@ -1,0 +1,14 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-collaboration-mode-templates"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "workx_collaboration_mode_templates"
+path = "src/lib.rs"
+test = false
+
+[lints]
+workspace = true

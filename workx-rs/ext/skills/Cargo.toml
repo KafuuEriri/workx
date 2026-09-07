@@ -1,0 +1,49 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-skills-extension"
+version.workspace = true
+
+[lib]
+name = "workx_skills_extension"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-analytics = { workspace = true }
+workx-config = { workspace = true }
+workx-exec-server = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-mcp = { workspace = true }
+workx-otel = { workspace = true }
+workx-protocol = { workspace = true }
+workx-skills = { workspace = true }
+workx-tools = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+workx-utils-plugins = { workspace = true }
+workx-utils-string = { workspace = true }
+dirs = { workspace = true }
+futures = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time"] }
+toml = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+assert_matches = { workspace = true }
+workx-models-manager = { workspace = true }
+workx-utils-cargo-bin = { workspace = true }
+dunce = { workspace = true }
+insta = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "responses-api-proxy",
+    crate_name = "workx_responses_api_proxy",
+)

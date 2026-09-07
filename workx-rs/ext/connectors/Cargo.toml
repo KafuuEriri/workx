@@ -1,0 +1,24 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-connectors-extension"
+version.workspace = true
+
+[lib]
+name = "workx_connectors_extension"
+path = "src/lib.rs"
+doctest = false
+test = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-connectors = { workspace = true }
+workx-core-plugins = { workspace = true }
+workx-file-system = { workspace = true }
+workx-plugin = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

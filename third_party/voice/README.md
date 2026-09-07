@@ -2,7 +2,7 @@
 
 This stage pins and prepares sources for a privately bundled, GStreamer-based
 audio runtime, including its native dependencies and build tools. It does not
-compile native libraries, link them into Codex or enable voice.
+compile native libraries, link them into Workx or enable voice.
 
 `sources.json` records the versions, URLs and SHA-256 digests of 11 archives:
 
@@ -85,4 +85,4 @@ with pkg-config restricted to this prefix. Only system ABI libraries/frameworks
 may remain external; runtime closure inspection must verify that independently.
 `//third_party/voice:build_inputs` exposes the recipe and source inputs to Bazel.
 Neither this filegroup nor a successful prefix build proves final Cargo/Bazel
-linkage, safe private runtime loading, or an installed voice-capable Codex package.
+linkage, safe private runtime loading, or an installed voice-capable Workx package.

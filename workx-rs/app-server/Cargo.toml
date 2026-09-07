@@ -1,0 +1,148 @@
+[package]
+name = "workx-app-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "workx-app-server"
+path = "src/main.rs"
+
+[[bin]]
+name = "workx-app-server-test-notify-capture"
+path = "src/bin/notify_capture.rs"
+
+[[bin]]
+name = "exec-server"
+path = "src/bin/exec_server.rs"
+
+[lib]
+name = "workx_app_server"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+base64 = { workspace = true }
+axum = { workspace = true, default-features = false, features = [
+    "http1",
+    "json",
+    "tokio",
+    "ws",
+] }
+workx-analytics = { workspace = true }
+workx-agent-extension = { workspace = true }
+workx-arg0 = { workspace = true }
+workx-aws-auth = { workspace = true }
+workx-cloud-config = { workspace = true }
+workx-code-mode = { workspace = true }
+workx-config = { workspace = true }
+workx-connectors = { workspace = true }
+workx-core = { workspace = true }
+workx-core-plugins = { workspace = true }
+workx-diagnostics = { workspace = true }
+workx-home = { workspace = true }
+workx-exec-server = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-external-agent-migration = { workspace = true }
+workx-features = { workspace = true }
+workx-goal-extension = { workspace = true }
+workx-git-attribution = { workspace = true }
+workx-guardian-v2 = { workspace = true }
+workx-git-utils = { workspace = true }
+workx-file-watcher = { workspace = true }
+workx-hooks = { workspace = true }
+workx-history-notes-extension = { workspace = true }
+workx-http-client = { workspace = true }
+workx-otel = { workspace = true }
+workx-plugin = { workspace = true }
+workx-shell-command = { workspace = true }
+workx-skills = { workspace = true }
+workx-skills-extension = { workspace = true }
+workx-utils-cli = { workspace = true }
+workx-utils-pty = { workspace = true }
+workx-backend-client = { workspace = true }
+workx-file-search = { workspace = true }
+workx-chatgpt = { workspace = true }
+workx-login = { workspace = true }
+workx-image-generation-extension = { workspace = true }
+workx-memories-extension = { workspace = true }
+workx-web-search-extension = { workspace = true }
+workx-memories-write = { workspace = true }
+workx-mcp = { workspace = true }
+workx-mcp-extension = { workspace = true }
+workx-model-provider = { workspace = true }
+workx-models-manager = { workspace = true }
+workx-protocol = { workspace = true }
+workx-queue-extension = { workspace = true }
+workx-app-server-protocol = { workspace = true }
+workx-app-server-transport = { workspace = true }
+workx-feedback = { workspace = true }
+workx-rmcp-client = { workspace = true }
+workx-rollout = { workspace = true }
+workx-sandboxing = { workspace = true }
+workx-state = { workspace = true }
+workx-thread-store = { workspace = true }
+workx-tools = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-json-to-toml = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+futures = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
+toml = { workspace = true }
+toml_edit = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "signal",
+] }
+tokio-util = { workspace = true }
+tracing = { workspace = true, features = ["log"] }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "json"] }
+url = { workspace = true }
+uuid = { workspace = true, features = ["serde", "v7"] }
+
+[target.'cfg(windows)'.dependencies]
+workx-windows-sandbox = { workspace = true }
+
+[dev-dependencies]
+app_test_support = { workspace = true }
+axum = { workspace = true, default-features = false, features = [
+    "http1",
+    "json",
+    "tokio",
+] }
+base64 = { workspace = true }
+workx-model-provider-info = { workspace = true }
+workx-utils-cargo-bin = { workspace = true }
+core_test_support = { workspace = true }
+flate2 = { workspace = true }
+hmac = { workspace = true }
+http = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+pretty_assertions = { workspace = true }
+rmcp = { workspace = true, default-features = false, features = [
+    "elicitation",
+    "server",
+    "transport-streamable-http-server",
+] }
+serial_test = { workspace = true }
+shlex = { workspace = true }
+tar = { workspace = true }
+test-case = "3.3.1"
+tokio-tungstenite = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+wiremock = { workspace = true }

@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "sandbox-summary",
+    crate_name = "workx_utils_sandbox_summary",
+)

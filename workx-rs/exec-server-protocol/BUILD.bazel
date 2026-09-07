@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "exec-server-protocol",
+    crate_name = "workx_exec_server_protocol",
+)

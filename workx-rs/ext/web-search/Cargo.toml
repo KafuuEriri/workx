@@ -1,0 +1,32 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-web-search-extension"
+version.workspace = true
+
+[lib]
+name = "workx_web_search_extension"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-api = { workspace = true }
+workx-core = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-extension-items = { workspace = true }
+workx-login = { workspace = true }
+workx-model-provider = { workspace = true }
+workx-model-provider-info = { workspace = true }
+workx-otel = { workspace = true }
+workx-protocol = { workspace = true }
+workx-tools = { workspace = true }
+http = { workspace = true }
+schemars = { workspace = true }
+serde_json = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

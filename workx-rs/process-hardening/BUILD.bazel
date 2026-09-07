@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "process-hardening",
+    crate_name = "workx_process_hardening",
+)

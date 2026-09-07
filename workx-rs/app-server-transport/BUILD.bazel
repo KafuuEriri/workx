@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "app-server-transport",
+    crate_name = "workx_app_server_transport",
+)

@@ -1,8 +1,8 @@
 import path from "node:path";
 
-export function codexPathOverride() {
+export function workxPathOverride() {
   return (
-    process.env.CODEX_EXECUTABLE ??
-    path.join(process.cwd(), "..", "..", "codex-rs", "target", "debug", "codex")
+    process.env.WORKX_EXECUTABLE ??
+    path.join(process.cwd(), "..", "..", "workx-rs", "target", "debug", "workx")
   );
 }

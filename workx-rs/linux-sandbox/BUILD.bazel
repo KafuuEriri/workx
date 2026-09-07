@@ -1,0 +1,13 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "linux-sandbox",
+    crate_name = "workx_linux_sandbox",
+    extra_binaries = [
+        "//workx-rs/bwrap:bwrap",
+    ],
+    rustc_env_files = select({
+        "@platforms//os:linux": ["//workx-rs/bwrap:bwrap-sha256-env"],
+        "//conditions:default": [],
+    }),
+)

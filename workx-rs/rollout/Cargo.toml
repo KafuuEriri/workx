@@ -1,0 +1,52 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-rollout"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "workx_rollout"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+workx-extension-items = { workspace = true }
+workx-file-search = { workspace = true }
+workx-git-utils = { workspace = true }
+workx-history = { workspace = true }
+workx-otel = { workspace = true }
+workx-protocol = { workspace = true }
+workx-state = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-path = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+time = { workspace = true, features = [
+    "formatting",
+    "local-offset",
+    "macros",
+    "parsing",
+] }
+tokio = { workspace = true, features = [
+    "fs",
+    "io-util",
+    "macros",
+    "process",
+    "rt",
+    "sync",
+    "time",
+] }
+tracing = { workspace = true }
+uuid = { workspace = true }
+zstd = { workspace = true }
+
+[dev-dependencies]
+workx-utils-absolute-path = { workspace = true }
+pretty_assertions = { workspace = true }

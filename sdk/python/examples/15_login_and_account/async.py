@@ -11,17 +11,17 @@ ensure_local_sdk_src()
 
 import asyncio
 
-from openai_codex import AsyncCodex
+from workx import AsyncWorkx
 
 
 async def main() -> None:
-    async with AsyncCodex(config=runtime_config()) as codex:
+    async with AsyncWorkx(config=runtime_config()) as workx:
         # Browser login returns a live handle. Open `auth_url` and await `wait()`
         # in a real app; this example cancels immediately so it stays non-blocking.
-        login = await codex.login_chatgpt()
+        login = await workx.login_chatgpt()
         canceled = await login.cancel()
         completed = await login.wait()
-        account = await codex.account()
+        account = await workx.account()
 
         print("login.id:", login.login_id)
         print("login.auth_url:", login.auth_url)

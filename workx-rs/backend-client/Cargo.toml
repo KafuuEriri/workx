@@ -1,0 +1,31 @@
+[package]
+name = "workx-backend-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+http = { workspace = true }
+url = { workspace = true }
+workx-backend-openapi-models = { path = "../workx-backend-openapi-models" }
+workx-api = { workspace = true }
+workx-http-client = { workspace = true }
+workx-login = { workspace = true }
+workx-model-provider = { workspace = true }
+workx-protocol = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = "1"
+tokio = { workspace = true, features = ["macros", "rt"] }
+wiremock = { workspace = true }

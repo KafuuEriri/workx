@@ -1,0 +1,43 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-mcp-extension"
+version.workspace = true
+
+[lib]
+name = "workx_mcp_extension"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+workx-core = { workspace = true }
+workx-core-plugins = { workspace = true }
+workx-config = { workspace = true }
+workx-connectors = { workspace = true }
+workx-connectors-extension = { workspace = true }
+workx-exec-server = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-features = { workspace = true }
+workx-mcp = { workspace = true }
+workx-plugin = { workspace = true }
+workx-protocol = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+
+[dev-dependencies]
+axum = { workspace = true }
+workx-exec-server-test-support = { workspace = true }
+workx-login = { workspace = true }
+futures = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio-util = { workspace = true, features = ["rt"] }

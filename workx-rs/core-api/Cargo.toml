@@ -1,0 +1,33 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-core-api"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "workx_core_api"
+path = "src/lib.rs"
+test = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-app-server-protocol = { workspace = true }
+workx-arg0 = { workspace = true }
+workx-analytics = { workspace = true }
+workx-config = { workspace = true }
+workx-core = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-home = { workspace = true }
+workx-history = { workspace = true }
+workx-image-generation-extension = { workspace = true }
+workx-exec-server = { workspace = true }
+workx-features = { workspace = true }
+workx-login = { workspace = true }
+workx-model-provider-info = { workspace = true }
+workx-models-manager = { workspace = true }
+workx-protocol = { workspace = true }
+workx-state = { workspace = true }
+workx-utils-absolute-path = { workspace = true }

@@ -1,0 +1,9 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "rmcp-client",
+    crate_name = "workx_rmcp_client",
+    extra_binaries = [
+        "//workx-rs/cli:workx",
+    ],
+)

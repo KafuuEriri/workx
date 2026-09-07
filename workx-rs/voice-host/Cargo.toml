@@ -1,0 +1,24 @@
+[package]
+name = "workx-voice-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "workx-voice-host"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-process-hardening = { workspace = true }
+codex-realtime-webrtc = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+workx-install-context = { workspace = true }
+workx-utils-cargo-bin = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["io-util", "macros", "process", "rt-multi-thread", "time"] }

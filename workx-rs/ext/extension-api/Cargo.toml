@@ -1,0 +1,29 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-extension-api"
+version.workspace = true
+
+[lib]
+name = "workx_extension_api"
+path = "src/lib.rs"
+test = false
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-config = { workspace = true }
+workx-context-fragments = { workspace = true }
+workx-exec-server-protocol = { workspace = true }
+workx-mcp = { workspace = true }
+workx-protocol = { workspace = true }
+workx-tools = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

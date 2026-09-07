@@ -1,0 +1,9 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "web-search",
+    compile_data = [
+        "web_run_description.md",
+    ],
+    crate_name = "workx_web_search_extension",
+)

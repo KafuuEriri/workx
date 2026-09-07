@@ -1,0 +1,42 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-guardian-v2"
+version.workspace = true
+
+[lib]
+name = "workx_guardian_v2"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-analytics = { workspace = true }
+workx-api = { workspace = true }
+workx-core = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-features = { workspace = true }
+workx-guardian-context = { workspace = true }
+workx-history = { workspace = true }
+workx-http-client = { workspace = true }
+workx-login = { workspace = true }
+workx-model-provider = { workspace = true }
+workx-models-manager = { workspace = true }
+workx-network-proxy = { workspace = true }
+workx-protocol = { workspace = true }
+dirs = { workspace = true }
+http = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+workx-model-provider-info = { workspace = true }
+core_test_support = { workspace = true }
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

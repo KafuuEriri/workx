@@ -17,20 +17,20 @@ class AssembleTests(unittest.TestCase):
         self.root = Path(temporary.name)
         self.package = self.root / "app"
         (self.package / "bin").mkdir(parents=True)
-        (self.package / "codex-resources").mkdir()
-        (self.package / "codex-path").mkdir()
+        (self.package / "workx-resources").mkdir()
+        (self.package / "workx-path").mkdir()
         self.commit = "a" * 40
         self.metadata = {
             "layoutVersion": 1,
             "version": f"0.0.0+{self.commit}",
             "target": "aarch64-unknown-linux-musl",
-            "variant": "codex",
-            "entrypoint": "bin/codex",
-            "resourcesDir": "codex-resources",
-            "pathDir": "codex-path",
+            "variant": "workx",
+            "entrypoint": "bin/workx",
+            "resourcesDir": "workx-resources",
+            "pathDir": "workx-path",
         }
-        (self.package / "codex-package.json").write_text(json.dumps(self.metadata))
-        (self.package / "bin/codex").write_bytes(b"unchanged app")
+        (self.package / "workx-package.json").write_text(json.dumps(self.metadata))
+        (self.package / "bin/workx").write_bytes(b"unchanged app")
         self.helper = self.root / "helper.exe"
         self.helper.write_bytes(b"private helper")
         self.helper.chmod(0o755)
@@ -44,16 +44,16 @@ class AssembleTests(unittest.TestCase):
             self.commit,
             self.output,
         )
-        self.assertEqual((self.output / "bin/codex").read_bytes(), b"unchanged app")
-        self.assertEqual((self.package / "bin/codex").read_bytes(), b"unchanged app")
-        self.assertFalse((self.package / "codex-resources/voice").exists())
+        self.assertEqual((self.output / "bin/workx").read_bytes(), b"unchanged app")
+        self.assertEqual((self.package / "bin/workx").read_bytes(), b"unchanged app")
+        self.assertFalse((self.package / "workx-resources/voice").exists())
         self.assertEqual(
-            (self.output / "codex-package.json").read_bytes(),
-            (self.package / "codex-package.json").read_bytes(),
+            (self.output / "workx-package.json").read_bytes(),
+            (self.package / "workx-package.json").read_bytes(),
         )
         self.assertEqual(
             json.loads(
-                (self.output / "codex-resources/voice/manifest.json").read_text()
+                (self.output / "workx-resources/voice/manifest.json").read_text()
             ),
             {
                 "schemaVersion": 1,
@@ -62,8 +62,8 @@ class AssembleTests(unittest.TestCase):
                 "voiceTarget": "aarch64-unknown-linux-gnu",
                 "appVersion": self.metadata["version"],
                 "sha256": {
-                    "bin/codex": hashlib.sha256(b"unchanged app").hexdigest(),
-                    "codex-resources/voice/bin/codex-voice-host": hashlib.sha256(
+                    "bin/workx": hashlib.sha256(b"unchanged app").hexdigest(),
+                    "workx-resources/voice/bin/workx-voice-host": hashlib.sha256(
                         b"private helper"
                     ).hexdigest(),
                 },
@@ -89,13 +89,13 @@ class AssembleTests(unittest.TestCase):
             target = f"{architecture}-unknown-linux-gnu"
             with self.subTest(target=target):
                 self.metadata["target"] = target
-                (self.package / "codex-package.json").write_text(
+                (self.package / "workx-package.json").write_text(
                     json.dumps(self.metadata)
                 )
                 output = self.root / target
                 assemble(self.package, self.helper, target, self.commit, output)
                 manifest = json.loads(
-                    (output / "codex-resources/voice/manifest.json").read_text()
+                    (output / "workx-resources/voice/manifest.json").read_text()
                 )
                 self.assertEqual(
                     manifest,
@@ -106,17 +106,17 @@ class AssembleTests(unittest.TestCase):
                         "voiceTarget": target,
                         "appVersion": self.metadata["version"],
                         "sha256": {
-                            "bin/codex": hashlib.sha256(b"unchanged app").hexdigest(),
-                            "codex-resources/voice/bin/codex-voice-host": hashlib.sha256(
+                            "bin/workx": hashlib.sha256(b"unchanged app").hexdigest(),
+                            "workx-resources/voice/bin/workx-voice-host": hashlib.sha256(
                                 b"private helper"
                             ).hexdigest(),
                         },
                     },
                 )
-                self.assertEqual((output / "bin/codex").read_bytes(), b"unchanged app")
+                self.assertEqual((output / "bin/workx").read_bytes(), b"unchanged app")
                 self.assertEqual(
                     (
-                        output / "codex-resources/voice/bin/codex-voice-host"
+                        output / "workx-resources/voice/bin/workx-voice-host"
                     ).read_bytes(),
                     self.helper.read_bytes(),
                 )
@@ -145,7 +145,7 @@ class AssembleTests(unittest.TestCase):
                     self.output,
                 )
         self.assertFalse(self.output.exists())
-        self.assertEqual((self.package / "bin/codex").read_bytes(), b"unchanged app")
+        self.assertEqual((self.package / "bin/workx").read_bytes(), b"unchanged app")
 
 
 if __name__ == "__main__":

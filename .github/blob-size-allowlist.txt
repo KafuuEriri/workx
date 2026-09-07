@@ -1,11 +1,11 @@
 # Paths are matched exactly, relative to the repository root.
 # Keep this list short and limited to intentional large checked-in assets.
 
-.github/codex-cli-splash.png
+.github/workx-cli-splash.png
 MODULE.bazel.lock
-codex-rs/app-server-protocol/schema/json/codex_app_server_protocol.schemas.json
-codex-rs/app-server-protocol/schema/json/codex_app_server_protocol.v2.schemas.json
-codex-rs/models-manager/models.json
-codex-rs/tui/tests/fixtures/oss-story.jsonl
-codex-rs/tui_app_server/tests/fixtures/oss-story.jsonl
-codex-rs/tui/src/app.rs
+workx-rs/app-server-protocol/schema/json/workx_app_server_protocol.schemas.json
+workx-rs/app-server-protocol/schema/json/workx_app_server_protocol.v2.schemas.json
+workx-rs/models-manager/models.json
+workx-rs/tui/tests/fixtures/oss-story.jsonl
+workx-rs/tui_app_server/tests/fixtures/oss-story.jsonl
+workx-rs/tui/src/app.rs

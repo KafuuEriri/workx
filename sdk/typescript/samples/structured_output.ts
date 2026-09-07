@@ -1,12 +1,12 @@
 #!/usr/bin/env -S NODE_NO_WARNINGS=1 pnpm ts-node-esm --files
 
-import { Codex } from "@openai/codex-sdk";
+import { Workx } from "@ronanxiao/workx-sdk";
 
-import { codexPathOverride } from "./helpers.ts";
+import { workxPathOverride } from "./helpers.ts";
 
-const codex = new Codex({ codexPathOverride: codexPathOverride() });
+const workx = new Workx({ workxPathOverride: workxPathOverride() });
 
-const thread = codex.startThread();
+const thread = workx.startThread();
 
 const schema = {
   type: "object",

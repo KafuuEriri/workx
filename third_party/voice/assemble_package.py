@@ -1,4 +1,4 @@
-"""Add a lifecycle-only helper to a fresh private copy of a canonical Codex package."""
+"""Add a lifecycle-only helper to a fresh private copy of a canonical Workx package."""
 
 import argparse
 import hashlib
@@ -21,7 +21,7 @@ def assemble(package: Path, helper: Path, voice_target: str, commit: str, output
         raise ValueError(
             "a full build commit is required; dev builds are not distributable"
         )
-    metadata = json.loads((package / "codex-package.json").read_text())
+    metadata = json.loads((package / "workx-package.json").read_text())
     app_target = metadata["target"]
     targets = {
         f"{arch}-{suffix}": f"{arch}-{suffix.replace('musl', 'gnu')}"
@@ -36,19 +36,19 @@ def assemble(package: Path, helper: Path, voice_target: str, commit: str, output
     if targets.get(app_target) != voice_target:
         raise ValueError("incompatible app and helper targets")
     suffix = ".exe" if app_target.endswith("windows-msvc") else ""
-    entrypoint = f"bin/codex{suffix}"
+    entrypoint = f"bin/workx{suffix}"
     expected = {
         "layoutVersion": 1,
-        "variant": "codex",
+        "variant": "workx",
         "entrypoint": entrypoint,
-        "resourcesDir": "codex-resources",
-        "pathDir": "codex-path",
+        "resourcesDir": "workx-resources",
+        "pathDir": "workx-path",
     }
     if any(metadata.get(key) != value for key, value in expected.items()):
-        raise ValueError("input is not a canonical Codex package")
+        raise ValueError("input is not a canonical Workx package")
     if not metadata["version"].endswith(f"+{commit}"):
         raise ValueError("package version does not match the declared build")
-    if (package / "codex-resources/voice").exists():
+    if (package / "workx-resources/voice").exists():
         raise ValueError("input already contains voice resources")
     for path in package.rglob("*"):
         if path.is_symlink() or not (path.is_file() or path.is_dir()):
@@ -60,7 +60,7 @@ def assemble(package: Path, helper: Path, voice_target: str, commit: str, output
     output.mkdir()  # Exclusive creation: never clean or overwrite a pre-existing output.
     try:
         shutil.copytree(package, output, dirs_exist_ok=True)
-        relative_helper = f"codex-resources/voice/bin/codex-voice-host{suffix}"
+        relative_helper = f"workx-resources/voice/bin/workx-voice-host{suffix}"
         destination = output / relative_helper
         destination.parent.mkdir(parents=True)
         shutil.copy2(helper, destination)

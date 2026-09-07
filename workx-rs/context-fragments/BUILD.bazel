@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "context-fragments",
+    crate_name = "workx_context_fragments",
+)

@@ -1,0 +1,36 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-model-provider"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "workx_model_provider"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-api = { workspace = true }
+workx-agent-identity = { workspace = true }
+workx-aws-auth = { workspace = true }
+workx-http-client = { workspace = true }
+workx-feedback = { workspace = true }
+workx-login = { workspace = true }
+workx-model-provider-info = { workspace = true }
+workx-models-manager = { workspace = true }
+workx-otel = { workspace = true }
+workx-protocol = { workspace = true }
+workx-response-debug-context = { workspace = true }
+http = { workspace = true }
+tokio = { workspace = true, features = ["process", "sync", "time"] }
+tracing = { workspace = true, features = ["log"] }
+
+[dev-dependencies]
+workx-utils-redacted-string = { workspace = true }
+pretty_assertions = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }
+wiremock = { workspace = true }

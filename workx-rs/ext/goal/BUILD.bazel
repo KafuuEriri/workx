@@ -1,0 +1,13 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "goal",
+    compile_data = glob([
+        "templates/**",
+    ]),
+    crate_name = "workx_goal_extension",
+    integration_compile_data_extra = [
+        "src/accounting.rs",
+        "src/steering.rs",
+    ] + glob(["templates/**"]),
+)

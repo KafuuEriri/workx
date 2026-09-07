@@ -1,0 +1,173 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-core"
+version.workspace = true
+
+[lib]
+name = "workx_core"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+arc-swap = { workspace = true }
+async-channel = { workspace = true }
+base64 = { workspace = true }
+bm25 = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+workx-analytics = { workspace = true }
+workx-agent-graph-store = { workspace = true }
+workx-agent-roles = { workspace = true }
+workx-api = { workspace = true }
+workx-app-server-protocol = { workspace = true }
+workx-apply-patch = { workspace = true }
+workx-async-utils = { workspace = true }
+workx-client = { workspace = true }
+workx-code-mode = { workspace = true }
+workx-connectors = { workspace = true }
+workx-context-fragments = { workspace = true }
+workx-config = { workspace = true }
+workx-core-plugins = { workspace = true }
+workx-diagnostics = { workspace = true }
+workx-exec-server = { workspace = true }
+workx-extension-api = { workspace = true }
+workx-extension-items = { workspace = true }
+workx-features = { workspace = true }
+workx-feedback = { workspace = true }
+workx-file-system = { workspace = true }
+workx-login = { workspace = true }
+workx-memories-read = { workspace = true }
+workx-mcp = { workspace = true }
+workx-model-provider-info = { workspace = true }
+workx-models-manager = { workspace = true }
+workx-shell-command = { workspace = true }
+workx-execpolicy = { workspace = true }
+workx-git-utils = { workspace = true }
+workx-guardian-context = { workspace = true }
+workx-history = { workspace = true }
+workx-hooks = { workspace = true }
+workx-http-client = { workspace = true }
+workx-install-context = { workspace = true }
+workx-network-proxy = { workspace = true }
+workx-otel = { workspace = true }
+workx-plugin = { workspace = true }
+workx-model-provider = { workspace = true }
+workx-protocol = { workspace = true }
+workx-response-debug-context = { workspace = true }
+workx-prompts = { workspace = true }
+workx-rollout = { workspace = true }
+workx-rollout-trace = { workspace = true }
+workx-rmcp-client = { workspace = true }
+workx-sandboxing = { workspace = true }
+workx-skills = { workspace = true }
+workx-skills-extension = { workspace = true }
+workx-state = { workspace = true }
+workx-terminal-detection = { workspace = true }
+workx-thread-store = { workspace = true }
+workx-tools = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+workx-utils-audio = { workspace = true }
+workx-utils-cache = { workspace = true }
+workx-utils-git-discovery = { workspace = true }
+workx-utils-image = { workspace = true }
+workx-utils-home-dir = { workspace = true }
+workx-utils-output-truncation = { workspace = true }
+workx-utils-path = { workspace = true }
+workx-utils-path-uri = { workspace = true }
+workx-utils-plugins = { workspace = true }
+workx-utils-pty = { workspace = true }
+workx-utils-string = { workspace = true }
+workx-utils-stream-parser = { workspace = true }
+workx-windows-sandbox = { package = "workx-windows-sandbox", path = "../windows-sandbox-rs" }
+dirs = { workspace = true }
+dunce = { workspace = true }
+eventsource-stream = { workspace = true }
+futures = { workspace = true }
+http = { workspace = true }
+iana-time-zone = { workspace = true }
+image = { workspace = true, features = ["jpeg", "png", "webp"] }
+indexmap = { workspace = true }
+libc = { workspace = true }
+once_cell = { workspace = true }
+rand = { workspace = true }
+regex-lite = { workspace = true }
+rmcp = { workspace = true, default-features = false, features = [
+    "base64",
+    "macros",
+    "schemars",
+    "server",
+] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha1 = { workspace = true }
+shlex = { workspace = true }
+similar = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "signal",
+] }
+tokio-util = { workspace = true, features = ["rt"] }
+tokio-tungstenite = { workspace = true }
+toml = { workspace = true }
+toml_edit = { workspace = true }
+tracing = { workspace = true, features = ["log"] }
+url = { workspace = true }
+uuid = { workspace = true, features = ["serde", "v4", "v5", "v7"] }
+which = { workspace = true }
+whoami = { workspace = true }
+
+# Build OpenSSL from source for musl builds.
+[target.x86_64-unknown-linux-musl.dependencies]
+openssl-sys = { workspace = true, features = ["vendored"] }
+
+# Build OpenSSL from source for musl builds.
+[target.aarch64-unknown-linux-musl.dependencies]
+openssl-sys = { workspace = true, features = ["vendored"] }
+
+[target.'cfg(unix)'.dependencies]
+workx-shell-escalation = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+assert_matches = { workspace = true }
+workx-exec-server-test-support = { workspace = true }
+workx-image-generation-extension = { workspace = true }
+workx-home = { workspace = true }
+workx-otel = { workspace = true }
+workx-test-binary-support = { workspace = true }
+workx-utils-cargo-bin = { workspace = true }
+workx-utils-redacted-string = { workspace = true }
+workx-web-search-extension = { workspace = true }
+core_test_support = { workspace = true }
+ctor = { workspace = true }
+insta = { workspace = true }
+maplit = { workspace = true }
+opentelemetry = { workspace = true }
+predicates = { workspace = true }
+pretty_assertions = { workspace = true }
+test-case = "3.3.1"
+opentelemetry_sdk = { workspace = true, features = [
+    "experimental_metrics_custom_reader",
+    "metrics",
+] }
+serial_test = { workspace = true }
+tempfile = { workspace = true }
+test-log = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-test = { workspace = true, features = ["no-env-filter"] }
+walkdir = { workspace = true }
+wiremock = { workspace = true }
+zstd = { workspace = true }
+
+[package.metadata.cargo-shear]
+ignored = ["openssl-sys"]
+ignored-paths = ["tests/remote_env_windows/*.rs"]

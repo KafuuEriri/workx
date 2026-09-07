@@ -1,0 +1,42 @@
+[package]
+name = "workx-external-agent-migration"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+doctest = false
+name = "workx_external_agent_migration"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+workx-analytics = { workspace = true }
+workx-config = { workspace = true }
+workx-core = { workspace = true }
+workx-core-plugins = { workspace = true }
+workx-hooks = { workspace = true }
+workx-login = { workspace = true }
+workx-memories-write = { workspace = true }
+workx-otel = { workspace = true }
+workx-plugin = { workspace = true }
+workx-protocol = { workspace = true }
+workx-rollout = { workspace = true }
+workx-thread-store = { workspace = true }
+workx-utils-output-truncation = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+sha2 = { workspace = true }
+toml = { workspace = true }
+tokio = { workspace = true, features = ["rt", "sync"] }
+tracing = { workspace = true }
+
+[dev-dependencies]
+workx-app-server-protocol = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

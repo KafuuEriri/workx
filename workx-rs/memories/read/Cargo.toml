@@ -1,0 +1,21 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "workx-memories-read"
+version.workspace = true
+
+[lib]
+name = "workx_memories_read"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+workx-protocol = { workspace = true }
+workx-shell-command = { workspace = true }
+workx-utils-absolute-path = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

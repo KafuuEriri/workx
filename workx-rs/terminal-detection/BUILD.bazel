@@ -1,0 +1,6 @@
+load("//:defs.bzl", "workx_rust_crate")
+
+workx_rust_crate(
+    name = "terminal-detection",
+    crate_name = "workx_terminal_detection",
+)
