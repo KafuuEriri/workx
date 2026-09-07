@@ -8,10 +8,5 @@
 /workx-rs/prompts/ @ronanxiao/workx-core-agent-team
 /workx-rs/utils/path-uri/ @ronanxiao/workx-core-agent-team
 
-# Keep macOS AKV signing changes reviewed by Workx maintainers.
-/.github/actions/setup-akv-pkcs11-codesigning/ @ronanxiao/workx-core-agent-team
-/.github/scripts/macos-signing/ @ronanxiao/workx-core-agent-team
-/.github/workflows/rust-release.yml @ronanxiao/workx-core-agent-team
-
 # Keep ownership changes reviewed by the same team.
 /.github/CODEOWNERS @ronanxiao/workx-core-agent-team
