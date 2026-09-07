@@ -1,3 +1,7 @@
+## 提交与推送
+
+每完成一块独立且已验证的改动，执行 git commit 并推送到 origin 当前分支。
+
 # Rust/workx-rs
 
 In the workx-rs folder where the rust code lives:
