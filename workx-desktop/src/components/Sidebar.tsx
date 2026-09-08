@@ -55,10 +55,12 @@ interface SidebarProps {
   projects: ProjectView[];
   recents: Thread[];
   activeThreadId: string | null;
-  activeCwd: string;
   onSelectThread: (id: string) => void;
-  onSelectProject: (cwd: string) => void;
+  onSelectProject: (projectId: string) => void;
+  onNewChatInProject: (projectId: string) => void;
   onAddProject: () => void;
+  onEditProject: (project: ProjectView) => void;
+  onRemoveProject: (project: ProjectView) => void;
   searchTerm: string;
   searchResults: Thread[];
   searching: boolean;
@@ -74,7 +76,7 @@ export function threadTitle(thread: Thread): string {
     return name;
   }
   const preview = thread.preview?.trim();
-  return preview ? preview : 'Untitled';
+  return preview ? preview : 'New chat';
 }
 
 export function Sidebar({
@@ -88,7 +90,10 @@ export function Sidebar({
   activeThreadId,
   onSelectThread,
   onSelectProject,
+  onNewChatInProject,
   onAddProject,
+  onEditProject,
+  onRemoveProject,
   searchTerm,
   searchResults,
   searching,
@@ -102,6 +107,7 @@ export function Sidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [showAllProjects, setShowAllProjects] = useState(false);
+  const [projectsMenuOpen, setProjectsMenuOpen] = useState(false);
 
   const searching_ = searchOpen || searchTerm.trim().length > 0;
 
@@ -132,7 +138,7 @@ export function Sidebar({
       }
       return next;
     });
-    onSelectProject(project.cwd);
+    onSelectProject(project.id);
   };
 
   const renderThread = (thread: Thread, indent = false) => (
@@ -291,52 +297,75 @@ export function Sidebar({
           </SidebarSection>
         ) : (
           <>
-            <SidebarSection
-              label="Projects"
-              onAdd={onAddProject}
-              onMore={() => setShowAllProjects((value) => !value)}
-            >
-              {visibleProjects.map((project) => {
-                const expanded = expandedProjects.has(project.id);
-                return (
-                  <div key={project.id}>
-                    <ProjectRow
-                      project={project}
-                      onToggle={() => toggleProject(project)}
-                      onNewChat={() => {
-                        onSelectProject(project.cwd);
-                        onNewChat();
+            <div className="relative">
+              <SidebarSection
+                label="Projects"
+                onAdd={onAddProject}
+                onMore={() => setProjectsMenuOpen((value) => !value)}
+              >
+                {visibleProjects.map((project) => {
+                  const expanded = expandedProjects.has(project.id);
+                  return (
+                    <div key={project.id}>
+                      <ProjectRow
+                        project={project}
+                        onToggle={() => toggleProject(project)}
+                        onNewChat={() => onNewChatInProject(project.id)}
+                        onEdit={() => onEditProject(project)}
+                        onRemove={() => onRemoveProject(project)}
+                      />
+
+                      {expanded
+                        ? project.threads
+                            .slice(0, PROJECT_THREAD_LIMIT)
+                            .map((thread) => renderThread(thread, true))
+                        : null}
+                    </div>
+                  );
+                })}
+                {projects.length === 0 ? (
+                  <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No projects yet</p>
+                ) : null}
+                {projects.length > PROJECT_LIMIT ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllProjects((value) => !value)}
+                    className="flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[14px] text-fg-tertiary hover:bg-hover"
+                  >
+                    {showAllProjects ? 'Show less' : 'Show more'}
+                  </button>
+                ) : null}
+              </SidebarSection>
+
+              {projectsMenuOpen ? (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onMouseDown={() => setProjectsMenuOpen(false)}
+                  />
+                  <div className="absolute right-2 top-9 z-50 min-w-[180px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
+                    <MenuAction
+                      icon={Plus}
+                      label="Create project"
+                      onClick={() => {
+                        setProjectsMenuOpen(false);
+                        onAddProject();
                       }}
-                      onArchiveThreads={() =>
-                        project.threads
-                          .slice(0, PROJECT_THREAD_LIMIT)
-                          .forEach((thread) => onArchiveThread(thread.id))
-                      }
                     />
-
-                    {expanded
-                      ? project.threads
-                          .slice(0, PROJECT_THREAD_LIMIT)
-                          .map((thread) => renderThread(thread, true))
-                      : null}
+                    <MenuAction
+                      icon={ChevronDown}
+                      label={showAllProjects ? 'Show less' : 'Show more'}
+                      onClick={() => {
+                        setProjectsMenuOpen(false);
+                        setShowAllProjects((value) => !value);
+                      }}
+                    />
                   </div>
-                );
-              })}
-              {projects.length === 0 ? (
-                <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No projects yet</p>
+                </>
               ) : null}
-              {projects.length > PROJECT_LIMIT ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAllProjects((value) => !value)}
-                  className="flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[14px] text-fg-tertiary hover:bg-hover"
-                >
-                  {showAllProjects ? 'Show less' : 'Show more'}
-                </button>
-              ) : null}
-            </SidebarSection>
+            </div>
 
-            <SidebarSection label="Recents">
+            <SidebarSection label="Recents" onAdd={onNewChat}>
               {recents.map((thread) => renderThread(thread))}
               {recents.length === 0 ? (
                 <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No chats yet</p>
@@ -385,12 +414,14 @@ function ProjectRow({
   project,
   onToggle,
   onNewChat,
-  onArchiveThreads,
+  onEdit,
+  onRemove,
 }: {
   project: ProjectView;
   onToggle: () => void;
   onNewChat: () => void;
-  onArchiveThreads: () => void;
+  onEdit: () => void;
+  onRemove: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -435,7 +466,9 @@ function ProjectRow({
               label="Open folder"
               onClick={() => {
                 setMenuOpen(false);
-                void window.workx.openPath(project.cwd);
+                if (project.primaryRoot) {
+                  void window.workx.openPath(project.primaryRoot);
+                }
               }}
             />
             <MenuAction
@@ -443,19 +476,28 @@ function ProjectRow({
               label="Copy path"
               onClick={() => {
                 setMenuOpen(false);
-                void navigator.clipboard.writeText(project.cwd);
+                if (project.primaryRoot) {
+                  void navigator.clipboard.writeText(project.primaryRoot);
+                }
               }}
             />
-            {project.threads.length > 0 ? (
-              <MenuAction
-                icon={Archive}
-                label="Archive chats"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onArchiveThreads();
-                }}
-              />
-            ) : null}
+            <MenuAction
+              icon={Pencil}
+              label="Edit project"
+              onClick={() => {
+                setMenuOpen(false);
+                onEdit();
+              }}
+            />
+            <MenuAction
+              icon={Trash2}
+              label="Remove project"
+              danger
+              onClick={() => {
+                setMenuOpen(false);
+                onRemove();
+              }}
+            />
           </div>
         </>
       ) : null}
@@ -616,12 +658,16 @@ function SidebarSection({
       <div className="flex h-8 items-center gap-1 px-2.5 pt-3">
         <span className="text-[13px] text-fg-tertiary">{label}</span>
         <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover/section:opacity-100">
-          <IconButton size="sm" aria-label={`More ${label}`} onClick={onMore}>
-            <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
-          </IconButton>
-          <IconButton size="sm" aria-label={`Add to ${label}`} onClick={onAdd}>
-            <Plus className="size-3.5" strokeWidth={1.75} />
-          </IconButton>
+          {onMore ? (
+            <IconButton size="sm" aria-label={`More ${label}`} onClick={onMore}>
+              <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
+            </IconButton>
+          ) : null}
+          {onAdd ? (
+            <IconButton size="sm" aria-label={`Add to ${label}`} onClick={onAdd}>
+              <Plus className="size-3.5" strokeWidth={1.75} />
+            </IconButton>
+          ) : null}
         </div>
       </div>
       <div className="flex flex-col gap-px">{children}</div>

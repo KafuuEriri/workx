@@ -11,6 +11,8 @@ import type { McpServerStatus } from '@protocol/v2/McpServerStatus';
 import type { ListMcpServerStatusResponse } from '@protocol/v2/ListMcpServerStatusResponse';
 import type { PluginListResponse } from '@protocol/v2/PluginListResponse';
 import type { PluginMarketplaceEntry } from '@protocol/v2/PluginMarketplaceEntry';
+import type { Project } from '@protocol/v2/Project';
+import type { ProjectChangedNotification } from '@protocol/v2/ProjectChangedNotification';
 import type { SkillErrorInfo } from '@protocol/v2/SkillErrorInfo';
 import type { SkillMetadata } from '@protocol/v2/SkillMetadata';
 import type { SkillsListResponse } from '@protocol/v2/SkillsListResponse';
@@ -20,6 +22,7 @@ import type { ThreadDeletedNotification } from '@protocol/v2/ThreadDeletedNotifi
 import type { ThreadItem } from '@protocol/v2/ThreadItem';
 import type { ThreadListResponse } from '@protocol/v2/ThreadListResponse';
 import type { ThreadNameUpdatedNotification } from '@protocol/v2/ThreadNameUpdatedNotification';
+import type { ThreadProjectUpdatedNotification } from '@protocol/v2/ThreadProjectUpdatedNotification';
 import type { ThreadResumeResponse } from '@protocol/v2/ThreadResumeResponse';
 import type { ThreadStartResponse } from '@protocol/v2/ThreadStartResponse';
 import type { Turn } from '@protocol/v2/Turn';
@@ -30,12 +33,14 @@ import type { WarningNotification } from '@protocol/v2/WarningNotification';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
+import {
+  type ProjectCreateResponse,
+  type ProjectDeleteResponse,
+  type ProjectListResponse,
+  type ProjectUpdateResponse,
+  type ThreadSearchResponse,
+} from './protocolExtensions';
 import { buildTranscript, type TranscriptEntry, type TurnView } from './transcript';
-
-interface ThreadSearchResponse {
-  data: Array<{ thread: Thread; snippet: string }>;
-  nextCursor: string | null;
-}
 
 export interface ApprovalRequest {
   id: string | number;
@@ -48,7 +53,8 @@ export interface ApprovalRequest {
 export interface ProjectView {
   id: string;
   name: string;
-  cwd: string;
+  roots: string[];
+  primaryRoot: string | null;
   threads: Thread[];
 }
 
@@ -84,6 +90,7 @@ export interface WorkxController {
   mcpLoading: boolean;
   setActiveCwd: (cwd: string) => void;
   newThread: () => Promise<void>;
+  newThreadInProject: (projectId: string) => Promise<void>;
   openThread: (id: string) => Promise<void>;
   sendMessage: (text: string) => Promise<void>;
   interrupt: () => Promise<void>;
@@ -94,6 +101,10 @@ export interface WorkxController {
   refreshPlugins: () => Promise<void>;
   refreshSkills: () => Promise<void>;
   refreshMcpServers: () => Promise<void>;
+  refreshProjects: () => Promise<void>;
+  createProject: (name: string, roots: string[]) => Promise<Project>;
+  updateProject: (id: string, name: string, roots: string[]) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
   resolveApproval: (id: string | number, decision: 'accept' | 'decline') => Promise<void>;
   dismissError: () => void;
   refreshThreads: () => Promise<void>;
@@ -103,6 +114,7 @@ interface State {
   status: WorkxController['status'];
   statusMessage: string | null;
   models: Model[];
+  projects: Project[];
   threads: Thread[];
   activeThread: Thread | null;
   turns: TurnView[];
@@ -127,7 +139,9 @@ interface State {
 type Action =
   | { type: 'status'; status: State['status']; message?: string | null }
   | { type: 'models'; models: Model[] }
+  | { type: 'projects'; projects: Project[] }
   | { type: 'threads'; threads: Thread[] }
+  | { type: 'threadUpsert'; thread: Thread }
   | { type: 'thread'; thread: Thread; turns: TurnView[] }
   | { type: 'item'; turnId: string; item: ThreadItem }
   | { type: 'delta'; turnId: string; itemId: string; delta: string }
@@ -156,6 +170,7 @@ const initialState: State = {
   status: 'connecting',
   statusMessage: null,
   models: [],
+  projects: [],
   threads: [],
   activeThread: null,
   turns: [],
@@ -206,6 +221,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, status: action.status, statusMessage: action.message ?? null };
     case 'models':
       return { ...state, models: action.models };
+    case 'projects':
+      return { ...state, projects: action.projects };
     case 'threads':
       return {
         ...state,
@@ -215,6 +232,17 @@ function reducer(state: State, action: Action): State {
             state.activeThread)
           : null,
       };
+    case 'threadUpsert': {
+      const exists = state.threads.some((thread) => thread.id === action.thread.id);
+      return {
+        ...state,
+        threads: exists
+          ? state.threads.map((thread) =>
+              thread.id === action.thread.id ? action.thread : thread,
+            )
+          : [action.thread, ...state.threads],
+      };
+    }
     case 'thread':
       return {
         ...state,
@@ -359,11 +387,6 @@ function turnView(turn: Turn): TurnView {
   };
 }
 
-function basename(path: string): string {
-  const parts = path.split('/').filter(Boolean);
-  return parts[parts.length - 1] ?? path;
-}
-
 export function useWorkx(): WorkxController {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
@@ -381,6 +404,8 @@ export function useWorkx(): WorkxController {
   const cwdRef = useRef('');
   const bootedRef = useRef(false);
   const threadsRef = useRef<Thread[]>([]);
+  const projectsRef = useRef<Project[]>([]);
+  const pendingThreadsRef = useRef<Map<string, Thread>>(new Map());
 
   const permission = useMemo(
     () => PERMISSION_MODES.find((mode) => mode.id === permissionId) ?? PERMISSION_MODES[0],
@@ -400,8 +425,29 @@ export function useWorkx(): WorkxController {
   }, []);
 
   const refreshThreads = useCallback(async () => {
-    const response = await request<ThreadListResponse>('thread/list', { limit: 60 });
-    dispatch({ type: 'threads', threads: response.data });
+    const response = await request<ThreadListResponse>('thread/list', {
+      limit: 200,
+      sortKey: 'recency_at',
+      sortDirection: 'desc',
+    });
+    const serverIds = new Set(response.data.map((thread) => thread.id));
+    for (const id of serverIds) {
+      pendingThreadsRef.current.delete(id);
+    }
+    dispatch({
+      type: 'threads',
+      threads: [...pendingThreadsRef.current.values(), ...response.data],
+    });
+  }, [request]);
+
+  const refreshProjects = useCallback(async () => {
+    const response = await request<ProjectListResponse>('project/list', {
+      limit: 100,
+      sortKey: 'position',
+      sortDirection: 'asc',
+    });
+    projectsRef.current = response.data;
+    dispatch({ type: 'projects', projects: response.data });
   }, [request]);
 
   const refreshModels = useCallback(async () => {
@@ -419,23 +465,71 @@ export function useWorkx(): WorkxController {
     }
   }, [request]);
 
-  const startThread = useCallback(async (): Promise<string> => {
-    const response = await request<ThreadStartResponse>('thread/start', {
-      cwd: cwdRef.current || undefined,
-      model: modelRef.current ?? undefined,
-      approvalPolicy: permissionRef.current.approvalPolicy,
-      sandbox: permissionRef.current.sandbox,
-    });
-    threadIdRef.current = response.thread.id;
-    turnIdRef.current = null;
-    dispatch({ type: 'thread', thread: response.thread, turns: [] });
-    void refreshThreads();
-    return response.thread.id;
-  }, [request, refreshThreads]);
+  const startThread = useCallback(
+    async (projectId?: string, cwd?: string): Promise<string> => {
+      const response = await request<ThreadStartResponse>('thread/start', {
+        cwd: cwd ?? (cwdRef.current || undefined),
+        projectId: projectId ?? undefined,
+        model: modelRef.current ?? undefined,
+        approvalPolicy: permissionRef.current.approvalPolicy,
+        sandbox: permissionRef.current.sandbox,
+      });
+      threadIdRef.current = response.thread.id;
+      turnIdRef.current = null;
+      pendingThreadsRef.current.set(response.thread.id, response.thread);
+      dispatch({ type: 'threadUpsert', thread: response.thread });
+      dispatch({ type: 'thread', thread: response.thread, turns: [] });
+      return response.thread.id;
+    },
+    [request],
+  );
 
   const newThread = useCallback(async () => {
     await startThread();
   }, [startThread]);
+
+  const newThreadInProject = useCallback(
+    async (projectId: string) => {
+      const project = projectsRef.current.find((candidate) => candidate.id === projectId);
+      const primaryRoot = project?.roots[0]?.path ?? undefined;
+      await startThread(projectId, primaryRoot);
+    },
+    [startThread],
+  );
+
+  const createProject = useCallback(
+    async (name: string, roots: string[]): Promise<Project> => {
+      const response = await request<ProjectCreateResponse>('project/create', {
+        name,
+        roots: roots.map((path) => ({ path })),
+        metadata: {},
+        idempotencyKey: crypto.randomUUID(),
+      });
+      await refreshProjects();
+      return response.project;
+    },
+    [request, refreshProjects],
+  );
+
+  const updateProject = useCallback(
+    async (id: string, name: string, roots: string[]) => {
+      await request<ProjectUpdateResponse>('project/update', {
+        projectId: id,
+        name,
+        roots: roots.map((path) => ({ path })),
+      });
+      await refreshProjects();
+    },
+    [request, refreshProjects],
+  );
+
+  const deleteProject = useCallback(
+    async (id: string) => {
+      await request<ProjectDeleteResponse>('project/delete', { projectId: id });
+      await Promise.all([refreshProjects(), refreshThreads()]);
+    },
+    [request, refreshProjects, refreshThreads],
+  );
 
   const openThread = useCallback(
     async (id: string) => {
@@ -492,6 +586,7 @@ export function useWorkx(): WorkxController {
   const archiveThread = useCallback(
     async (id: string) => {
       await request('thread/archive', { threadId: id });
+      pendingThreadsRef.current.delete(id);
       dispatch({ type: 'threadRemoved', threadId: id });
       void refreshThreads();
     },
@@ -501,6 +596,7 @@ export function useWorkx(): WorkxController {
   const deleteThread = useCallback(
     async (id: string) => {
       await request('thread/delete', { threadId: id });
+      pendingThreadsRef.current.delete(id);
       dispatch({ type: 'threadRemoved', threadId: id });
       void refreshThreads();
     },
@@ -629,7 +725,27 @@ export function useWorkx(): WorkxController {
             durationMs: params.turn.durationMs,
             status: params.turn.status,
           });
-          void refreshThreads();
+          void Promise.all([refreshThreads(), refreshProjects()]);
+          break;
+        }
+        case 'project/changed': {
+          const params = notification.params as ProjectChangedNotification;
+          if (params.changeType === 'deleted') {
+            void refreshThreads();
+          }
+          void refreshProjects();
+          break;
+        }
+        case 'thread/project/updated': {
+          const params = notification.params as ThreadProjectUpdatedNotification;
+          const thread = threadsRef.current.find((candidate) => candidate.id === params.threadId);
+          if (thread) {
+            dispatch({
+              type: 'threadUpdated',
+              thread: { ...thread, projectId: params.projectId },
+            });
+          }
+          void Promise.all([refreshThreads(), refreshProjects()]);
           break;
         }
         case 'error': {
@@ -655,6 +771,7 @@ export function useWorkx(): WorkxController {
           const params = notification.params as
             | ThreadArchivedNotification
             | ThreadDeletedNotification;
+          pendingThreadsRef.current.delete(params.threadId);
           dispatch({ type: 'threadRemoved', threadId: params.threadId });
           break;
         }
@@ -662,7 +779,7 @@ export function useWorkx(): WorkxController {
           break;
       }
     },
-    [refreshThreads],
+    [refreshProjects, refreshThreads],
   );
 
   const handleServerRequest = useCallback(
@@ -744,7 +861,7 @@ export function useWorkx(): WorkxController {
           return;
         }
         dispatch({ type: 'status', status: 'ready' });
-        await Promise.all([refreshModels(), refreshThreads()]);
+        await Promise.all([refreshModels(), refreshThreads(), refreshProjects()]);
       } catch (error) {
         dispatch({
           type: 'status',
@@ -753,7 +870,7 @@ export function useWorkx(): WorkxController {
         });
       }
     })();
-  }, [refreshModels, refreshThreads]);
+  }, [refreshModels, refreshProjects, refreshThreads]);
 
   useEffect(() => {
     const term = state.searchTerm.trim();
@@ -788,25 +905,31 @@ export function useWorkx(): WorkxController {
   const transcript = useMemo(() => buildTranscript(state.turns), [state.turns]);
 
   const projects = useMemo<ProjectView[]>(() => {
-    const byCwd = new Map<string, ProjectView>();
+    const byProject = new Map<string, Thread[]>();
     for (const thread of state.threads) {
-      const key = thread.cwd;
-      const existing = byCwd.get(key);
+      if (!thread.projectId) {
+        continue;
+      }
+      const existing = byProject.get(thread.projectId);
       if (existing) {
-        existing.threads.push(thread);
+        existing.push(thread);
       } else {
-        byCwd.set(key, {
-          id: key,
-          name: basename(key),
-          cwd: key,
-          threads: [thread],
-        });
+        byProject.set(thread.projectId, [thread]);
       }
     }
-    return [...byCwd.values()];
-  }, [state.threads]);
+    return state.projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      roots: project.roots.map((root) => root.path),
+      primaryRoot: project.roots[0]?.path ?? null,
+      threads: byProject.get(project.id) ?? [],
+    }));
+  }, [state.projects, state.threads]);
 
-  const recents = useMemo(() => state.threads.slice(0, 12), [state.threads]);
+  const recents = useMemo(
+    () => state.threads.filter((thread) => !thread.projectId),
+    [state.threads],
+  );
 
   return {
     status: state.status,
@@ -857,6 +980,7 @@ export function useWorkx(): WorkxController {
       setCwd(next);
     },
     newThread,
+    newThreadInProject,
     openThread,
     sendMessage,
     interrupt,
@@ -867,6 +991,10 @@ export function useWorkx(): WorkxController {
     refreshPlugins,
     refreshSkills,
     refreshMcpServers,
+    refreshProjects,
+    createProject,
+    updateProject,
+    deleteProject,
     resolveApproval,
     dismissError: () => dispatch({ type: 'error', message: null }),
     refreshThreads,

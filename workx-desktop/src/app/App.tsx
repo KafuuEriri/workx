@@ -2,6 +2,8 @@ import { ArrowDown } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Composer } from '../components/Composer';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { CreateProjectDialog } from '../components/CreateProjectDialog';
 import { MessageList } from '../components/MessageList';
 import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar, threadTitle } from '../components/Sidebar';
@@ -14,7 +16,7 @@ import {
   THEME_STORAGE_KEY,
   type ThemePreference,
 } from '../lib/theme';
-import { useWorkx } from './useWorkx';
+import { useWorkx, type ProjectView } from './useWorkx';
 
 const PANEL_TITLES: Partial<Record<NavKey, string>> = {
   plugins: 'Plugins',
@@ -28,6 +30,11 @@ export function App() {
   const [activeNav, setActiveNav] = useState<NavKey | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [projectDialog, setProjectDialog] = useState<{
+    mode: 'create' | 'edit';
+    project: ProjectView | null;
+  } | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<ProjectView | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -95,6 +102,7 @@ export function App() {
   }, [workx.activeThread, scrollToBottom]);
 
   const activeThread = workx.activeThread;
+  const activeCwd = activeThread?.cwd ?? workx.cwd;
   const disabled = workx.status !== 'ready';
   const panel = PANEL_TITLES[activeNav ?? 'new-chat'] ? activeNav : null;
   const title =
@@ -115,26 +123,24 @@ export function App() {
         projects={workx.projects}
         recents={workx.recents}
         activeThreadId={activeThread?.id ?? null}
-        activeCwd={workx.cwd}
         onSelectThread={(id) => {
           setActiveNav(null);
           void workx.openThread(id);
         }}
-        onSelectProject={(cwd) => {
+        onSelectProject={(projectId) => {
           setActiveNav(null);
-          workx.setActiveCwd(cwd);
+          const project = workx.projects.find((candidate) => candidate.id === projectId);
+          if (project?.primaryRoot) {
+            workx.setActiveCwd(project.primaryRoot);
+          }
         }}
-        onAddProject={() => {
-          void (async () => {
-            const dir = await window.workx.pickFolder();
-            if (!dir) {
-              return;
-            }
-            setActiveNav(null);
-            workx.setActiveCwd(dir);
-            await workx.newThread();
-          })();
+        onNewChatInProject={(projectId) => {
+          setActiveNav('new-chat');
+          void workx.newThreadInProject(projectId);
         }}
+        onAddProject={() => setProjectDialog({ mode: 'create', project: null })}
+        onEditProject={(project) => setProjectDialog({ mode: 'edit', project })}
+        onRemoveProject={(project) => setRemoveTarget(project)}
         searchTerm={workx.searchTerm}
         searchResults={workx.searchResults}
         searching={workx.searching}
@@ -147,7 +153,7 @@ export function App() {
       <main className="flex min-w-0 flex-1 flex-col">
         <TopBar
           title={title}
-          subtitle={panel ? null : workx.cwd}
+          subtitle={panel ? null : activeCwd}
           status={workx.status}
         />
 
@@ -197,7 +203,7 @@ export function App() {
                   }
                   warnings={workx.warnings}
                   approvals={workx.approvals}
-                  cwd={workx.cwd}
+                  cwd={activeCwd}
                   onResolveApproval={(id, decision) => void workx.resolveApproval(id, decision)}
                   onDismissError={workx.dismissError}
                 />
@@ -243,6 +249,43 @@ export function App() {
         onEffortChange={workx.setEffort}
         theme={theme}
         onThemeChange={setTheme}
+      />
+
+      <CreateProjectDialog
+        open={projectDialog !== null}
+        mode={projectDialog?.mode ?? 'create'}
+        initialName={projectDialog?.project?.name ?? ''}
+        initialRoots={projectDialog?.project?.roots ?? []}
+        onClose={() => setProjectDialog(null)}
+        onPickFolder={() => window.workx.pickFolder()}
+        onSubmit={async (name, roots) => {
+          const dialog = projectDialog;
+          if (!dialog) {
+            return;
+          }
+          if (dialog.mode === 'edit' && dialog.project) {
+            await workx.updateProject(dialog.project.id, name, roots);
+            return;
+          }
+          const project = await workx.createProject(name, roots);
+          setActiveNav('new-chat');
+          await workx.newThreadInProject(project.id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={removeTarget !== null}
+        title={`Remove ${removeTarget?.name ?? 'project'}?`}
+        description="The project is removed and its chats move to Recents. Files on disk are not touched."
+        confirmLabel="Remove project"
+        onCancel={() => setRemoveTarget(null)}
+        onConfirm={() => {
+          const target = removeTarget;
+          setRemoveTarget(null);
+          if (target) {
+            void workx.deleteProject(target.id);
+          }
+        }}
       />
     </div>
   );
