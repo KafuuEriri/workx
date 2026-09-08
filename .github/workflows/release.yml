@@ -292,3 +292,77 @@ jobs:
             --draft=false \
             --title "Workx $version" \
             --notes "$notes"
+
+  # Requires HOMEBREW_TAP_TOKEN with push access to RonanXiao/homebrew-workx.
+  # Without the secret this job is a no-op so releases are not blocked.
+  update-homebrew:
+    name: Update Homebrew tap
+    needs:
+      - create-release
+      - finalize-release
+    runs-on: ubuntu-24.04
+    env:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      VERSION: ${{ needs.create-release.outputs.version }}
+      TAG: ${{ needs.create-release.outputs.tag }}
+      GH_REPO: ${{ github.repository }}
+      HOMEBREW_REPOSITORY: RonanXiao/homebrew-workx
+      HOMEBREW_FORMULA_PATH: homebrew-workx/Formula/workx.rb
+    steps:
+      - name: Skip Homebrew sync
+        if: env.HOMEBREW_TAP_TOKEN == ''
+        run: echo "HOMEBREW_TAP_TOKEN is not set; skipping Homebrew formula sync."
+
+      - name: Checkout Workx release tools
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Checkout Homebrew tap
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ env.HOMEBREW_REPOSITORY }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-workx
+          ref: main
+
+      - name: Update formula and push
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          assets_dir="$(mktemp -d)"
+          cd "$assets_dir"
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern 'workx-package-aarch64-apple-darwin.tar.gz'
+          arm64_sha="$(sha256sum workx-package-aarch64-apple-darwin.tar.gz | awk '{print $1}')"
+
+          curl -fsSL \
+            "https://github.com/${{ github.repository }}/archive/refs/tags/$TAG.tar.gz" \
+            -o source.tar.gz
+          source_sha="$(sha256sum source.tar.gz | awk '{print $1}')"
+
+          cd "$GITHUB_WORKSPACE"
+          python3 scripts/update_homebrew_formula.py \
+            --formula "$HOMEBREW_FORMULA_PATH" \
+            --version "$VERSION" \
+            --tag "$TAG" \
+            --arm64-sha256 "$arm64_sha" \
+            --source-sha256 "$source_sha"
+
+          cd homebrew-workx
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "Homebrew formula already up to date."
+            exit 0
+          fi
+          git add Formula/workx.rb
+          git commit -m "Workx $VERSION"
+          git push origin main
