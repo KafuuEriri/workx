@@ -13,6 +13,19 @@ workx 是基于 OpenAI Codex `rust-v0.153.4` 的独立项目。
 - Python 包名：`workx`、`workx-cli-bin`；SDK 导入：`import workx`
 - macOS 配置及应用标识：`com.ronanxiao.workx`
 
+## 安装
+
+macOS 可通过 Homebrew tap 安装预编译版本：
+
+```sh
+brew tap ronanxiao/workx
+brew trust ronanxiao/workx
+brew install workx
+```
+
+`brew trust` 用于信任非官方 tap，首次执行即可。`brew install workx` 会从
+`RonanXiao/workx` 的 GitHub Releases 拉取当前平台的预编译包。
+
 ## 从源码运行和打包
 
 使用仓库指定的 Rust toolchain，以及 Node.js、pnpm、Python 和 just：
@@ -30,7 +43,7 @@ just assemble-workx-package --help
 ```
 
 打包脚本、安装脚本及发布文件使用 workx 名称，安装器默认从本仓库的 GitHub Releases 下载。
-当前尚未发布 npm/PyPI 包、GitHub Release 或桌面应用。
+GitHub Releases 已发布 macOS Apple Silicon 预编译包；npm/PyPI 包和桌面应用尚未发布。
 上游发布流程仍包含签名、发布凭据和运行环境要求，后续需配置后才能正式发布。
 
 ## 模型 provider
