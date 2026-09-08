@@ -206,8 +206,10 @@ export function App() {
                   warnings={workx.warnings}
                   approvals={workx.approvals}
                   cwd={activeCwd}
+                  writerConflict={workx.writerConflict}
                   onResolveApproval={(id, decision) => void workx.resolveApproval(id, decision)}
                   onDismissError={workx.dismissError}
+                  onRetryWriter={() => void workx.retryActiveThread()}
                 />
               </div>
 
@@ -230,7 +232,10 @@ export function App() {
               permission={workx.permission}
               onPermissionChange={workx.setPermission}
               running={workx.running}
-              disabled={disabled}
+              disabled={disabled || workx.writerConflict}
+              disabledPlaceholder={
+                workx.writerConflict ? 'This chat is open in another app' : undefined
+              }
               onSubmit={(text) => {
                 void workx.sendMessage(text);
                 window.requestAnimationFrame(scrollToBottom);

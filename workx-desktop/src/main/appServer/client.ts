@@ -13,6 +13,16 @@ export interface JsonRpcErrorShape {
   data?: unknown;
 }
 
+export class AppServerError extends Error {
+  readonly code: number;
+
+  constructor(message: string, code: number) {
+    super(message);
+    this.name = 'AppServerError';
+    this.code = code;
+  }
+}
+
 export interface AppServerNotification {
   method: string;
   params: unknown;
@@ -181,7 +191,7 @@ export class AppServerClient extends EventEmitter<AppServerClientEvents> {
       this.pending.delete(message.id);
       clearTimeout(pending.timer);
       if (message.error) {
-        pending.reject(new Error(message.error.message));
+        pending.reject(new AppServerError(message.error.message, message.error.code));
       } else {
         pending.resolve(message.result);
       }

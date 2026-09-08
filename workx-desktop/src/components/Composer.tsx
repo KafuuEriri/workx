@@ -15,6 +15,7 @@ interface ComposerProps {
   onPermissionChange: (mode: PermissionMode) => void;
   running: boolean;
   disabled: boolean;
+  disabledPlaceholder?: string;
   onSubmit: (text: string) => void;
   onInterrupt: () => void;
 }
@@ -27,6 +28,7 @@ export function Composer({
   onPermissionChange,
   running,
   disabled,
+  disabledPlaceholder,
   onSubmit,
   onInterrupt,
 }: ComposerProps) {
@@ -72,7 +74,9 @@ export function Composer({
               event.currentTarget.form?.requestSubmit();
             }
           }}
-          placeholder={disabled ? 'Connecting to app-server…' : 'Do anything'}
+          placeholder={
+            disabled ? (disabledPlaceholder ?? 'Connecting to app-server…') : 'Do anything'
+          }
           className="max-h-[240px] w-full resize-none bg-transparent px-4 pt-3.5 text-[16px] leading-[1.5] outline-none placeholder:text-fg-tertiary disabled:opacity-60"
         />
 

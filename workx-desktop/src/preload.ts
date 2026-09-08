@@ -39,10 +39,28 @@ function subscribe<T>(channel: string, listener: (payload: T) => void): () => vo
   return () => ipcRenderer.removeListener(channel, wrapped);
 }
 
+interface RequestEnvelope {
+  ok: boolean;
+  result?: unknown;
+  error?: { message: string; code?: number };
+}
+
 const appServer: AppServerApi = {
   start: () => ipcRenderer.invoke('workx:app-server:start'),
-  request: (method, params) =>
-    ipcRenderer.invoke('workx:app-server:request', { method, params }),
+  request: async <T = unknown>(method: string, params?: unknown): Promise<T> => {
+    const response = (await ipcRenderer.invoke('workx:app-server:request', {
+      method,
+      params,
+    })) as RequestEnvelope;
+    if (response?.ok) {
+      return response.result as T;
+    }
+    const error = new Error(response?.error?.message ?? `${method} failed`);
+    if (response?.error?.code !== undefined) {
+      Object.assign(error, { code: response.error.code });
+    }
+    throw error;
+  },
   respond: (id, result, error) =>
     ipcRenderer.invoke('workx:app-server:respond', { id, result, error }),
   onNotification: (listener) => subscribe('workx:app-server:notification', listener),

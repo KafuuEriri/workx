@@ -47,8 +47,10 @@ interface MessageListProps {
   warnings: string[];
   approvals: ApprovalRequest[];
   cwd: string;
+  writerConflict: boolean;
   onResolveApproval: (id: string | number, decision: 'accept' | 'decline') => void;
   onDismissError: () => void;
+  onRetryWriter: () => void;
 }
 
 export function MessageList({
@@ -58,11 +60,15 @@ export function MessageList({
   warnings,
   approvals,
   cwd,
+  writerConflict,
   onResolveApproval,
   onDismissError,
+  onRetryWriter,
 }: MessageListProps) {
   return (
     <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-7 px-6 pb-10 pt-2">
+      {writerConflict ? <WriterConflict onRetry={onRetryWriter} /> : null}
+
       {entries.length === 0 ? <EmptyState cwd={cwd} /> : null}
 
       {entries.map((entry) =>
@@ -94,6 +100,28 @@ export function MessageList({
       ) : null}
 
       {running && entries.length === 0 ? <Thinking /> : null}
+    </div>
+  );
+}
+
+function WriterConflict({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3"
+    >
+      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" strokeWidth={1.75} />
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-medium">This is open in another app</p>
+        <p className="mt-0.5 text-[13px] text-fg-secondary">Close it there to continue here.</p>
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="shrink-0 rounded-lg border border-line px-2.5 py-1 text-[13px] hover:bg-hover"
+      >
+        Retry
+      </button>
     </div>
   );
 }

@@ -23,6 +23,7 @@ import type { ThreadItem } from '@protocol/v2/ThreadItem';
 import type { ThreadListResponse } from '@protocol/v2/ThreadListResponse';
 import type { ThreadNameUpdatedNotification } from '@protocol/v2/ThreadNameUpdatedNotification';
 import type { ThreadProjectUpdatedNotification } from '@protocol/v2/ThreadProjectUpdatedNotification';
+import type { ThreadReadResponse } from '@protocol/v2/ThreadReadResponse';
 import type { ThreadResumeResponse } from '@protocol/v2/ThreadResumeResponse';
 import type { ThreadStartResponse } from '@protocol/v2/ThreadStartResponse';
 import type { Turn } from '@protocol/v2/Turn';
@@ -93,6 +94,8 @@ export interface WorkxController {
   newThread: () => Promise<void>;
   newThreadInProject: (projectId: string) => Promise<void>;
   openThread: (id: string) => Promise<void>;
+  retryActiveThread: () => Promise<void>;
+  writerConflict: boolean;
   sendMessage: (text: string) => Promise<void>;
   interrupt: () => Promise<void>;
   renameThread: (id: string, name: string) => Promise<void>;
@@ -118,6 +121,7 @@ interface State {
   projects: Project[];
   threads: Thread[];
   activeThread: Thread | null;
+  writerConflict: string | null;
   turns: TurnView[];
   running: boolean;
   activeTurnId: string | null;
@@ -143,7 +147,7 @@ type Action =
   | { type: 'projects'; projects: Project[] }
   | { type: 'threads'; threads: Thread[] }
   | { type: 'threadUpsert'; thread: Thread }
-  | { type: 'thread'; thread: Thread; turns: TurnView[] }
+  | { type: 'thread'; thread: Thread; turns: TurnView[]; writerConflict?: string | null }
   | { type: 'item'; turnId: string; item: ThreadItem }
   | { type: 'delta'; turnId: string; itemId: string; delta: string }
   | { type: 'turnStarted'; turnId: string; startedAtMs: number | null }
@@ -174,6 +178,7 @@ const initialState: State = {
   projects: [],
   threads: [],
   activeThread: null,
+  writerConflict: null,
   turns: [],
   running: false,
   activeTurnId: null,
@@ -249,7 +254,10 @@ function reducer(state: State, action: Action): State {
         ...state,
         activeThread: action.thread,
         turns: action.turns,
-        running: action.turns.some((turn) => turn.status === 'inProgress'),
+        writerConflict: action.writerConflict ?? null,
+        running: action.writerConflict
+          ? false
+          : action.turns.some((turn) => turn.status === 'inProgress'),
         activeTurnId: null,
         error: null,
         warnings: [],
@@ -350,6 +358,8 @@ function reducer(state: State, action: Action): State {
         activeThread:
           state.activeThread?.id === action.threadId ? null : state.activeThread,
         turns: state.activeThread?.id === action.threadId ? [] : state.turns,
+        writerConflict:
+          state.activeThread?.id === action.threadId ? null : state.writerConflict,
       };
     case 'plugins':
       return {
@@ -534,20 +544,50 @@ export function useWorkx(): WorkxController {
 
   const openThread = useCallback(
     async (id: string) => {
-      const response = await request<ThreadResumeResponse>('thread/resume', { threadId: id });
-      threadIdRef.current = response.thread.id;
-      turnIdRef.current = null;
-      dispatch({
-        type: 'thread',
-        thread: response.thread,
-        turns: response.thread.turns.map(turnView),
-      });
+      try {
+        const response = await request<ThreadResumeResponse>('thread/resume', { threadId: id });
+        threadIdRef.current = response.thread.id;
+        turnIdRef.current = null;
+        dispatch({
+          type: 'thread',
+          thread: response.thread,
+          turns: response.thread.turns.map(turnView),
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('already has an active writer')) {
+          dispatch({ type: 'error', message });
+          return;
+        }
+        const response = await request<ThreadReadResponse>('thread/read', {
+          threadId: id,
+          includeTurns: true,
+        });
+        threadIdRef.current = response.thread.id;
+        turnIdRef.current = null;
+        dispatch({
+          type: 'thread',
+          thread: response.thread,
+          turns: response.thread.turns.map(turnView),
+          writerConflict: id,
+        });
+      }
     },
     [request],
   );
 
+  const retryActiveThread = useCallback(async () => {
+    const threadId = threadIdRef.current;
+    if (threadId) {
+      await openThread(threadId);
+    }
+  }, [openThread]);
+
   const sendMessage = useCallback(
     async (text: string) => {
+      if (state.writerConflict) {
+        return;
+      }
       const threadId = threadIdRef.current ?? (await startThread());
       const response = await request<TurnStartResponse>('turn/start', {
         threadId,
@@ -561,7 +601,7 @@ export function useWorkx(): WorkxController {
         startedAtMs: Date.now(),
       });
     },
-    [request, startThread],
+    [request, startThread, state.writerConflict],
   );
 
   const interrupt = useCallback(async () => {
@@ -984,6 +1024,8 @@ export function useWorkx(): WorkxController {
     newThread,
     newThreadInProject,
     openThread,
+    retryActiveThread,
+    writerConflict: state.writerConflict !== null,
     sendMessage,
     interrupt,
     renameThread,

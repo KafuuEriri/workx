@@ -1,7 +1,7 @@
 import { app, ipcMain, webContents } from 'electron';
 import os from 'node:os';
 
-import { AppServerClient, type JsonRpcId } from './client';
+import { AppServerClient, AppServerError, type JsonRpcId } from './client';
 
 const CLIENT_INFO = {
   name: 'workx_desktop',
@@ -57,11 +57,19 @@ export function registerAppServerIpc(): void {
 
   ipcMain.handle(
     'workx:app-server:request',
-    (_event, payload: { method: string; params?: unknown }) => {
+    async (_event, payload: { method: string; params?: unknown }) => {
       if (!client) {
-        throw new Error('app-server is not running');
+        return { ok: false, error: { message: 'app-server is not running' } };
       }
-      return client.request(payload.method, payload.params);
+      try {
+        return { ok: true, result: await client.request(payload.method, payload.params) };
+      } catch (error) {
+        const code = error instanceof AppServerError ? error.code : undefined;
+        return {
+          ok: false,
+          error: { message: error instanceof Error ? error.message : String(error), code },
+        };
+      }
     },
   );
 
