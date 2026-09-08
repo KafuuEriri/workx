@@ -5,7 +5,6 @@ import {
   ChevronDown,
   CircleHelp,
   Folder,
-  Link,
   MoreHorizontal,
   Pencil,
   Plug,
@@ -18,7 +17,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
+import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
 
 import type { ProjectView } from '../app/useWorkx';
 import type { Thread } from '@protocol/v2/Thread';
@@ -40,6 +39,9 @@ const STATUS_DOT: Record<ConnectionStatus, string> = {
   error: 'bg-danger',
   stopped: 'bg-fg-tertiary',
 };
+
+const PROJECT_LIMIT = 5;
+const PROJECT_THREAD_LIMIT = 5;
 
 interface SidebarProps {
   status: ConnectionStatus;
@@ -80,7 +82,6 @@ export function Sidebar({
   projects,
   recents,
   activeThreadId,
-  activeCwd,
   onSelectThread,
   onSelectProject,
   searchTerm,
@@ -94,12 +95,39 @@ export function Sidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [showAllProjects, setShowAllProjects] = useState(false);
 
   const searching_ = searchOpen || searchTerm.trim().length > 0;
+
+  useEffect(() => {
+    if (!activeThreadId) {
+      return;
+    }
+    const project = projects.find((candidate) =>
+      candidate.threads.some((thread) => thread.id === activeThreadId),
+    );
+    if (project) {
+      setExpandedProjects(new Set([project.id]));
+    }
+  }, [activeThreadId, projects]);
 
   const closeSearch = () => {
     setSearchOpen(false);
     onSearchTermChange('');
+  };
+
+  const toggleProject = (project: ProjectView) => {
+    setExpandedProjects((current) => {
+      const next = new Set(current);
+      if (next.has(project.id)) {
+        next.delete(project.id);
+      } else {
+        next.add(project.id);
+      }
+      return next;
+    });
+    onSelectProject(project.cwd);
   };
 
   const renderThread = (thread: Thread, indent = false) => (
@@ -122,6 +150,8 @@ export function Sidebar({
       onDelete={() => onDeleteThread(thread.id)}
     />
   );
+
+  const visibleProjects = showAllProjects ? projects : projects.slice(0, PROJECT_LIMIT);
 
   return (
     <aside className="drag flex h-full w-[275px] shrink-0 flex-col border-r border-line-subtle bg-sidebar">
@@ -257,32 +287,41 @@ export function Sidebar({
         ) : (
           <>
             <SidebarSection label="Projects">
-              {projects.map((project) => (
-                <div key={project.id}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectProject(project.cwd)}
-                    className={cn(
-                      'flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] hover:bg-hover',
-                      activeCwd === project.cwd && 'bg-hover',
-                    )}
-                  >
-                    <Folder className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
-                    <span className="truncate">{project.name}</span>
-                  </button>
+              {visibleProjects.map((project) => {
+                const expanded = expandedProjects.has(project.id);
+                return (
+                  <div key={project.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggleProject(project)}
+                      className="flex h-[30px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] hover:bg-hover"
+                    >
+                      <Folder
+                        className="size-[18px] shrink-0 text-fg-secondary"
+                        strokeWidth={1.75}
+                      />
+                      <span className="truncate">{project.name}</span>
+                    </button>
 
-                  {project.remoteUrl ? (
-                    <div className="group ml-[22px] flex h-[30px] items-center gap-1.5 rounded-lg px-2 text-[13px] text-fg-secondary">
-                      <Link className="size-3.5 shrink-0" strokeWidth={1.75} />
-                      <span className="truncate">{project.remoteUrl}</span>
-                    </div>
-                  ) : null}
-
-                  {project.threads.slice(0, 5).map((thread) => renderThread(thread, true))}
-                </div>
-              ))}
+                    {expanded
+                      ? project.threads
+                          .slice(0, PROJECT_THREAD_LIMIT)
+                          .map((thread) => renderThread(thread, true))
+                      : null}
+                  </div>
+                );
+              })}
               {projects.length === 0 ? (
                 <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No projects yet</p>
+              ) : null}
+              {projects.length > PROJECT_LIMIT ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllProjects((value) => !value)}
+                  className="flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[14px] text-fg-tertiary hover:bg-hover"
+                >
+                  {showAllProjects ? 'Show less' : 'Show more'}
+                </button>
               ) : null}
             </SidebarSection>
 
@@ -359,7 +398,7 @@ function ThreadRow({
 
   if (renaming) {
     return (
-      <div className={cn('px-1', indent && 'pl-[42px]')}>
+      <div className={cn('pr-1', indent ? 'pl-[38px]' : 'pl-1')}>
         <input
           autoFocus
           value={draft}
@@ -379,13 +418,13 @@ function ThreadRow({
   }
 
   return (
-    <div className={cn('group/row relative', indent && 'pl-[24px]')}>
+    <div className="group/row relative">
       <button
         type="button"
         onClick={onSelect}
         className={cn(
-          'flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[13px] text-fg-secondary hover:bg-hover',
-          indent && 'pl-[22px]',
+          'flex h-[30px] w-full items-center rounded-lg pr-8 text-left text-[13px] text-fg-secondary hover:bg-hover',
+          indent ? 'pl-[38px]' : 'pl-2.5',
           active && 'bg-active text-fg',
         )}
       >

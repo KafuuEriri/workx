@@ -49,7 +49,6 @@ export interface ProjectView {
   id: string;
   name: string;
   cwd: string;
-  remoteUrl?: string;
   threads: Thread[];
 }
 
@@ -795,18 +794,16 @@ export function useWorkx(): WorkxController {
       const existing = byCwd.get(key);
       if (existing) {
         existing.threads.push(thread);
-        existing.remoteUrl ??= thread.gitInfo?.originUrl ?? undefined;
       } else {
         byCwd.set(key, {
           id: key,
           name: basename(key),
           cwd: key,
-          remoteUrl: thread.gitInfo?.originUrl ?? undefined,
           threads: [thread],
         });
       }
     }
-    return [...byCwd.values()].slice(0, 6);
+    return [...byCwd.values()];
   }, [state.threads]);
 
   const recents = useMemo(() => state.threads.slice(0, 12), [state.threads]);
