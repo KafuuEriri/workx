@@ -1,7 +1,6 @@
 import {
   Archive,
   ArrowUpDown,
-  AudioLines,
   Bell,
   Check,
   ChevronDown,
@@ -404,17 +403,7 @@ export function Sidebar({
             )}
           />
         </div>
-        <span className="min-w-0 truncate text-[13px] text-fg-secondary">
-          {status === 'ready' ? 'app-server connected' : status}
-        </span>
         <div className="ml-auto flex items-center gap-0.5">
-          <button
-            type="button"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover"
-          >
-            <AudioLines className="size-3.5" strokeWidth={1.75} />
-            Voice
-          </button>
           <IconButton size="sm" aria-label="Settings" onClick={onOpenSettings}>
             <Settings2 className="size-4" strokeWidth={1.75} />
           </IconButton>
