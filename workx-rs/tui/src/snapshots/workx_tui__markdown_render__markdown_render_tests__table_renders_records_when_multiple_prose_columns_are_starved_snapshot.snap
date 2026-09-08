@@ -10,7 +10,7 @@ expression: "plain_lines(&text).join(\"\\n\")"
              path.
 ────────────────────────────────────────────────────────────────────────────
  Issue       #23926: Vim composer e stalls at word end (https://github.com/
-             RonanXiao/workx/issues/23926)
+             openai/codex/issues/23926)
  Activity    +1 0, comments 0
  Complexity  Low
  Why start   Standing best quick win; deterministic motion bug.
@@ -29,7 +29,7 @@ expression: "plain_lines(&text).join(\"\\n\")"
              family.
 ────────────────────────────────────────────────────────────────────────────
  Issue       #24527: typing lag increases with session length (https://
-             github.com/RonanXiao/workx/issues/24527)
+             github.com/openai/codex/issues/24527)
  Activity    +1 0, substantive comments 0
  Complexity  Medium
  Why start   New TUI-visible performance report; needs profiling before

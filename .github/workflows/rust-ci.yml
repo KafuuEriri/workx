@@ -161,10 +161,30 @@ jobs:
         if: always() && !cancelled()
         uses: ./.github/actions/check-clean-worktree
 
+  tui_tests:
+    name: workx-tui tests
+    runs-on: ubuntu-24.04
+    needs: changed
+    if: ${{ needs.changed.outputs.workx == 'true' || needs.changed.outputs.workflows == 'true' }}
+    defaults:
+      run:
+        working-directory: workx-rs
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-ci
+      - uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+      - uses: taiki-e/install-action@1ed6d7be6168f6c9046541087ff549b6bc581fdf # v2.87.2
+        with:
+          tool: cargo-nextest
+      - name: Run workx-tui test suite
+        run: just test -p workx-tui
+
   # --- Gatherer job that you mark as the ONLY required status -----------------
   results:
     name: CI results (required)
-    needs: [changed, general, cargo_shear, argument_comment_lint_package]
+    needs: [changed, general, cargo_shear, argument_comment_lint_package, tui_tests]
     if: always()
     runs-on: ubuntu-24.04
     steps:
@@ -174,6 +194,7 @@ jobs:
           echo "argpkg : ${{ needs.argument_comment_lint_package.result }}"
           echo "general: ${{ needs.general.result }}"
           echo "shear  : ${{ needs.cargo_shear.result }}"
+          echo "tui    : ${{ needs.tui_tests.result }}"
 
           # If nothing relevant changed (PR touching only root README, etc.),
           # declare success regardless of other jobs.
@@ -189,6 +210,7 @@ jobs:
           if [[ "${NEEDS_CHANGED_OUTPUTS_WORKX}" == 'true' || "${NEEDS_CHANGED_OUTPUTS_WORKFLOWS}" == 'true' ]]; then
             [[ '${{ needs.general.result }}' == 'success' ]] || { echo 'general failed'; exit 1; }
             [[ '${{ needs.cargo_shear.result }}' == 'success' ]] || { echo 'cargo_shear failed'; exit 1; }
+            [[ '${{ needs.tui_tests.result }}' == 'success' ]] || { echo 'tui_tests failed'; exit 1; }
           fi
         env:
           NEEDS_CHANGED_OUTPUTS_ARGUMENT_COMMENT_LINT: ${{ needs.changed.outputs.argument_comment_lint }}

@@ -253,13 +253,13 @@ mod tests {
                 "Disable terminal pets",
                 "BSOD",
                 "Chefito",
-                "Workx",
                 "Dewey",
                 "Fireball",
                 "Null Signal",
                 "Rocky",
                 "Seedy",
                 "Stacky",
+                "Workx",
             ],
         );
         assert_eq!(params.initial_selected_idx, Some(2));
@@ -278,9 +278,9 @@ mod tests {
             PetPickerPreviewState::default(),
         );
 
-        assert_eq!(params.initial_selected_idx, Some(2));
-        assert_eq!(params.items[2].name, "Workx");
-        assert!(!params.items[2].is_current);
+        assert_eq!(params.initial_selected_idx, Some(8));
+        assert_eq!(params.items[8].name, "Workx");
+        assert!(!params.items[8].is_current);
     }
 
     #[test]

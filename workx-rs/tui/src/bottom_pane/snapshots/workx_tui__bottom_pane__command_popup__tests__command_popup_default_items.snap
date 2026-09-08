@@ -3,6 +3,7 @@ source: tui/src/bottom_pane/command_popup.rs
 expression: commands
 ---
 /model - choose what model and reasoning effort to use
+/provider - add, edit, or switch model providers
 /ide - include current selection, open files, and other context from your IDE
 /permissions - choose what Workx is allowed to do
 /keymap - remap TUI shortcuts
@@ -19,6 +20,7 @@ expression: commands
 /archive - archive this session and exit
 /delete - permanently delete this session and exit
 /resume - resume a saved chat
+/codex - copy chats from Codex and resume them here
 /fork - fork the current chat
 /app - continue this session in the Desktop app
 /init - create an AGENTS.md file with instructions for Workx
