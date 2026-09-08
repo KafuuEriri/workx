@@ -11,7 +11,7 @@ name: release
 #      per platform (no cross-compilation from a single host):
 #        - ubuntu-24.04   -> x86_64-unknown-linux-musl  (WSL / Linux x64)
 #        - windows-latest -> x86_64-pc-windows-msvc     (Windows x64)
-#        - macos-14       -> aarch64-apple-darwin       (macOS Apple Silicon)
+#        - macos-15       -> aarch64-apple-darwin       (macOS Apple Silicon)
 #   3. Publishes the release with a combined `workx-package_SHA256SUMS`.
 #
 # Optional extra matrix rows (uncomment the matching `include` entry):
@@ -148,7 +148,9 @@ jobs:
             apt: ""
             python: python
           - name: macOS Apple Silicon
-            os: macos-14
+            # macos-14 ships an older Xcode whose ld cannot link the oversized
+            # arm64 `workx` binary (ld: B/BL out of range); use a current image.
+            os: macos-15
             target: aarch64-apple-darwin
             apt: ""
             python: python3
