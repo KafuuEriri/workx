@@ -4,6 +4,9 @@ import started from 'electron-squirrel-startup';
 
 import { registerAppServerIpc } from './main/appServer/ipc';
 
+app.setName('Workx');
+app.setAboutPanelOptions({ applicationName: 'Workx', applicationVersion: app.getVersion() });
+
 if (started) {
   app.quit();
 }
