@@ -1,11 +1,39 @@
-import { AlertTriangle, ArrowUp, ChevronDown, Mic, Plus, Square } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  ArrowUp,
+  ChevronDown,
+  FileText,
+  MessageSquare,
+  Mic,
+  Plug,
+  Plus,
+  Puzzle,
+  Sparkles,
+  Square,
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { FuzzyFileSearchResult } from '@protocol/FuzzyFileSearchResult';
+import type { McpServerStatus } from '@protocol/v2/McpServerStatus';
 import type { Model } from '@protocol/v2/Model';
+import type { PluginSummary } from '@protocol/v2/PluginSummary';
+import type { SkillMetadata } from '@protocol/v2/SkillMetadata';
+import type { Thread } from '@protocol/v2/Thread';
+import {
+  COMPOSER_COMMANDS,
+  type ComposerCommand,
+  type ComposerMenuBinding,
+} from '../data/composerMenu';
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
 import { cn } from '../lib/cn';
+import { ComposerMenu, type ComposerMenuItem, type ComposerMenuSection } from './ComposerMenu';
 import { IconButton } from './IconButton';
 import { Menu, MenuItem } from './Menu';
+import { threadTitle } from './Sidebar';
+
+type ComposerMenuState =
+  | { mode: 'mention'; start: number | null; query: string }
+  | { mode: 'slash'; start: number; query: string };
 
 interface ComposerProps {
   models: Model[];
@@ -17,11 +45,82 @@ interface ComposerProps {
   onProviderChange: (id: string) => void;
   permission: PermissionMode;
   onPermissionChange: (mode: PermissionMode) => void;
+  skills: SkillMetadata[];
+  plugins: PluginSummary[];
+  mcpServers: McpServerStatus[];
+  searchFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
+  searchChats: (query: string) => Promise<Thread[]>;
   running: boolean;
   disabled: boolean;
   disabledPlaceholder?: string;
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string, bindings: ComposerMenuBinding[]) => void;
+  onCommand: (id: string, args: string) => void;
   onInterrupt: () => void;
+}
+
+function detectTrigger(value: string, caret: number): ComposerMenuState | null {
+  const before = value.slice(0, caret);
+  if (before.startsWith('/')) {
+    const query = before.slice(1);
+    if (!/\s/.test(query)) {
+      return { mode: 'slash', start: 0, query };
+    }
+  }
+  const at = before.lastIndexOf('@');
+  if (at !== -1) {
+    const prev = at === 0 ? '' : before[at - 1];
+    const query = before.slice(at + 1);
+    if ((at === 0 || /\s/.test(prev)) && !/[\s@]/.test(query)) {
+      return { mode: 'mention', start: at, query };
+    }
+  }
+  return null;
+}
+
+function splitPluginNameSegments(name: string): Array<{ text: string; separator: string | null }> {
+  const segments: Array<{ text: string; separator: string | null }> = [];
+  let current = '';
+  for (const char of name) {
+    if (char === '-' || char === '_') {
+      if (current) {
+        segments.push({ text: current, separator: char });
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (current) {
+    segments.push({ text: current, separator: null });
+  }
+  return segments;
+}
+
+function pluginMentionName(pluginName: string, displayName: string): string {
+  const pluginSegments = splitPluginNameSegments(pluginName);
+  const displaySegments = displayName.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  if (
+    pluginSegments.length === displaySegments.length &&
+    pluginSegments.every(
+      (segment, index) => segment.text.toLowerCase() === displaySegments[index].toLowerCase(),
+    )
+  ) {
+    return pluginSegments
+      .map((segment, index) => displaySegments[index] + (segment.separator ?? ''))
+      .join('');
+  }
+  return pluginName
+    .split(/([-_])/)
+    .map((part) => (part === '-' || part === '_' ? part : part.replace(/^[a-z]/, (c) => c.toUpperCase())))
+    .join('');
+}
+
+function matches(terms: Array<string | null | undefined>, query: string): boolean {
+  if (!query) {
+    return true;
+  }
+  const needle = query.toLowerCase();
+  return terms.some((term) => term?.toLowerCase().includes(needle));
 }
 
 export function Composer({
@@ -34,17 +133,30 @@ export function Composer({
   onProviderChange,
   permission,
   onPermissionChange,
+  skills,
+  plugins,
+  mcpServers,
+  searchFiles,
+  searchChats,
   running,
   disabled,
   disabledPlaceholder,
   onSubmit,
+  onCommand,
   onInterrupt,
 }: ComposerProps) {
   const [value, setValue] = useState('');
   const [modelOpen, setModelOpen] = useState(false);
   const [providerOpen, setProviderOpen] = useState(false);
   const [permissionOpen, setPermissionOpen] = useState(false);
+  const [menu, setMenu] = useState<ComposerMenuState | null>(null);
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [fileResults, setFileResults] = useState<FuzzyFileSearchResult[]>([]);
+  const [chatResults, setChatResults] = useState<Thread[]>([]);
+  const [searching, setSearching] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const bindingsRef = useRef(new Map<string, ComposerMenuBinding>());
 
   useEffect(() => {
     const element = textareaRef.current;
@@ -57,27 +169,340 @@ export function Composer({
 
   const selectedModel = models.find((model) => model.id === selectedModelId) ?? null;
 
+  useEffect(() => {
+    if (!menu || menu.mode !== 'mention') {
+      return;
+    }
+    const query = menu.query.trim();
+    if (!query) {
+      setFileResults([]);
+      setChatResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const [files, chats] = await Promise.all([searchFiles(query), searchChats(query)]);
+          if (cancelled) {
+            return;
+          }
+          setFileResults(files);
+          setChatResults(chats);
+        } catch {
+          if (!cancelled) {
+            setFileResults([]);
+            setChatResults([]);
+          }
+        } finally {
+          if (!cancelled) {
+            setSearching(false);
+          }
+        }
+      })();
+    }, 160);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [menu, searchFiles, searchChats]);
+
+  const query = menu?.query.trim() ?? '';
+
+  const mentionSections = useMemo<ComposerMenuSection[]>(() => {
+    const fileItems: ComposerMenuItem[] = fileResults.map((file) => ({
+      id: `file:${file.path}`,
+      title: file.file_name || file.path,
+      description: file.path,
+      icon: FileText,
+      insertText: `@${file.path}`,
+    }));
+    const chatItems: ComposerMenuItem[] = chatResults.map((thread) => ({
+      id: `chat:${thread.id}`,
+      title: threadTitle(thread),
+      description: thread.cwd,
+      icon: MessageSquare,
+      insertText: `@${threadTitle(thread)}`,
+    }));
+    const skillItems: ComposerMenuItem[] = skills
+      .filter((skill) => skill.enabled)
+      .filter((skill) =>
+        matches([skill.name, skill.interface?.displayName, skill.description], query),
+      )
+      .slice(0, 20)
+      .map((skill) => ({
+        id: `skill:${skill.name}`,
+        title: skill.interface?.displayName ?? skill.name,
+        description: skill.interface?.shortDescription ?? skill.description,
+        meta: `$${skill.name}`,
+        icon: Sparkles,
+        insertText: `$${skill.name}`,
+        binding: { type: 'skill', name: skill.name, path: skill.path },
+      }));
+    const pluginItems: ComposerMenuItem[] = plugins
+      .filter((plugin) => plugin.enabled && plugin.installed)
+      .filter((plugin) =>
+        matches([plugin.id, plugin.name, plugin.interface?.displayName], query),
+      )
+      .slice(0, 20)
+      .map((plugin) => {
+        const [pluginName] = plugin.id.split('@');
+        const displayName = plugin.interface?.displayName ?? plugin.name;
+        const mentionName = pluginMentionName(pluginName, displayName);
+        return {
+          id: `plugin:${plugin.id}`,
+          title: displayName,
+          description: plugin.interface?.shortDescription ?? undefined,
+          meta: `@${mentionName}`,
+          icon: Puzzle,
+          insertText: `@${mentionName}`,
+          binding: { type: 'mention', name: displayName, path: `plugin://${plugin.id}` },
+        };
+      });
+    const mcpItems: ComposerMenuItem[] = mcpServers
+      .filter((server) => matches([server.name, server.serverInfo?.name], query))
+      .slice(0, 20)
+      .map((server) => ({
+        id: `mcp:${server.name}`,
+        title: server.name,
+        description: server.serverInfo?.name ?? undefined,
+        meta: `${Object.keys(server.tools ?? {}).length} tools`,
+        icon: Plug,
+        insertText: `$${server.name}`,
+        binding: { type: 'mention', name: server.name, path: `mcp://${server.name}` },
+      }));
+    return [
+      {
+        id: 'filesAndChats',
+        label: 'Files and chats',
+        hint: query ? undefined : 'Type to search files or chats',
+        items: [...fileItems, ...chatItems],
+      },
+      { id: 'skills', label: 'Skills', items: skillItems },
+      { id: 'plugins', label: 'Plugins', items: pluginItems },
+      { id: 'mcp', label: 'MCP servers', items: mcpItems },
+    ];
+  }, [chatResults, fileResults, mcpServers, plugins, query, skills]);
+
+  const slashSections = useMemo<ComposerMenuSection[]>(() => {
+    const items: ComposerMenuItem[] = COMPOSER_COMMANDS.filter((command) =>
+      matches([command.id, command.title], query),
+    ).map((command) => ({
+      id: `command:${command.id}`,
+      title: command.title,
+      description: command.description,
+      meta: `/${command.id}`,
+      icon: command.icon,
+      insertText: `/${command.id}`,
+      commandId: command.id,
+    }));
+    return [{ id: 'commands', label: 'Commands', items }];
+  }, [query]);
+
+  const sections = menu?.mode === 'slash' ? slashSections : mentionSections;
+  const flatItems = useMemo(() => sections.flatMap((section) => section.items), [sections]);
+
+  useEffect(() => {
+    if (!menu) {
+      setActiveId(null);
+      return;
+    }
+    setActiveId((current) =>
+      current && flatItems.some((item) => item.id === current) ? current : (flatItems[0]?.id ?? null),
+    );
+  }, [flatItems, menu]);
+
+  const closeMenu = useCallback(() => {
+    if (menu && menu.start !== null) {
+      setDismissedKey(`${menu.mode}:${menu.start}`);
+    }
+    setMenu(null);
+    setActiveId(null);
+  }, [menu]);
+
+  const handleValueChange = (next: string, caret: number) => {
+    setValue(next);
+    if (menu && menu.start === null) {
+      setMenu(null);
+      return;
+    }
+    const detected = detectTrigger(next, caret);
+    if (!detected) {
+      setMenu(null);
+      setDismissedKey(null);
+      return;
+    }
+    const key = `${detected.mode}:${detected.start}`;
+    if (dismissedKey === key) {
+      setMenu(null);
+      return;
+    }
+    setMenu(detected);
+  };
+
+  const runCommand = (command: ComposerCommand, args: string) => {
+    if (command.id === 'model') {
+      setModelOpen(true);
+      return;
+    }
+    if (command.id === 'provider') {
+      setProviderOpen(true);
+      return;
+    }
+    if (command.id === 'permissions') {
+      setPermissionOpen(true);
+      return;
+    }
+    onCommand(command.id, args);
+  };
+
+  const applyItem = (item: ComposerMenuItem) => {
+    if (item.commandId) {
+      const command = COMPOSER_COMMANDS.find((candidate) => candidate.id === item.commandId);
+      setMenu(null);
+      setDismissedKey(null);
+      setActiveId(null);
+      if (!command) {
+        return;
+      }
+      if (command.acceptsArgs) {
+        setValue(`/${command.id} `);
+        window.requestAnimationFrame(() => {
+          const element = textareaRef.current;
+          if (element) {
+            element.focus();
+            const end = element.value.length;
+            element.setSelectionRange(end, end);
+          }
+        });
+        return;
+      }
+      setValue('');
+      runCommand(command, '');
+      return;
+    }
+    if (item.binding) {
+      bindingsRef.current.set(item.insertText, item.binding);
+    }
+    const element = textareaRef.current;
+    const caret = element?.selectionStart ?? value.length;
+    const end = Math.max(element?.selectionEnd ?? caret, caret);
+    let nextValue: string;
+    let nextCaret: number;
+    if (menu && menu.start !== null) {
+      nextValue = value.slice(0, menu.start) + item.insertText + value.slice(end);
+      nextCaret = menu.start + item.insertText.length;
+    } else {
+      const needsSpace = caret > 0 && !/\s/.test(value[caret - 1] ?? '');
+      const prefix = needsSpace ? ' ' : '';
+      nextValue = value.slice(0, caret) + prefix + item.insertText + value.slice(end);
+      nextCaret = caret + prefix.length + item.insertText.length;
+    }
+    setValue(nextValue);
+    setMenu(null);
+    setDismissedKey(null);
+    setActiveId(null);
+    window.requestAnimationFrame(() => {
+      const target = textareaRef.current;
+      if (target) {
+        target.focus();
+        target.setSelectionRange(nextCaret, nextCaret);
+      }
+    });
+  };
+
+  const moveActive = (delta: number) => {
+    if (flatItems.length === 0) {
+      return;
+    }
+    const index = flatItems.findIndex((item) => item.id === activeId);
+    const next = index === -1 ? 0 : (index + delta + flatItems.length) % flatItems.length;
+    setActiveId(flatItems[next]?.id ?? null);
+  };
+
+  const submit = () => {
+    const trimmed = value.trim();
+    if (!trimmed || disabled) {
+      return;
+    }
+    if (trimmed.startsWith('/')) {
+      const [name, ...rest] = trimmed.slice(1).split(/\s+/);
+      const command = COMPOSER_COMMANDS.find(
+        (candidate) => candidate.id === name.toLowerCase(),
+      );
+      if (command) {
+        setValue('');
+        setMenu(null);
+        runCommand(command, rest.join(' '));
+        return;
+      }
+    }
+    const bindings = [...bindingsRef.current.entries()]
+      .filter(([token]) => trimmed.includes(token))
+      .map(([, binding]) => binding);
+    bindingsRef.current.clear();
+    setValue('');
+    setMenu(null);
+    onSubmit(trimmed, bindings);
+  };
+
   return (
     <div className="shrink-0 px-6 pb-4">
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          const trimmed = value.trim();
-          if (!trimmed || disabled) {
-            return;
-          }
-          onSubmit(trimmed);
-          setValue('');
+          submit();
         }}
-        className="mx-auto w-full max-w-[42rem] rounded-3xl border border-line bg-composer shadow-[var(--elevation-composer)] transition-colors focus-within:border-line-strong"
+        className="relative mx-auto w-full max-w-[42rem] rounded-3xl border border-line bg-composer shadow-[var(--elevation-composer)] transition-colors focus-within:border-line-strong"
       >
+        {menu ? (
+          <ComposerMenu
+            sections={sections}
+            activeId={activeId}
+            loading={menu.mode === 'mention' && searching}
+            emptyLabel="No results"
+            onHover={setActiveId}
+            onSelect={applyItem}
+            onDismiss={closeMenu}
+          />
+        ) : null}
+
         <textarea
           ref={textareaRef}
           rows={1}
           value={value}
           disabled={disabled}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) =>
+            handleValueChange(event.target.value, event.target.selectionStart ?? 0)
+          }
           onKeyDown={(event) => {
+            if (menu && flatItems.length > 0) {
+              if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                moveActive(1);
+                return;
+              }
+              if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                moveActive(-1);
+                return;
+              }
+              if (event.key === 'Enter' || event.key === 'Tab') {
+                event.preventDefault();
+                const active = flatItems.find((item) => item.id === activeId) ?? flatItems[0];
+                if (active) {
+                  applyItem(active);
+                }
+                return;
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                closeMenu();
+                return;
+              }
+            }
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
@@ -90,7 +515,18 @@ export function Composer({
         />
 
         <div className="flex items-center gap-1 px-3 pb-2.5 pt-0.5">
-          <IconButton aria-label="Add attachment" disabled={disabled}>
+          <IconButton
+            aria-label="Add files and more"
+            title="Add files and more (@)"
+            disabled={disabled}
+            active={menu !== null}
+            onClick={() => {
+              setDismissedKey(null);
+              setActiveId(null);
+              setMenu({ mode: 'mention', start: null, query: '' });
+              textareaRef.current?.focus();
+            }}
+          >
             <Plus className="size-4" strokeWidth={1.75} />
           </IconButton>
 
@@ -132,16 +568,10 @@ export function Composer({
                 onClick={() => setProviderOpen((open) => !open)}
                 className="flex h-7 items-center gap-1 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover disabled:opacity-60"
               >
-                <span className="max-w-[140px] truncate">
-                  {providerId ?? 'Provider'}
-                </span>
+                <span className="max-w-[140px] truncate">{providerId ?? 'Provider'}</span>
                 <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
               </button>
-              <Menu
-                open={providerOpen}
-                onClose={() => setProviderOpen(false)}
-                align="right"
-              >
+              <Menu open={providerOpen} onClose={() => setProviderOpen(false)} align="right">
                 {providers.map((id) => (
                   <MenuItem
                     key={id}

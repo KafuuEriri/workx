@@ -29,6 +29,7 @@ export function App() {
   const [theme, setTheme] = useState<ThemePreference>(readStoredTheme);
   const [activeNav, setActiveNav] = useState<NavKey | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchRequest, setSearchRequest] = useState(0);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [projectDialog, setProjectDialog] = useState<{
     mode: 'create' | 'edit';
@@ -110,6 +111,58 @@ export function App() {
     (panel ? PANEL_TITLES[panel] : null) ??
     (activeThread ? threadTitle(activeThread) : 'New chat');
 
+  const plugins = workx.pluginMarketplaces.flatMap((marketplace) => marketplace.plugins);
+
+  const runCommand = (id: string, args: string) => {
+    switch (id) {
+      case 'new':
+      case 'clear':
+        setActiveNav('new-chat');
+        void workx.newThread();
+        return;
+      case 'compact':
+        void workx.compactThread();
+        return;
+      case 'review':
+        void workx.reviewChanges();
+        return;
+      case 'init':
+        void workx.initAgentsFile();
+        return;
+      case 'rename': {
+        const name = args.trim();
+        if (name && workx.activeThread) {
+          void workx.renameThread(workx.activeThread.id, name);
+        }
+        return;
+      }
+      case 'archive':
+        if (workx.activeThread) {
+          void workx.archiveThread(workx.activeThread.id);
+        }
+        return;
+      case 'delete':
+        if (workx.activeThread) {
+          void workx.deleteThread(workx.activeThread.id);
+        }
+        return;
+      case 'skills':
+        setActiveNav('skills');
+        return;
+      case 'plugins':
+        setActiveNav('plugins');
+        return;
+      case 'mcp':
+        setActiveNav('mcp');
+        return;
+      case 'resume':
+        setSearchRequest((request) => request + 1);
+        return;
+      default:
+        return;
+    }
+  };
+
   return (
     <div className="flex h-full w-full overflow-hidden bg-app text-fg">
       <Sidebar
@@ -148,6 +201,7 @@ export function App() {
         searchTerm={workx.searchTerm}
         searchResults={workx.searchResults}
         searching={workx.searching}
+        searchRequest={searchRequest}
         onSearchTermChange={workx.setSearchTerm}
         onRenameThread={(id, name) => void workx.renameThread(id, name)}
         onArchiveThread={(id) => void workx.archiveThread(id)}
@@ -237,15 +291,21 @@ export function App() {
               onProviderChange={(id) => void workx.selectProvider(id)}
               permission={workx.permission}
               onPermissionChange={workx.setPermission}
+              skills={workx.skills}
+              plugins={plugins}
+              mcpServers={workx.mcpServers}
+              searchFiles={workx.searchMentionFiles}
+              searchChats={workx.searchMentionChats}
               running={workx.running}
               disabled={disabled || workx.writerConflict}
               disabledPlaceholder={
                 workx.writerConflict ? 'This chat is open in another app' : undefined
               }
-              onSubmit={(text) => {
-                void workx.sendMessage(text);
+              onSubmit={(text, bindings) => {
+                void workx.sendMessage(text, bindings);
                 window.requestAnimationFrame(scrollToBottom);
               }}
+              onCommand={runCommand}
               onInterrupt={() => void workx.interrupt()}
             />
           </>

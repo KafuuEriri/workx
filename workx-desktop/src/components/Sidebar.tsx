@@ -63,6 +63,7 @@ interface SidebarProps {
   searchTerm: string;
   searchResults: Thread[];
   searching: boolean;
+  searchRequest: number;
   onSearchTermChange: (term: string) => void;
   onRenameThread: (id: string, name: string) => void;
   onArchiveThread: (id: string) => void;
@@ -97,6 +98,7 @@ export function Sidebar({
   searchTerm,
   searchResults,
   searching,
+  searchRequest,
   onSearchTermChange,
   onRenameThread,
   onArchiveThread,
@@ -111,6 +113,12 @@ export function Sidebar({
   const [projectSort, setProjectSort] = useState<ProjectSort>('manual');
 
   const searching_ = searchOpen || searchTerm.trim().length > 0;
+
+  useEffect(() => {
+    if (searchRequest > 0) {
+      setSearchOpen(true);
+    }
+  }, [searchRequest]);
 
   useEffect(() => {
     if (!activeThreadId) {

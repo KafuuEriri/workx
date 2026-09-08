@@ -3,6 +3,8 @@ import type { CommandExecutionRequestApprovalParams } from '@protocol/v2/Command
 import type { ConfigReadResponse } from '@protocol/v2/ConfigReadResponse';
 import type { ErrorNotification } from '@protocol/v2/ErrorNotification';
 import type { FileChangeRequestApprovalParams } from '@protocol/v2/FileChangeRequestApprovalParams';
+import type { FuzzyFileSearchResponse } from '@protocol/FuzzyFileSearchResponse';
+import type { FuzzyFileSearchResult } from '@protocol/FuzzyFileSearchResult';
 import type { ItemCompletedNotification } from '@protocol/v2/ItemCompletedNotification';
 import type { ItemStartedNotification } from '@protocol/v2/ItemStartedNotification';
 import type { Model } from '@protocol/v2/Model';
@@ -31,9 +33,11 @@ import type { Turn } from '@protocol/v2/Turn';
 import type { TurnCompletedNotification } from '@protocol/v2/TurnCompletedNotification';
 import type { TurnStartedNotification } from '@protocol/v2/TurnStartedNotification';
 import type { TurnStartResponse } from '@protocol/v2/TurnStartResponse';
+import type { UserInput } from '@protocol/v2/UserInput';
 import type { WarningNotification } from '@protocol/v2/WarningNotification';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
+import { INIT_AGENTS_PROMPT, type ComposerMenuBinding } from '../data/composerMenu';
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
 import {
   type ProjectCreateResponse,
@@ -109,7 +113,12 @@ export interface WorkxController {
   openThread: (id: string) => Promise<void>;
   retryActiveThread: () => Promise<void>;
   writerConflict: boolean;
-  sendMessage: (text: string) => Promise<void>;
+  sendMessage: (text: string, bindings?: ComposerMenuBinding[]) => Promise<void>;
+  searchMentionFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
+  searchMentionChats: (query: string) => Promise<Thread[]>;
+  compactThread: () => Promise<void>;
+  reviewChanges: () => Promise<void>;
+  initAgentsFile: () => Promise<void>;
   interrupt: () => Promise<void>;
   renameThread: (id: string, name: string) => Promise<void>;
   archiveThread: (id: string) => Promise<void>;
@@ -558,6 +567,10 @@ export function useWorkx(): WorkxController {
       });
       threadIdRef.current = response.thread.id;
       turnIdRef.current = null;
+      if (response.thread.cwd && response.thread.cwd !== cwdRef.current) {
+        cwdRef.current = response.thread.cwd;
+        setCwd(response.thread.cwd);
+      }
       pendingThreadsRef.current.set(response.thread.id, response.thread);
       dispatch({ type: 'threadUpsert', thread: response.thread });
       dispatch({ type: 'thread', thread: response.thread, turns: [] });
@@ -646,6 +659,10 @@ export function useWorkx(): WorkxController {
       }
       threadIdRef.current = thread.id;
       turnIdRef.current = null;
+      if (thread.cwd && thread.cwd !== cwdRef.current) {
+        cwdRef.current = thread.cwd;
+        setCwd(thread.cwd);
+      }
       dispatch({
         type: 'thread',
         thread,
@@ -664,14 +681,22 @@ export function useWorkx(): WorkxController {
   }, [openThread]);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, bindings: ComposerMenuBinding[] = []) => {
       if (state.writerConflict) {
         return;
       }
       const threadId = threadIdRef.current ?? (await startThread());
+      const input: UserInput[] = [{ type: 'text', text, text_elements: [] }];
+      for (const binding of bindings) {
+        input.push(
+          binding.type === 'skill'
+            ? { type: 'skill', name: binding.name, path: binding.path }
+            : { type: 'mention', name: binding.name, path: binding.path },
+        );
+      }
       const response = await request<TurnStartResponse>('turn/start', {
         threadId,
-        input: [{ type: 'text', text, text_elements: [] }],
+        input,
         effort: effortRef.current ?? undefined,
       });
       turnIdRef.current = response.turn.id;
@@ -683,6 +708,53 @@ export function useWorkx(): WorkxController {
     },
     [request, startThread, state.writerConflict],
   );
+
+  const searchMentionFiles = useCallback(
+    async (query: string) => {
+      const root = cwdRef.current;
+      if (!root) {
+        return [];
+      }
+      const response = await request<FuzzyFileSearchResponse>('fuzzyFileSearch', {
+        query,
+        roots: [root],
+        cancellationToken: null,
+      });
+      return response.files.slice(0, 12);
+    },
+    [request],
+  );
+
+  const searchMentionChats = useCallback(
+    async (query: string) => {
+      const response = await request<ThreadSearchResponse>('thread/search', {
+        searchTerm: query,
+        limit: 8,
+      });
+      return response.data.map((result) => result.thread);
+    },
+    [request],
+  );
+
+  const compactThread = useCallback(async () => {
+    const threadId = threadIdRef.current;
+    if (!threadId) {
+      return;
+    }
+    await request('thread/compact/start', { threadId });
+  }, [request]);
+
+  const reviewChanges = useCallback(async () => {
+    const threadId = threadIdRef.current ?? (await startThread());
+    await request('review/start', {
+      threadId,
+      target: { type: 'uncommittedChanges' },
+    });
+  }, [request, startThread]);
+
+  const initAgentsFile = useCallback(async () => {
+    await sendMessage(INIT_AGENTS_PROMPT);
+  }, [sendMessage]);
 
   const interrupt = useCallback(async () => {
     const threadId = threadIdRef.current;
@@ -982,7 +1054,13 @@ export function useWorkx(): WorkxController {
           return;
         }
         dispatch({ type: 'status', status: 'ready' });
-        await Promise.all([refreshModels(), refreshThreads(), refreshProjects(), refreshProviders()]);
+        await Promise.all([
+          refreshModels(),
+          refreshThreads(),
+          refreshProjects(),
+          refreshProviders(),
+          refreshMcpServers(),
+        ]);
       } catch (error) {
         dispatch({
           type: 'status',
@@ -991,7 +1069,15 @@ export function useWorkx(): WorkxController {
         });
       }
     })();
-  }, [refreshModels, refreshProjects, refreshProviders, refreshThreads]);
+  }, [refreshMcpServers, refreshModels, refreshProjects, refreshProviders, refreshThreads]);
+
+  useEffect(() => {
+    if (state.status !== 'ready') {
+      return;
+    }
+    void refreshSkills();
+    void refreshPlugins();
+  }, [cwd, refreshPlugins, refreshSkills, state.status]);
 
   useEffect(() => {
     const term = state.searchTerm.trim();
@@ -1111,6 +1197,11 @@ export function useWorkx(): WorkxController {
     retryActiveThread,
     writerConflict: state.writerConflict !== null,
     sendMessage,
+    searchMentionFiles,
+    searchMentionChats,
+    compactThread,
+    reviewChanges,
+    initAgentsFile,
     interrupt,
     renameThread,
     archiveThread,
