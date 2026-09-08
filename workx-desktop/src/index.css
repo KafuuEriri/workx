@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+  /* Codex light palette (extracted from the installed app bundle). */
+  --bg-app: #ffffff;
+  --bg-sidebar: #f9f9f9;
+  --bg-elevated: #ffffff;
+  --bg-elevated-secondary: rgba(26, 28, 31, 0.02);
+  --bg-hover: rgba(26, 28, 31, 0.05);
+  --bg-active: rgba(26, 28, 31, 0.08);
+  --bg-bubble: #f9f9f9;
+  --bg-composer: #ffffff;
+  --bg-scrim: rgba(0, 0, 0, 0.2);
+  --border-subtle: rgba(26, 28, 31, 0.05);
+  --border-default: rgba(26, 28, 31, 0.08);
+  --border-strong: rgba(26, 28, 31, 0.12);
+  --fg-primary: #1a1c1f;
+  --fg-secondary: rgba(26, 28, 31, 0.7);
+  --fg-tertiary: rgba(26, 28, 31, 0.5);
+  --fg-inverse: #ffffff;
+  --warning: #e25507;
+  --danger: #e02e2a;
+  --info: #339cff;
+  --send-bg: #1a1c1f;
+  --send-fg: #ffffff;
+  --code-bg: #f9f9f9;
+  --scrollbar: rgba(26, 28, 31, 0.18);
+  --elevation-composer: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04),
+    0 4px 40px 8px rgba(0, 0, 0, 0.024);
+}
+
+.dark {
+  color-scheme: dark;
+  /* Codex dark palette (gray scale stays fixed; semantic roles flip). */
+  --bg-app: #181818;
+  --bg-sidebar: #212121;
+  --bg-elevated: #212121;
+  --bg-elevated-secondary: rgba(255, 255, 255, 0.03);
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --bg-bubble: #282828;
+  --bg-composer: #212121;
+  --bg-scrim: rgba(0, 0, 0, 0.5);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --fg-primary: #dfdfdf;
+  --fg-secondary: rgba(255, 255, 255, 0.7);
+  --fg-tertiary: rgba(255, 255, 255, 0.5);
+  --fg-inverse: #0d0d0d;
+  --warning: #ff8549;
+  --danger: #fa423e;
+  --info: #339cff;
+  --send-bg: #dfdfdf;
+  --send-fg: #0d0d0d;
+  --code-bg: #212121;
+  --scrollbar: rgba(255, 255, 255, 0.18);
+}
+
+@theme inline {
+  --color-app: var(--bg-app);
+  --color-sidebar: var(--bg-sidebar);
+  --color-elevated: var(--bg-elevated);
+  --color-elevated-secondary: var(--bg-elevated-secondary);
+  --color-hover: var(--bg-hover);
+  --color-active: var(--bg-active);
+  --color-bubble: var(--bg-bubble);
+  --color-composer: var(--bg-composer);
+  --color-scrim: var(--bg-scrim);
+  --color-line: var(--border-default);
+  --color-line-subtle: var(--border-subtle);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--fg-primary);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-inverse: var(--fg-inverse);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-send: var(--send-bg);
+  --color-send-fg: var(--send-fg);
+  --color-code: var(--code-bg);
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco,
+    "Cascadia Mono", "Roboto Mono", monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg-app);
+    color: var(--fg-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+
+  *:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+@utility drag {
+  -webkit-app-region: drag;
+}
+
+@utility no-drag {
+  -webkit-app-region: no-drag;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  background-clip: content-box;
+}
