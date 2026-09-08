@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
@@ -67,6 +67,20 @@ ipcMain.handle('workx:open-external', (_event, url: string) => {
     return shell.openExternal(url);
   }
   return undefined;
+});
+
+ipcMain.handle('workx:open-path', (_event, target: string) => {
+  if (typeof target === 'string' && target.length > 0) {
+    return shell.openPath(target);
+  }
+  return undefined;
+});
+
+ipcMain.handle('workx:pick-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return result.canceled ? null : (result.filePaths[0] ?? null);
 });
 
 ipcMain.handle('workx:get-theme', () => nativeTheme.themeSource);

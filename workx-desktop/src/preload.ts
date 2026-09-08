@@ -54,6 +54,8 @@ const api = {
   platform: process.platform,
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke('workx:open-external', url),
+  openPath: (target: string): Promise<string> => ipcRenderer.invoke('workx:open-path', target),
+  pickFolder: (): Promise<string | null> => ipcRenderer.invoke('workx:pick-folder'),
   getTheme: (): Promise<ThemeSource> => ipcRenderer.invoke('workx:get-theme'),
   setTheme: (theme: ThemeSource): Promise<ThemeSource> =>
     ipcRenderer.invoke('workx:set-theme', theme),

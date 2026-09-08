@@ -4,7 +4,10 @@ import {
   Bell,
   ChevronDown,
   CircleHelp,
+  Copy,
   Folder,
+  FolderOpen,
+  MessageSquarePlus,
   MoreHorizontal,
   Pencil,
   Plug,
@@ -55,6 +58,7 @@ interface SidebarProps {
   activeCwd: string;
   onSelectThread: (id: string) => void;
   onSelectProject: (cwd: string) => void;
+  onAddProject: () => void;
   searchTerm: string;
   searchResults: Thread[];
   searching: boolean;
@@ -84,6 +88,7 @@ export function Sidebar({
   activeThreadId,
   onSelectThread,
   onSelectProject,
+  onAddProject,
   searchTerm,
   searchResults,
   searching,
@@ -286,22 +291,28 @@ export function Sidebar({
           </SidebarSection>
         ) : (
           <>
-            <SidebarSection label="Projects">
+            <SidebarSection
+              label="Projects"
+              onAdd={onAddProject}
+              onMore={() => setShowAllProjects((value) => !value)}
+            >
               {visibleProjects.map((project) => {
                 const expanded = expandedProjects.has(project.id);
                 return (
                   <div key={project.id}>
-                    <button
-                      type="button"
-                      onClick={() => toggleProject(project)}
-                      className="flex h-[30px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] hover:bg-hover"
-                    >
-                      <Folder
-                        className="size-[18px] shrink-0 text-fg-secondary"
-                        strokeWidth={1.75}
-                      />
-                      <span className="truncate">{project.name}</span>
-                    </button>
+                    <ProjectRow
+                      project={project}
+                      onToggle={() => toggleProject(project)}
+                      onNewChat={() => {
+                        onSelectProject(project.cwd);
+                        onNewChat();
+                      }}
+                      onArchiveThreads={() =>
+                        project.threads
+                          .slice(0, PROJECT_THREAD_LIMIT)
+                          .forEach((thread) => onArchiveThread(thread.id))
+                      }
+                    />
 
                     {expanded
                       ? project.threads
@@ -367,6 +378,88 @@ export function Sidebar({
         </div>
       </div>
     </aside>
+  );
+}
+
+function ProjectRow({
+  project,
+  onToggle,
+  onNewChat,
+  onArchiveThreads,
+}: {
+  project: ProjectView;
+  onToggle: () => void;
+  onNewChat: () => void;
+  onArchiveThreads: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <div className="group/row relative">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex h-[30px] w-full items-center gap-2.5 rounded-lg px-2.5 pr-8 text-left text-[14px] hover:bg-hover"
+      >
+        <Folder className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
+        <span className="truncate">{project.name}</span>
+      </button>
+      <div
+        className={cn(
+          'absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/row:opacity-100',
+          menuOpen && 'opacity-100',
+        )}
+      >
+        <IconButton
+          size="sm"
+          aria-label="Project actions"
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
+        </IconButton>
+      </div>
+      {menuOpen ? (
+        <>
+          <div className="fixed inset-0 z-40" onMouseDown={() => setMenuOpen(false)} />
+          <div className="absolute right-1 top-[28px] z-50 min-w-[190px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
+            <MenuAction
+              icon={MessageSquarePlus}
+              label="New chat"
+              onClick={() => {
+                setMenuOpen(false);
+                onNewChat();
+              }}
+            />
+            <MenuAction
+              icon={FolderOpen}
+              label="Open folder"
+              onClick={() => {
+                setMenuOpen(false);
+                void window.workx.openPath(project.cwd);
+              }}
+            />
+            <MenuAction
+              icon={Copy}
+              label="Copy path"
+              onClick={() => {
+                setMenuOpen(false);
+                void navigator.clipboard.writeText(project.cwd);
+              }}
+            />
+            {project.threads.length > 0 ? (
+              <MenuAction
+                icon={Archive}
+                label="Archive chats"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onArchiveThreads();
+                }}
+              />
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -507,16 +600,26 @@ function MenuAction({
   );
 }
 
-function SidebarSection({ label, children }: { label: string; children: ReactNode }) {
+function SidebarSection({
+  label,
+  children,
+  onAdd,
+  onMore,
+}: {
+  label: string;
+  children: ReactNode;
+  onAdd?: () => void;
+  onMore?: () => void;
+}) {
   return (
     <section className="group/section">
       <div className="flex h-8 items-center gap-1 px-2.5 pt-3">
         <span className="text-[13px] text-fg-tertiary">{label}</span>
         <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover/section:opacity-100">
-          <IconButton size="sm" aria-label={`More ${label}`}>
+          <IconButton size="sm" aria-label={`More ${label}`} onClick={onMore}>
             <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
           </IconButton>
-          <IconButton size="sm" aria-label={`Add to ${label}`}>
+          <IconButton size="sm" aria-label={`Add to ${label}`} onClick={onAdd}>
             <Plus className="size-3.5" strokeWidth={1.75} />
           </IconButton>
         </div>

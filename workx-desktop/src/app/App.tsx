@@ -124,6 +124,17 @@ export function App() {
           setActiveNav(null);
           workx.setActiveCwd(cwd);
         }}
+        onAddProject={() => {
+          void (async () => {
+            const dir = await window.workx.pickFolder();
+            if (!dir) {
+              return;
+            }
+            setActiveNav(null);
+            workx.setActiveCwd(dir);
+            await workx.newThread();
+          })();
+        }}
         searchTerm={workx.searchTerm}
         searchResults={workx.searchResults}
         searching={workx.searching}
