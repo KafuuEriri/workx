@@ -1,0 +1,10 @@
+---
+source: tui/src/app/tests/provider_save_tests.rs
+assertion_line: 52
+expression: "render_bottom_popup(&app.chat_widget, 80)"
+---
+  Loading provider models
+
+›    Fetching the current provider's model catalog…
+
+  Press enter to confirm or esc to go back

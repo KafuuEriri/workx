@@ -4,6 +4,7 @@ use crate::config_update::write_config_batch;
 use workx_models_manager::manager::RefreshStrategy;
 
 impl App {
+    /// 保存供应商配置并切换会话；显式模型 ID 可用于未公开在模型列表中的模型。
     pub(super) async fn save_provider(
         &mut self,
         tui: &mut tui::Tui,
@@ -28,18 +29,13 @@ impl App {
             let models = manager
                 .list_models(RefreshStrategy::Online, self.config.http_client_factory())
                 .await;
-            if models.is_empty() {
+            // 模型发现仅用于选择默认值，不能用作内测模型或私有别名的准入校验。
+            if selected_model.is_none() && models.is_empty() {
                 return Err(color_eyre::eyre::eyre!(
                     "The models endpoint returned no usable models or could not be reached. Check the URL and API key in /provider."
                 ));
             }
-            if let Some(model) = &selected_model {
-                if !models.iter().any(|preset| &preset.model == model) {
-                    return Err(color_eyre::eyre::eyre!(
-                        "The selected model is absent from this provider's model catalog."
-                    ));
-                }
-            } else {
+            if selected_model.is_none() {
                 selected_model = models.first().map(|preset| preset.model.clone());
             }
             catalog = Some(models);
