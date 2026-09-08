@@ -1,0 +1,194 @@
+name: release
+
+# Manual multi-platform release pipeline.
+#
+# Each matrix job runs the same builder used for the manual macOS releases
+# (`scripts/build_workx_package.py`) on a native runner for its platform, so no
+# cross-compilation from a single host is needed:
+#
+#   - ubuntu-24.04        -> x86_64-unknown-linux-musl   (WSL / Linux x64)
+#   - windows-latest      -> x86_64-pc-windows-msvc      (Windows x64)
+#   - macos-14            -> aarch64-apple-darwin        (macOS Apple Silicon)
+#
+# Optional extra rows (uncomment the matching `include` entry):
+#   - linux arm64:        os: ubuntu-24.04-arm,  target: aarch64-unknown-linux-musl
+#   - macOS Intel:        os: macos-13,          target: x86_64-apple-darwin
+#
+# Usage: Actions -> Run workflow -> version 0.0.3 publishes tag rust-v0.0.3
+# with `workx-package-<target>.tar.gz` assets plus a combined
+# `workx-package_SHA256SUMS` file, then flips the release to public.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version to publish (e.g. 0.0.3). Tag is rust-v<version>."
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.event.inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Validate version
+        id: resolve
+        shell: bash
+        run: |
+          version="${{ github.event.inputs.version }}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+            echo "Invalid version: $version (expected e.g. 0.0.3 or 0.0.3-alpha.1)" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=rust-v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.resolve.outputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --draft=true --title "Workx ${{ steps.resolve.outputs.version }}"
+          else
+            gh release create "$tag" \
+              --draft=true \
+              --title "Workx ${{ steps.resolve.outputs.version }}" \
+              --notes "Preparing release ${{ steps.resolve.outputs.version }}..." \
+              --target "$GITHUB_SHA"
+          fi
+
+  build-package:
+    name: ${{ matrix.name }}
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    env:
+      WORKX_REPO_ROOT: ${{ github.workspace }}
+      VERSION: ${{ needs.create-release.outputs.version }}
+      TAG: ${{ needs.create-release.outputs.tag }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64 (WSL)
+            os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            apt: musl-tools nasm pkg-config
+            python: python3
+          - name: Windows x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            apt: ""
+            python: python
+          - name: macOS Apple Silicon
+            os: macos-14
+            target: aarch64-apple-darwin
+            apt: ""
+            python: python3
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Linux cross-compile dependencies
+        if: matrix.apt != ''
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.apt }}
+
+      - name: Install Rust 1.95.0
+        shell: bash
+        run: |
+          rustup toolchain install 1.95.0
+          rustup component add --toolchain 1.95.0 rust-src
+          rustup target add --toolchain 1.95.0 "${{ matrix.target }}"
+          rustup default 1.95.0
+
+      - name: Build package archive
+        shell: bash
+        run: |
+          ${{ matrix.python }} scripts/build_workx_package.py \
+            --target "${{ matrix.target }}" \
+            --cargo-profile release \
+            --package-version "$VERSION" \
+            --archive-output "$RUNNER_TEMP/workx-package-${{ matrix.target }}.tar.gz" \
+            --force
+
+      - name: Upload package asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" \
+            "$RUNNER_TEMP/workx-package-${{ matrix.target }}.tar.gz" \
+            --clobber
+
+  finalize-release:
+    name: Publish release
+    needs:
+      - create-release
+      - build-package
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Rebuild checksums from uploaded packages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ needs.create-release.outputs.tag }}"
+          assets_dir="$(mktemp -d)"
+
+          # Drop package assets/checksums from a previous (failed) run so the
+          # published set always matches the current build.
+          for asset in $(gh release view "$tag" --json assets -q '.assets[].name'); do
+            case "$asset" in
+              workx-package-*) gh release delete-asset "$tag" "$asset" -y ;;
+            esac
+          done
+
+          cd "$assets_dir"
+          gh release download "$tag" --pattern 'workx-package-*.tar.gz'
+          sha256sum workx-package-*.tar.gz > workx-package_SHA256SUMS
+          cat workx-package_SHA256SUMS
+          gh release upload "$tag" workx-package_SHA256SUMS --clobber
+
+      - name: Flip draft to public
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ needs.create-release.outputs.tag }}"
+          version="${{ needs.create-release.outputs.version }}"
+          notes="## Workx $version
+
+          Native prebuilt packages for Windows, WSL/Linux, and macOS:
+
+          - Windows x86_64: \`workx-package-x86_64-pc-windows-msvc.tar.gz\`
+          - WSL / Linux x86_64: \`workx-package-x86_64-unknown-linux-musl.tar.gz\`
+          - macOS Apple Silicon: \`workx-package-aarch64-apple-darwin.tar.gz\`
+
+          Install on Windows (PowerShell):
+
+          \`\`\`
+          irm https://raw.githubusercontent.com/RonanXiao/workx/main/scripts/install/install.ps1 | iex
+          \`\`\`
+
+          Install on WSL / Linux / macOS:
+
+          \`\`\`
+          curl -fsSL https://raw.githubusercontent.com/RonanXiao/workx/main/scripts/install/install.sh | sh
+          \`\`\`"
+          gh release edit "$tag" \
+            --draft=false \
+            --title "Workx $version" \
+            --notes "$notes"
