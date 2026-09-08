@@ -1,8 +1,10 @@
 ---
 source: tui/src/bottom_pane/command_popup.rs
+assertion_line: 430
 expression: commands
 ---
 /model - choose what model and reasoning effort to use
+/provider - add, edit, or switch model providers
 /ide - include current selection, open files, and other context from your IDE
 /permissions - choose what Workx is allowed to do
 /keymap - remap TUI shortcuts
@@ -48,3 +50,4 @@ expression: commands
 /clear - clear the terminal and start a new chat
 /test-approval - test approval request
 /subagents - switch between this session's subagents
+/codex - copy chats from Codex and resume them here

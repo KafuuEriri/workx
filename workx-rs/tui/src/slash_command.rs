@@ -35,7 +35,6 @@ pub enum SlashCommand {
     Archive,
     Delete,
     Resume,
-    Codex,
     Fork,
     App,
     Init,
@@ -83,6 +82,9 @@ pub enum SlashCommand {
     MemoryDrop,
     #[strum(serialize = "debug-m-update")]
     MemoryUpdate,
+    // Import commands are listed last so they never shadow more frequently
+    // used commands that share a prefix (e.g. /compact vs /codex).
+    Codex,
 }
 
 impl SlashCommand {
