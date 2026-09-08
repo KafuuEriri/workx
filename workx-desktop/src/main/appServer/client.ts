@@ -169,7 +169,7 @@ export class AppServerClient extends EventEmitter<AppServerClientEvents> {
     try {
       message = JSON.parse(line) as WireMessage;
     } catch {
-      this.emit('log', `unparseable message: ${line.slice(0, 200)}`);
+      this.emit('log', `unparsable message: ${line.slice(0, 200)}`);
       return;
     }
 
