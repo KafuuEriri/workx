@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
+import { registerAppServerIpc } from './main/appServer/ipc';
+
 if (started) {
   app.quit();
 }
@@ -43,7 +45,10 @@ const createWindow = () => {
   }
 };
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  registerAppServerIpc();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

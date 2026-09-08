@@ -40,6 +40,37 @@ npm install
 npm start
 ```
 
+The main process spawns `workx app-server --stdio` and speaks JSON-RPC over
+stdin/stdout. The protocol types are imported from the checked-in TypeScript
+schema at `../workx-rs/app-server-protocol/schema/typescript` (aliased as
+`@protocol/*`), so the client stays in sync with the server.
+
+Set `WORKX_BIN` to point at a different Workx binary, and `WORKX_CWD` to change
+the directory used for new threads (defaults to the user's home directory).
+
+## Wiring
+
+The client negotiates the experimental app-server API and uses these methods:
+
+- `initialize` / `initialized` — handshake with `clientInfo` and experimental
+  capabilities
+- `thread/list`, `thread/start`, `thread/resume` — chat history and new chats
+- `thread/name/set`, `thread/archive`, `thread/delete` — sidebar actions
+- `thread/search` — sidebar search
+- `turn/start`, `turn/interrupt` — sending prompts and stopping a run
+- `model/list` — model and reasoning-effort pickers
+- `plugin/list`, `skills/list`, `mcpServerStatus/list` — Plugins / Skills / MCP
+  panels
+- `item/commandExecution/requestApproval`,
+  `item/fileChange/requestApproval` — inline approval cards
+
+Streaming notifications (`turn/started`, `item/started`, `item/completed`,
+`item/agentMessage/delta`, `thread/tokenUsage/updated`, `turn/completed`,
+`warning`, `error`, thread lifecycle events) update the transcript incrementally.
+
+Server requests for surfaces the desktop does not implement are answered with a
+JSON-RPC `-32601` error instead of hanging.
+
 ## Scripts
 
 - `npm start` — launch the app with the Forge dev server
@@ -50,12 +81,7 @@ npm start
 
 ## Scope
 
-This change ships the client shell and its design system. The transcript, project
-list, and model catalog are seeded with typed sample data in
-`src/data/workspace.ts`. Wiring the UI to `workx app-server` over JSON-RPC is the
-next step; the data module is the intended seam.
-
-OpenAI-exclusive product surfaces (ChatGPT account, plans, cloud tasks) are
-deliberately omitted. Workx-owned surfaces that Codex also has — threads,
-projects, pull requests, scheduled runs, plugins, approvals, terminal, files,
-permission modes — are kept.
+OpenAI-exclusive product surfaces (ChatGPT account, plans, the pull-request
+inbox, and cloud scheduled runs) are deliberately omitted. Workx-owned surfaces
+that Codex also has — threads, projects, plugins, skills, MCP servers,
+approvals, terminal activity, file changes, and permission modes — are kept.

@@ -14,6 +14,9 @@
     "noEmit": true,
     "sourceMap": true,
     "baseUrl": ".",
+    "paths": {
+      "@protocol/*": ["../workx-rs/app-server-protocol/schema/typescript/*"]
+    },
     "resolveJsonModule": true,
     "types": ["vite/client", "node"]
   },

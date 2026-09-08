@@ -1,30 +1,34 @@
-import { AlertTriangle, ArrowUp, ChevronDown, Mic, Plus } from 'lucide-react';
+import { AlertTriangle, ArrowUp, ChevronDown, Mic, Plus, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  MODEL_OPTIONS,
-  PERMISSION_MODES,
-  type ModelOption,
-  type PermissionMode,
-} from '../data/workspace';
+import type { Model } from '@protocol/v2/Model';
+import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
 import { cn } from '../lib/cn';
 import { IconButton } from './IconButton';
 import { Menu, MenuItem } from './Menu';
 
 interface ComposerProps {
-  model: ModelOption;
-  onModelChange: (model: ModelOption) => void;
+  models: Model[];
+  selectedModelId: string | null;
+  onModelChange: (id: string) => void;
   permission: PermissionMode;
   onPermissionChange: (mode: PermissionMode) => void;
+  running: boolean;
+  disabled: boolean;
   onSubmit: (text: string) => void;
+  onInterrupt: () => void;
 }
 
 export function Composer({
-  model,
+  models,
+  selectedModelId,
   onModelChange,
   permission,
   onPermissionChange,
+  running,
+  disabled,
   onSubmit,
+  onInterrupt,
 }: ComposerProps) {
   const [value, setValue] = useState('');
   const [modelOpen, setModelOpen] = useState(false);
@@ -40,13 +44,15 @@ export function Composer({
     element.style.height = `${Math.min(element.scrollHeight, 240)}px`;
   }, [value]);
 
+  const selectedModel = models.find((model) => model.id === selectedModelId) ?? null;
+
   return (
     <div className="shrink-0 px-6 pb-4">
       <form
         onSubmit={(event) => {
           event.preventDefault();
           const trimmed = value.trim();
-          if (!trimmed) {
+          if (!trimmed || disabled) {
             return;
           }
           onSubmit(trimmed);
@@ -58,6 +64,7 @@ export function Composer({
           ref={textareaRef}
           rows={1}
           value={value}
+          disabled={disabled}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -65,12 +72,12 @@ export function Composer({
               event.currentTarget.form?.requestSubmit();
             }
           }}
-          placeholder="Do anything"
-          className="max-h-[240px] w-full resize-none bg-transparent px-4 pt-3.5 text-[16px] leading-[1.5] outline-none placeholder:text-fg-tertiary"
+          placeholder={disabled ? 'Connecting to app-server…' : 'Do anything'}
+          className="max-h-[240px] w-full resize-none bg-transparent px-4 pt-3.5 text-[16px] leading-[1.5] outline-none placeholder:text-fg-tertiary disabled:opacity-60"
         />
 
         <div className="flex items-center gap-1 px-3 pb-2.5 pt-0.5">
-          <IconButton aria-label="Add attachment">
+          <IconButton aria-label="Add attachment" disabled={disabled}>
             <Plus className="size-4" strokeWidth={1.75} />
           </IconButton>
 
@@ -111,18 +118,20 @@ export function Composer({
                 onClick={() => setModelOpen((open) => !open)}
                 className="flex h-7 items-center gap-1 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover"
               >
-                <span className="max-w-[180px] truncate">{model.label}</span>
+                <span className="max-w-[180px] truncate">
+                  {selectedModel?.displayName ?? selectedModelId ?? 'Model'}
+                </span>
                 <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
               </button>
               <Menu open={modelOpen} onClose={() => setModelOpen(false)} align="right">
-                {MODEL_OPTIONS.map((option) => (
+                {models.map((model) => (
                   <MenuItem
-                    key={option.id}
-                    title={option.label}
-                    description={option.description}
-                    selected={option.id === model.id}
+                    key={model.id}
+                    title={model.displayName}
+                    description={model.description}
+                    selected={model.id === selectedModelId}
                     onClick={() => {
-                      onModelChange(option);
+                      onModelChange(model.id);
                       setModelOpen(false);
                     }}
                   />
@@ -134,14 +143,25 @@ export function Composer({
               <Mic className="size-4" strokeWidth={1.75} />
             </IconButton>
 
-            <button
-              type="submit"
-              aria-label="Send"
-              disabled={value.trim().length === 0}
-              className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
-            >
-              <ArrowUp className="size-4" strokeWidth={2} />
-            </button>
+            {running ? (
+              <button
+                type="button"
+                onClick={onInterrupt}
+                aria-label="Stop"
+                className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg"
+              >
+                <Square className="size-3.5" strokeWidth={2} />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                aria-label="Send"
+                disabled={value.trim().length === 0 || disabled}
+                className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
+              >
+                <ArrowUp className="size-4" strokeWidth={2} />
+              </button>
+            )}
           </div>
         </div>
       </form>

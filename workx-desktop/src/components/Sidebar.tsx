@@ -1,44 +1,128 @@
 import {
-  AtSign,
+  Archive,
   AudioLines,
   Bell,
   ChevronDown,
   CircleHelp,
-  Clock,
   Folder,
-  GitPullRequest,
   Link,
   MoreHorizontal,
+  Pencil,
+  Plug,
   Plus,
+  Puzzle,
   Search,
   Settings2,
+  Sparkles,
   SquarePen,
+  Trash2,
+  X,
 } from 'lucide-react';
-import type { ComponentType, ReactNode, SVGProps } from 'react';
+import { useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
 
-import { NAV_ITEMS, PROJECTS, RECENTS, type NavKey } from '../data/workspace';
+import type { ProjectView } from '../app/useWorkx';
+import type { Thread } from '@protocol/v2/Thread';
+import { EXPLORE_ITEMS, NAV_ITEMS, type NavKey } from '../data/workspace';
 import { cn } from '../lib/cn';
 import { IconButton } from './IconButton';
+import type { ConnectionStatus } from './TopBar';
 
 const NAV_ICONS: Record<NavKey, ComponentType<SVGProps<SVGSVGElement>>> = {
   'new-chat': SquarePen,
-  'pull-requests': GitPullRequest,
-  scheduled: Clock,
-  plugins: AtSign,
-  explore: MoreHorizontal,
+  plugins: Puzzle,
+  skills: Sparkles,
+  mcp: Plug,
 };
 
-const NAV_ACTION_SLOTS: Partial<Record<NavKey, ComponentType<SVGProps<SVGSVGElement>>>> = {
-  'new-chat': Plus,
+const STATUS_DOT: Record<ConnectionStatus, string> = {
+  connecting: 'bg-amber-500',
+  ready: 'bg-emerald-500',
+  error: 'bg-danger',
+  stopped: 'bg-fg-tertiary',
 };
 
 interface SidebarProps {
+  status: ConnectionStatus;
   activeNav: NavKey | null;
   onSelectNav: (key: NavKey) => void;
   onOpenSettings: () => void;
+  onNewChat: () => void;
+  projects: ProjectView[];
+  recents: Thread[];
+  activeThreadId: string | null;
+  activeCwd: string;
+  onSelectThread: (id: string) => void;
+  onSelectProject: (cwd: string) => void;
+  searchTerm: string;
+  searchResults: Thread[];
+  searching: boolean;
+  onSearchTermChange: (term: string) => void;
+  onRenameThread: (id: string, name: string) => void;
+  onArchiveThread: (id: string) => void;
+  onDeleteThread: (id: string) => void;
 }
 
-export function Sidebar({ activeNav, onSelectNav, onOpenSettings }: SidebarProps) {
+export function threadTitle(thread: Thread): string {
+  const name = thread.name?.trim();
+  if (name) {
+    return name;
+  }
+  const preview = thread.preview?.trim();
+  return preview ? preview : 'Untitled';
+}
+
+export function Sidebar({
+  status,
+  activeNav,
+  onSelectNav,
+  onOpenSettings,
+  onNewChat,
+  projects,
+  recents,
+  activeThreadId,
+  activeCwd,
+  onSelectThread,
+  onSelectProject,
+  searchTerm,
+  searchResults,
+  searching,
+  onSearchTermChange,
+  onRenameThread,
+  onArchiveThread,
+  onDeleteThread,
+}: SidebarProps) {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+
+  const searching_ = searchOpen || searchTerm.trim().length > 0;
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    onSearchTermChange('');
+  };
+
+  const renderThread = (thread: Thread, indent = false) => (
+    <ThreadRow
+      key={thread.id}
+      thread={thread}
+      indent={indent}
+      active={activeThreadId === thread.id}
+      renaming={renamingId === thread.id}
+      onSelect={() => onSelectThread(thread.id)}
+      onStartRename={() => setRenamingId(thread.id)}
+      onRename={(name) => {
+        setRenamingId(null);
+        if (name.trim()) {
+          onRenameThread(thread.id, name.trim());
+        }
+      }}
+      onCancelRename={() => setRenamingId(null)}
+      onArchive={() => onArchiveThread(thread.id)}
+      onDelete={() => onDeleteThread(thread.id)}
+    />
+  );
+
   return (
     <aside className="drag flex h-full w-[275px] shrink-0 flex-col border-r border-line-subtle bg-sidebar">
       <div className="h-11 shrink-0" />
@@ -52,7 +136,11 @@ export function Sidebar({ activeNav, onSelectNav, onOpenSettings }: SidebarProps
           <ChevronDown className="size-3.5 shrink-0 text-fg-tertiary" strokeWidth={2} />
         </button>
         <div className="no-drag ml-auto flex items-center gap-0.5">
-          <IconButton size="sm" aria-label="Search">
+          <IconButton
+            size="sm"
+            aria-label="Search"
+            onClick={() => setSearchOpen((value) => !value)}
+          >
             <Search className="size-4" strokeWidth={1.75} />
           </IconButton>
           <IconButton size="sm" aria-label="Notifications">
@@ -61,103 +149,168 @@ export function Sidebar({ activeNav, onSelectNav, onOpenSettings }: SidebarProps
         </div>
       </div>
 
-      <nav className="no-drag mt-1 flex flex-col gap-px px-2">
-        {NAV_ITEMS.map((item) => {
-          const Icon = NAV_ICONS[item.key];
-          const ActionIcon = NAV_ACTION_SLOTS[item.key];
-          const isActive = activeNav === item.key && item.key !== 'new-chat';
-          return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => onSelectNav(item.key)}
-              className={cn(
-                'group flex h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px]',
-                'transition-colors hover:bg-hover',
-                isActive ? 'bg-active text-fg' : 'text-fg',
-              )}
-            >
-              <Icon className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
-              <span className="truncate">{item.label}</span>
-              {ActionIcon ? (
-                <ActionIcon className="ml-auto size-4 shrink-0 text-fg-tertiary" strokeWidth={1.75} />
-              ) : null}
-            </button>
-          );
-        })}
-      </nav>
+      {searchOpen ? (
+        <div className="no-drag mx-2 mt-1 flex h-8 items-center gap-2 rounded-lg border border-line bg-app px-2.5">
+          <Search className="size-3.5 shrink-0 text-fg-tertiary" strokeWidth={1.75} />
+          <input
+            autoFocus
+            value={searchTerm}
+            onChange={(event) => onSearchTermChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                closeSearch();
+              }
+            }}
+            placeholder="Search chats"
+            className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-fg-tertiary"
+          />
+          <button type="button" onClick={closeSearch} aria-label="Close search">
+            <X className="size-3.5 text-fg-tertiary hover:text-fg" strokeWidth={1.75} />
+          </button>
+        </div>
+      ) : null}
 
-      <div className="no-drag mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pb-2">
-        <SidebarSection label="Projects">
-          {PROJECTS.map((project) => (
-            <div key={project.id}>
+      {!searching_ ? (
+        <nav className="no-drag mt-1 flex flex-col gap-px px-2">
+          {NAV_ITEMS.map((item) => {
+            const Icon = NAV_ICONS[item.key];
+            const isActive = activeNav === item.key && item.key !== 'new-chat';
+            return (
               <button
+                key={item.key}
                 type="button"
+                onClick={() => {
+                  if (item.key === 'new-chat') {
+                    onNewChat();
+                  } else {
+                    onSelectNav(item.key);
+                  }
+                }}
                 className={cn(
-                  'flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] hover:bg-hover',
-                  project.active ? 'text-fg' : 'text-fg',
+                  'flex h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] transition-colors hover:bg-hover',
+                  isActive ? 'bg-active text-fg' : 'text-fg',
                 )}
               >
-                <Folder className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
-                <span className="truncate">{project.name}</span>
+                <Icon className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
+                <span className="truncate">{item.label}</span>
+                {item.key === 'new-chat' ? (
+                  <Plus className="ml-auto size-4 shrink-0 text-fg-tertiary" strokeWidth={1.75} />
+                ) : null}
               </button>
+            );
+          })}
 
-              {project.active && project.remoteUrl ? (
-                <div className="group ml-[22px] flex h-[30px] items-center gap-1.5 rounded-lg bg-active px-2 text-[13px] text-fg-secondary">
-                  <Link className="size-3.5 shrink-0" strokeWidth={1.75} />
-                  <span className="truncate">{project.remoteUrl}</span>
-                  <Settings2
-                    className="ml-auto size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                    strokeWidth={1.75}
-                  />
-                </div>
-              ) : null}
-
-              {project.active
-                ? project.threads.map((thread) => (
-                    <button
-                      key={thread.id}
-                      type="button"
-                      className="flex h-[30px] w-full items-center rounded-lg pl-[46px] pr-2 text-left text-[13px] text-fg-secondary hover:bg-hover"
-                    >
-                      <span className="truncate">{thread.title}</span>
-                    </button>
-                  ))
-                : null}
-            </div>
-          ))}
           <button
             type="button"
-            className="flex h-8 w-full items-center rounded-lg px-2.5 text-left text-[14px] text-fg-tertiary hover:bg-hover"
+            onClick={() => setExploreOpen((value) => !value)}
+            className={cn(
+              'flex h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] transition-colors hover:bg-hover',
+              (activeNav === 'skills' || activeNav === 'mcp') && 'bg-active text-fg',
+            )}
           >
-            Show more
-          </button>
-        </SidebarSection>
-
-        <SidebarSection label="Recents">
-          {RECENTS.map((thread) => (
-            <button
-              key={thread.id}
-              type="button"
+            <MoreHorizontal className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
+            <span className="truncate">Explore</span>
+            <ChevronDown
               className={cn(
-                'flex h-8 w-full items-center rounded-lg px-2.5 text-left text-[14px] hover:bg-hover',
-                thread.muted ? 'text-fg-tertiary' : 'text-fg',
+                'ml-auto size-3.5 shrink-0 text-fg-tertiary transition-transform',
+                exploreOpen && 'rotate-180',
               )}
-            >
-              <span className="truncate">{thread.title}</span>
-            </button>
-          ))}
-        </SidebarSection>
+              strokeWidth={1.75}
+            />
+          </button>
+
+          {exploreOpen ? (
+            <div className="flex flex-col gap-px pl-4">
+              {EXPLORE_ITEMS.map((item) => {
+                const Icon = NAV_ICONS[item.key];
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => onSelectNav(item.key)}
+                    className={cn(
+                      'flex h-[32px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] transition-colors hover:bg-hover',
+                      activeNav === item.key ? 'bg-active text-fg' : 'text-fg-secondary',
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" strokeWidth={1.75} />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </nav>
+      ) : null}
+
+      <div className="no-drag mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pb-2">
+        {searching_ ? (
+          <SidebarSection label="Search results">
+            {searching ? (
+              <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">Searching…</p>
+            ) : null}
+            {!searching && searchTerm.trim() && searchResults.length === 0 ? (
+              <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No matching chats</p>
+            ) : null}
+            {searchResults.map((thread) => renderThread(thread))}
+          </SidebarSection>
+        ) : (
+          <>
+            <SidebarSection label="Projects">
+              {projects.map((project) => (
+                <div key={project.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectProject(project.cwd)}
+                    className={cn(
+                      'flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] hover:bg-hover',
+                      activeCwd === project.cwd && 'bg-hover',
+                    )}
+                  >
+                    <Folder className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
+                    <span className="truncate">{project.name}</span>
+                  </button>
+
+                  {project.remoteUrl ? (
+                    <div className="group ml-[22px] flex h-[30px] items-center gap-1.5 rounded-lg px-2 text-[13px] text-fg-secondary">
+                      <Link className="size-3.5 shrink-0" strokeWidth={1.75} />
+                      <span className="truncate">{project.remoteUrl}</span>
+                    </div>
+                  ) : null}
+
+                  {project.threads.slice(0, 5).map((thread) => renderThread(thread, true))}
+                </div>
+              ))}
+              {projects.length === 0 ? (
+                <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No projects yet</p>
+              ) : null}
+            </SidebarSection>
+
+            <SidebarSection label="Recents">
+              {recents.map((thread) => renderThread(thread))}
+              {recents.length === 0 ? (
+                <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No chats yet</p>
+              ) : null}
+            </SidebarSection>
+          </>
+        )}
       </div>
 
       <div className="no-drag flex h-[52px] shrink-0 items-center gap-2 px-2.5">
         <div className="relative shrink-0">
           <div className="flex size-7 items-center justify-center rounded-full bg-fg text-[11px] font-medium text-fg-inverse">
-            AE
+            WX
           </div>
-          <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-sidebar bg-emerald-500" />
+          <span
+            className={cn(
+              'absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-sidebar',
+              STATUS_DOT[status],
+            )}
+          />
         </div>
-        <span className="min-w-0 truncate text-[13px] text-fg-secondary">aegonxxxxxxx....</span>
+        <span className="min-w-0 truncate text-[13px] text-fg-secondary">
+          {status === 'ready' ? 'app-server connected' : status}
+        </span>
         <div className="ml-auto flex items-center gap-0.5">
           <button
             type="button"
@@ -175,6 +328,143 @@ export function Sidebar({ activeNav, onSelectNav, onOpenSettings }: SidebarProps
         </div>
       </div>
     </aside>
+  );
+}
+
+function ThreadRow({
+  thread,
+  indent,
+  active,
+  renaming,
+  onSelect,
+  onStartRename,
+  onRename,
+  onCancelRename,
+  onArchive,
+  onDelete,
+}: {
+  thread: Thread;
+  indent: boolean;
+  active: boolean;
+  renaming: boolean;
+  onSelect: () => void;
+  onStartRename: () => void;
+  onRename: (name: string) => void;
+  onCancelRename: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [draft, setDraft] = useState(threadTitle(thread));
+
+  if (renaming) {
+    return (
+      <div className={cn('px-1', indent && 'pl-[42px]')}>
+        <input
+          autoFocus
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => onRename(draft)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              onRename(draft);
+            } else if (event.key === 'Escape') {
+              onCancelRename();
+            }
+          }}
+          className="h-[30px] w-full rounded-lg border border-line bg-app px-2 text-[13px] outline-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn('group/row relative', indent && 'pl-[24px]')}>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          'flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[13px] text-fg-secondary hover:bg-hover',
+          indent && 'pl-[22px]',
+          active && 'bg-active text-fg',
+        )}
+      >
+        <span className="truncate">{threadTitle(thread)}</span>
+      </button>
+      <div
+        className={cn(
+          'absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/row:opacity-100',
+          menuOpen && 'opacity-100',
+        )}
+      >
+        <IconButton
+          size="sm"
+          aria-label="Chat actions"
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
+        </IconButton>
+      </div>
+      {menuOpen ? (
+        <>
+          <div className="fixed inset-0 z-40" onMouseDown={() => setMenuOpen(false)} />
+          <div className="absolute right-1 top-[28px] z-50 min-w-[160px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
+            <MenuAction
+              icon={Pencil}
+              label="Rename"
+              onClick={() => {
+                setMenuOpen(false);
+                setDraft(threadTitle(thread));
+                onStartRename();
+              }}
+            />
+            <MenuAction
+              icon={Archive}
+              label="Archive"
+              onClick={() => {
+                setMenuOpen(false);
+                onArchive();
+              }}
+            />
+            <MenuAction
+              icon={Trash2}
+              label="Delete"
+              danger
+              onClick={() => {
+                setMenuOpen(false);
+                onDelete();
+              }}
+            />
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function MenuAction({
+  icon: Icon,
+  label,
+  danger = false,
+  onClick,
+}: {
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-hover',
+        danger ? 'text-danger' : 'text-fg',
+      )}
+    >
+      <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
+      {label}
+    </button>
   );
 }
 

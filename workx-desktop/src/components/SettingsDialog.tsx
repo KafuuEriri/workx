@@ -1,23 +1,18 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
-import {
-  MODEL_OPTIONS,
-  REASONING_EFFORTS,
-  type ModelOption,
-} from '../data/workspace';
-import type { ThemePreference } from '../lib/theme';
+import type { Model } from '@protocol/v2/Model';
 import { cn } from '../lib/cn';
+import type { ThemePreference } from '../lib/theme';
 
 interface SettingsDialogProps {
   open: boolean;
   onClose: () => void;
-  provider: string;
-  onProviderChange: (provider: string) => void;
-  model: ModelOption;
-  onModelChange: (model: ModelOption) => void;
-  reasoning: string;
-  onReasoningChange: (reasoning: string) => void;
+  models: Model[];
+  selectedModelId: string | null;
+  onModelChange: (id: string) => void;
+  selectedEffort: string | null;
+  onEffortChange: (effort: string) => void;
   theme: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
 }
@@ -31,15 +26,26 @@ const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }
 export function SettingsDialog({
   open,
   onClose,
-  provider,
-  onProviderChange,
-  model,
+  models,
+  selectedModelId,
   onModelChange,
-  reasoning,
-  onReasoningChange,
+  selectedEffort,
+  onEffortChange,
   theme,
   onThemeChange,
 }: SettingsDialogProps) {
+  const [draftModelId, setDraftModelId] = useState(selectedModelId);
+  const [draftEffort, setDraftEffort] = useState(selectedEffort);
+  const [draftTheme, setDraftTheme] = useState(theme);
+
+  useEffect(() => {
+    if (open) {
+      setDraftModelId(selectedModelId);
+      setDraftEffort(selectedEffort);
+      setDraftTheme(theme);
+    }
+  }, [open, selectedModelId, selectedEffort, theme]);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -57,6 +63,18 @@ export function SettingsDialog({
     return null;
   }
 
+  const draftModel = models.find((model) => model.id === draftModelId) ?? null;
+  const efforts = draftModel
+    ? draftModel.supportedReasoningEfforts.length > 0
+      ? draftModel.supportedReasoningEfforts
+      : [
+          {
+            reasoningEffort: draftModel.defaultReasoningEffort,
+            description: 'Default for this model',
+          },
+        ]
+    : [];
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-6"
@@ -72,28 +90,20 @@ export function SettingsDialog({
         <h2 className="text-[17px] font-semibold">Settings</h2>
 
         <div className="mt-5 flex flex-col gap-4">
-          <Field label="Provider">
-            <input
-              value={provider}
-              onChange={(event) => onProviderChange(event.target.value)}
-              className="h-9 w-full rounded-lg border border-line bg-app px-3 text-[14px] outline-none focus:border-line-strong"
-            />
-          </Field>
-
           <Field label="Model">
             <select
-              value={model.id}
+              value={draftModelId ?? ''}
               onChange={(event) => {
-                const next = MODEL_OPTIONS.find((option) => option.id === event.target.value);
-                if (next) {
-                  onModelChange(next);
-                }
+                const nextId = event.target.value;
+                setDraftModelId(nextId);
+                const nextModel = models.find((model) => model.id === nextId);
+                setDraftEffort(nextModel?.defaultReasoningEffort ?? null);
               }}
               className="h-9 w-full rounded-lg border border-line bg-app px-2.5 text-[14px] outline-none focus:border-line-strong"
             >
-              {MODEL_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.displayName}
                 </option>
               ))}
             </select>
@@ -101,13 +111,13 @@ export function SettingsDialog({
 
           <Field label="Reasoning effort">
             <select
-              value={reasoning}
-              onChange={(event) => onReasoningChange(event.target.value)}
+              value={draftEffort ?? ''}
+              onChange={(event) => setDraftEffort(event.target.value)}
               className="h-9 w-full rounded-lg border border-line bg-app px-2.5 text-[14px] outline-none focus:border-line-strong"
             >
-              {REASONING_EFFORTS.map((effort) => (
-                <option key={effort} value={effort}>
-                  {effort}
+              {efforts.map((option) => (
+                <option key={option.reasoningEffort} value={option.reasoningEffort}>
+                  {option.reasoningEffort}
                 </option>
               ))}
             </select>
@@ -117,12 +127,12 @@ export function SettingsDialog({
             <div className="flex gap-1.5">
               {THEME_OPTIONS.map((option) => {
                 const Icon = option.icon;
-                const selected = theme === option.value;
+                const selected = draftTheme === option.value;
                 return (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => onThemeChange(option.value)}
+                    onClick={() => setDraftTheme(option.value)}
                     className={cn(
                       'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border text-[13px]',
                       selected
@@ -149,7 +159,16 @@ export function SettingsDialog({
           </button>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              if (draftModelId) {
+                onModelChange(draftModelId);
+              }
+              if (draftEffort) {
+                onEffortChange(draftEffort);
+              }
+              onThemeChange(draftTheme);
+              onClose();
+            }}
             className="h-8 rounded-full bg-send px-4 text-[13px] text-send-fg"
           >
             Save
