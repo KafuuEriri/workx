@@ -55,6 +55,7 @@ export interface ProjectView {
   name: string;
   roots: string[];
   primaryRoot: string | null;
+  recencyAt: number | null;
   threads: Thread[];
 }
 
@@ -922,6 +923,7 @@ export function useWorkx(): WorkxController {
       name: project.name,
       roots: project.roots.map((root) => root.path),
       primaryRoot: project.roots[0]?.path ?? null,
+      recencyAt: project.recencyAt,
       threads: byProject.get(project.id) ?? [],
     }));
   }, [state.projects, state.threads]);

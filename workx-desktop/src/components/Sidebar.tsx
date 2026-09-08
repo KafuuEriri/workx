@@ -1,12 +1,16 @@
 import {
   Archive,
+  ArrowUpDown,
   AudioLines,
   Bell,
+  Check,
   ChevronDown,
+  ChevronRight,
   CircleHelp,
   Copy,
   Folder,
   FolderOpen,
+  Layers,
   MessageSquarePlus,
   MoreHorizontal,
   Pencil,
@@ -45,6 +49,9 @@ const STATUS_DOT: Record<ConnectionStatus, string> = {
 
 const PROJECT_LIMIT = 5;
 const PROJECT_THREAD_LIMIT = 5;
+
+type ProjectOrganize = 'project' | 'list';
+type ProjectSort = 'manual' | 'updated';
 
 interface SidebarProps {
   status: ConnectionStatus;
@@ -108,6 +115,8 @@ export function Sidebar({
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [projectsMenuOpen, setProjectsMenuOpen] = useState(false);
+  const [organize, setOrganize] = useState<ProjectOrganize>('project');
+  const [projectSort, setProjectSort] = useState<ProjectSort>('manual');
 
   const searching_ = searchOpen || searchTerm.trim().length > 0;
 
@@ -162,7 +171,16 @@ export function Sidebar({
     />
   );
 
-  const visibleProjects = showAllProjects ? projects : projects.slice(0, PROJECT_LIMIT);
+  const orderedProjects =
+    projectSort === 'updated'
+      ? [...projects].sort((a, b) => (b.recencyAt ?? -1) - (a.recencyAt ?? -1))
+      : projects;
+  const visibleProjects = showAllProjects
+    ? orderedProjects
+    : orderedProjects.slice(0, PROJECT_LIMIT);
+  const flatThreads = [...projects.flatMap((project) => project.threads), ...recents].sort(
+    (a, b) => (b.recencyAt ?? 0) - (a.recencyAt ?? 0),
+  );
 
   return (
     <aside className="drag flex h-full w-[275px] shrink-0 flex-col border-r border-line-subtle bg-sidebar">
@@ -298,44 +316,57 @@ export function Sidebar({
         ) : (
           <>
             <div className="relative">
-              <SidebarSection
-                label="Projects"
-                onAdd={onAddProject}
-                onMore={() => setProjectsMenuOpen((value) => !value)}
-              >
-                {visibleProjects.map((project) => {
-                  const expanded = expandedProjects.has(project.id);
-                  return (
-                    <div key={project.id}>
-                      <ProjectRow
-                        project={project}
-                        onToggle={() => toggleProject(project)}
-                        onNewChat={() => onNewChatInProject(project.id)}
-                        onEdit={() => onEditProject(project)}
-                        onRemove={() => onRemoveProject(project)}
-                      />
+              {organize === 'list' ? (
+                <SidebarSection
+                  label="Chats"
+                  onAdd={onNewChat}
+                  onMore={() => setProjectsMenuOpen((value) => !value)}
+                >
+                  {flatThreads.map((thread) => renderThread(thread))}
+                  {flatThreads.length === 0 ? (
+                    <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No chats yet</p>
+                  ) : null}
+                </SidebarSection>
+              ) : (
+                <SidebarSection
+                  label="Projects"
+                  onAdd={onAddProject}
+                  onMore={() => setProjectsMenuOpen((value) => !value)}
+                >
+                  {visibleProjects.map((project) => {
+                    const expanded = expandedProjects.has(project.id);
+                    return (
+                      <div key={project.id}>
+                        <ProjectRow
+                          project={project}
+                          onToggle={() => toggleProject(project)}
+                          onNewChat={() => onNewChatInProject(project.id)}
+                          onEdit={() => onEditProject(project)}
+                          onRemove={() => onRemoveProject(project)}
+                        />
 
-                      {expanded
-                        ? project.threads
-                            .slice(0, PROJECT_THREAD_LIMIT)
-                            .map((thread) => renderThread(thread, true))
-                        : null}
-                    </div>
-                  );
-                })}
-                {projects.length === 0 ? (
-                  <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No projects yet</p>
-                ) : null}
-                {projects.length > PROJECT_LIMIT ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllProjects((value) => !value)}
-                    className="flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[14px] text-fg-tertiary hover:bg-hover"
-                  >
-                    {showAllProjects ? 'Show less' : 'Show more'}
-                  </button>
-                ) : null}
-              </SidebarSection>
+                        {expanded
+                          ? project.threads
+                              .slice(0, PROJECT_THREAD_LIMIT)
+                              .map((thread) => renderThread(thread, true))
+                          : null}
+                      </div>
+                    );
+                  })}
+                  {projects.length === 0 ? (
+                    <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No projects yet</p>
+                  ) : null}
+                  {projects.length > PROJECT_LIMIT ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllProjects((value) => !value)}
+                      className="flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[14px] text-fg-tertiary hover:bg-hover"
+                    >
+                      {showAllProjects ? 'Show less' : 'Show more'}
+                    </button>
+                  ) : null}
+                </SidebarSection>
+              )}
 
               {projectsMenuOpen ? (
                 <>
@@ -343,34 +374,56 @@ export function Sidebar({
                     className="fixed inset-0 z-40"
                     onMouseDown={() => setProjectsMenuOpen(false)}
                   />
-                  <div className="absolute right-2 top-9 z-50 min-w-[180px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
-                    <MenuAction
-                      icon={Plus}
-                      label="Create project"
-                      onClick={() => {
-                        setProjectsMenuOpen(false);
-                        onAddProject();
-                      }}
-                    />
-                    <MenuAction
-                      icon={ChevronDown}
-                      label={showAllProjects ? 'Show less' : 'Show more'}
-                      onClick={() => {
-                        setProjectsMenuOpen(false);
-                        setShowAllProjects((value) => !value);
-                      }}
-                    />
+                  <div className="absolute right-2 top-9 z-50 min-w-[200px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
+                    <MenuSubmenu icon={Layers} label="Organize sidebar">
+                      <MenuRadio
+                        label="By project"
+                        checked={organize === 'project'}
+                        onClick={() => {
+                          setOrganize('project');
+                          setProjectsMenuOpen(false);
+                        }}
+                      />
+                      <MenuRadio
+                        label="In one list"
+                        checked={organize === 'list'}
+                        onClick={() => {
+                          setOrganize('list');
+                          setProjectsMenuOpen(false);
+                        }}
+                      />
+                    </MenuSubmenu>
+                    <MenuSubmenu icon={ArrowUpDown} label="Sort chats by">
+                      <MenuRadio
+                        label="Manual order"
+                        checked={projectSort === 'manual'}
+                        onClick={() => {
+                          setProjectSort('manual');
+                          setProjectsMenuOpen(false);
+                        }}
+                      />
+                      <MenuRadio
+                        label="Last updated"
+                        checked={projectSort === 'updated'}
+                        onClick={() => {
+                          setProjectSort('updated');
+                          setProjectsMenuOpen(false);
+                        }}
+                      />
+                    </MenuSubmenu>
                   </div>
                 </>
               ) : null}
             </div>
 
-            <SidebarSection label="Recents" onAdd={onNewChat}>
-              {recents.map((thread) => renderThread(thread))}
-              {recents.length === 0 ? (
-                <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No chats yet</p>
-              ) : null}
-            </SidebarSection>
+            {organize === 'project' ? (
+              <SidebarSection label="Recents" onAdd={onNewChat}>
+                {recents.map((thread) => renderThread(thread))}
+                {recents.length === 0 ? (
+                  <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No chats yet</p>
+                ) : null}
+              </SidebarSection>
+            ) : null}
           </>
         )}
       </div>
@@ -637,6 +690,60 @@ function MenuAction({
       )}
     >
       <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
+      {label}
+    </button>
+  );
+}
+
+function MenuSubmenu({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  label: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-fg hover:bg-hover"
+      >
+        <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
+        <span className="flex-1">{label}</span>
+        <ChevronRight
+          className={cn('size-3.5 shrink-0 text-fg-tertiary transition-transform', open && 'rotate-90')}
+          strokeWidth={1.75}
+        />
+      </button>
+      {open ? <div className="mt-px flex flex-col gap-px pl-5">{children}</div> : null}
+    </div>
+  );
+}
+
+function MenuRadio({
+  label,
+  checked,
+  onClick,
+}: {
+  label: string;
+  checked: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-fg hover:bg-hover"
+    >
+      <Check
+        className={cn('size-3.5 shrink-0', checked ? 'opacity-100' : 'opacity-0')}
+        strokeWidth={2}
+      />
       {label}
     </button>
   );

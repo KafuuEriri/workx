@@ -276,7 +276,7 @@ export function App() {
       <ConfirmDialog
         open={removeTarget !== null}
         title={`Remove ${removeTarget?.name ?? 'project'}?`}
-        description="The project is removed and its chats move to Recents. Files on disk are not touched."
+        description="This only removes the project from the app. Files on your computer and existing chats won't be deleted."
         confirmLabel="Remove project"
         onCancel={() => setRemoveTarget(null)}
         onConfirm={() => {
