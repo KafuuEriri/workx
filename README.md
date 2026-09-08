@@ -26,6 +26,23 @@ brew install workx
 `brew trust` 用于信任非官方 tap，首次执行即可。`brew install workx` 会从
 `RonanXiao/workx` 的 GitHub Releases 拉取当前平台的预编译包。
 
+Windows（PowerShell）：
+
+```powershell
+irm https://raw.githubusercontent.com/RonanXiao/workx/main/scripts/install/install.ps1 | iex
+```
+
+WSL / Linux（在 WSL 或 Linux 终端内执行）：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/RonanXiao/workx/main/scripts/install/install.sh | sh
+```
+
+安装脚本会从 GitHub Releases 下载对应平台的 `workx-package-<target>.tar.gz`
+预编译包（Windows 为 `x86_64-pc-windows-msvc`，WSL/Linux 为
+`x86_64-unknown-linux-musl`）。多平台发布包由 `.github/workflows/release.yml`
+在手动触发后自动生成并上传到 Release。
+
 ## 从源码运行和打包
 
 使用仓库指定的 Rust toolchain，以及 Node.js、pnpm、Python 和 just：
