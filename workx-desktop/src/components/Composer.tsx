@@ -11,6 +11,10 @@ interface ComposerProps {
   models: Model[];
   selectedModelId: string | null;
   onModelChange: (id: string) => void;
+  providers: string[];
+  providerId: string | null;
+  providerBusy: boolean;
+  onProviderChange: (id: string) => void;
   permission: PermissionMode;
   onPermissionChange: (mode: PermissionMode) => void;
   running: boolean;
@@ -24,6 +28,10 @@ export function Composer({
   models,
   selectedModelId,
   onModelChange,
+  providers,
+  providerId,
+  providerBusy,
+  onProviderChange,
   permission,
   onPermissionChange,
   running,
@@ -34,6 +42,7 @@ export function Composer({
 }: ComposerProps) {
   const [value, setValue] = useState('');
   const [modelOpen, setModelOpen] = useState(false);
+  const [providerOpen, setProviderOpen] = useState(false);
   const [permissionOpen, setPermissionOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -116,6 +125,37 @@ export function Composer({
           </div>
 
           <div className="ml-auto flex items-center gap-1">
+            <div className="relative">
+              <button
+                type="button"
+                disabled={providerBusy}
+                onClick={() => setProviderOpen((open) => !open)}
+                className="flex h-7 items-center gap-1 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover disabled:opacity-60"
+              >
+                <span className="max-w-[140px] truncate">
+                  {providerId ?? 'Provider'}
+                </span>
+                <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
+              </button>
+              <Menu
+                open={providerOpen}
+                onClose={() => setProviderOpen(false)}
+                align="right"
+              >
+                {providers.map((id) => (
+                  <MenuItem
+                    key={id}
+                    title={id}
+                    selected={id === providerId}
+                    onClick={() => {
+                      onProviderChange(id);
+                      setProviderOpen(false);
+                    }}
+                  />
+                ))}
+              </Menu>
+            </div>
+
             <div className="relative">
               <button
                 type="button"

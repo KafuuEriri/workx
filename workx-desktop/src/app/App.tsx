@@ -231,6 +231,10 @@ export function App() {
               models={workx.models}
               selectedModelId={workx.selectedModelId}
               onModelChange={workx.selectModel}
+              providers={workx.providers}
+              providerId={workx.providerId}
+              providerBusy={workx.providerBusy}
+              onProviderChange={(id) => void workx.selectProvider(id)}
               permission={workx.permission}
               onPermissionChange={workx.setPermission}
               running={workx.running}

@@ -1,5 +1,6 @@
 import type { AgentMessageDeltaNotification } from '@protocol/v2/AgentMessageDeltaNotification';
 import type { CommandExecutionRequestApprovalParams } from '@protocol/v2/CommandExecutionRequestApprovalParams';
+import type { ConfigReadResponse } from '@protocol/v2/ConfigReadResponse';
 import type { ErrorNotification } from '@protocol/v2/ErrorNotification';
 import type { FileChangeRequestApprovalParams } from '@protocol/v2/FileChangeRequestApprovalParams';
 import type { ItemCompletedNotification } from '@protocol/v2/ItemCompletedNotification';
@@ -43,6 +44,14 @@ import {
 } from './protocolExtensions';
 import { buildTranscript, type TranscriptEntry, type TurnView } from './transcript';
 
+const BUILTIN_MODEL_PROVIDER_IDS = [
+  'openai',
+  'amazon-bedrock',
+  'amazon-bedrock-runtime',
+  'ollama',
+  'lmstudio',
+];
+
 export interface ApprovalRequest {
   id: string | number;
   kind: 'command' | 'file';
@@ -66,6 +75,10 @@ export interface WorkxController {
   models: Model[];
   selectedModelId: string | null;
   selectModel: (id: string) => void;
+  providerId: string | null;
+  providers: string[];
+  providerBusy: boolean;
+  selectProvider: (id: string) => Promise<void>;
   selectedEffort: string | null;
   setEffort: (effort: string) => void;
   permission: PermissionMode;
@@ -401,6 +414,9 @@ function turnView(turn: Turn): TurnView {
 export function useWorkx(): WorkxController {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [providerId, setProviderId] = useState<string | null>(null);
+  const [providers, setProviders] = useState<string[]>([]);
+  const [providerBusy, setProviderBusy] = useState(false);
   const [effortId, setEffortId] = useState<string | null>(null);
   const [permissionId, setPermissionId] = useState('full-access');
   const [cwd, setCwd] = useState('');
@@ -475,6 +491,61 @@ export function useWorkx(): WorkxController {
       }
     }
   }, [request]);
+
+  const refreshProviders = useCallback(async () => {
+    const response = await request<ConfigReadResponse>('config/read', { includeLayers: true });
+    const configured = Object.keys(
+      (response.config.model_providers as Record<string, unknown> | undefined) ?? {},
+    );
+    const ids = Array.from(new Set([...configured, ...BUILTIN_MODEL_PROVIDER_IDS])).sort();
+    setProviders(ids);
+    setProviderId(response.config.model_provider ?? null);
+  }, [request]);
+
+  const selectProvider = useCallback(
+    async (id: string) => {
+      if (providerBusy || id === providerId) {
+        return;
+      }
+      setProviderBusy(true);
+      try {
+        await request('config/batchWrite', {
+          edits: [
+            { keyPath: 'model_provider', value: id, mergeStrategy: 'replace' },
+            { keyPath: 'model_reasoning_effort', value: null, mergeStrategy: 'replace' },
+            { keyPath: 'service_tier', value: null, mergeStrategy: 'replace' },
+          ],
+          reloadUserConfig: true,
+        });
+        const listed = await request<ModelListResponse>('model/list', {});
+        const preferred = listed.data.find((model) => model.isDefault) ?? listed.data[0] ?? null;
+        await request('config/batchWrite', {
+          edits: [
+            {
+              keyPath: 'model',
+              value: preferred?.id ?? null,
+              mergeStrategy: 'replace',
+            },
+          ],
+          reloadUserConfig: true,
+        });
+        await refreshProviders();
+        dispatch({ type: 'models', models: listed.data });
+        modelRef.current = preferred?.id ?? null;
+        setSelectedModelId(preferred?.id ?? null);
+        effortRef.current = preferred?.defaultReasoningEffort ?? null;
+        setEffortId(preferred?.defaultReasoningEffort ?? null);
+      } catch (error) {
+        dispatch({
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        setProviderBusy(false);
+      }
+    },
+    [providerBusy, providerId, refreshProviders, request],
+  );
 
   const startThread = useCallback(
     async (projectId?: string, cwd?: string): Promise<string> => {
@@ -911,7 +982,7 @@ export function useWorkx(): WorkxController {
           return;
         }
         dispatch({ type: 'status', status: 'ready' });
-        await Promise.all([refreshModels(), refreshThreads(), refreshProjects()]);
+        await Promise.all([refreshModels(), refreshThreads(), refreshProjects(), refreshProviders()]);
       } catch (error) {
         dispatch({
           type: 'status',
@@ -920,7 +991,7 @@ export function useWorkx(): WorkxController {
         });
       }
     })();
-  }, [refreshModels, refreshProjects, refreshThreads]);
+  }, [refreshModels, refreshProjects, refreshProviders, refreshThreads]);
 
   useEffect(() => {
     const term = state.searchTerm.trim();
@@ -1001,6 +1072,10 @@ export function useWorkx(): WorkxController {
       effortRef.current = effort;
       setEffortId(effort);
     },
+    providerId,
+    providers,
+    providerBusy,
+    selectProvider,
     permission,
     setPermission: (mode) => {
       permissionRef.current = mode;
