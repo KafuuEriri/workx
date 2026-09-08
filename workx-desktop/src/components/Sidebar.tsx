@@ -27,7 +27,7 @@ import { useEffect, useRef, useState, type ComponentType, type ReactNode, type S
 
 import type { ProjectView } from '../app/useWorkx';
 import type { Thread } from '@protocol/v2/Thread';
-import { EXPLORE_ITEMS, NAV_ITEMS, type NavKey } from '../data/workspace';
+import { NAV_ITEMS, type NavKey } from '../data/workspace';
 import { cn } from '../lib/cn';
 import { IconButton } from './IconButton';
 import { ProjectHoverCard } from './ProjectHoverCard';
@@ -114,7 +114,6 @@ export function Sidebar({
   onDeleteThread,
 }: SidebarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [exploreOpen, setExploreOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [showAllProjects, setShowAllProjects] = useState(false);
@@ -262,47 +261,6 @@ export function Sidebar({
               </button>
             );
           })}
-
-          <button
-            type="button"
-            onClick={() => setExploreOpen((value) => !value)}
-            className={cn(
-              'flex h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] transition-colors hover:bg-hover',
-              (activeNav === 'skills' || activeNav === 'mcp') && 'bg-active text-fg',
-            )}
-          >
-            <MoreHorizontal className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
-            <span className="truncate">Explore</span>
-            <ChevronDown
-              className={cn(
-                'ml-auto size-3.5 shrink-0 text-fg-tertiary transition-transform',
-                exploreOpen && 'rotate-180',
-              )}
-              strokeWidth={1.75}
-            />
-          </button>
-
-          {exploreOpen ? (
-            <div className="flex flex-col gap-px pl-4">
-              {EXPLORE_ITEMS.map((item) => {
-                const Icon = NAV_ICONS[item.key];
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => onSelectNav(item.key)}
-                    className={cn(
-                      'flex h-[32px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] transition-colors hover:bg-hover',
-                      activeNav === item.key ? 'bg-active text-fg' : 'text-fg-secondary',
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" strokeWidth={1.75} />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
         </nav>
       ) : null}
 

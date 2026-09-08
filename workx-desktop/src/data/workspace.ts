@@ -15,17 +15,8 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { key: 'new-chat', label: 'New chat' },
   { key: 'plugins', label: 'Plugins' },
-];
-
-export interface ExploreItem {
-  key: NavKey;
-  label: string;
-  description: string;
-}
-
-export const EXPLORE_ITEMS: ExploreItem[] = [
-  { key: 'skills', label: 'Skills', description: 'Reusable instructions Workx can load' },
-  { key: 'mcp', label: 'MCP servers', description: 'Model Context Protocol connections' },
+  { key: 'skills', label: 'Skills' },
+  { key: 'mcp', label: 'MCP servers' },
 ];
 
 export interface PermissionMode {
