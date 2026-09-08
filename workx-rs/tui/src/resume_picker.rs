@@ -418,7 +418,8 @@ async fn run_resume_picker_with_launch_context(
         app_server.remote_cwd_override(),
     );
     let local_filter_cwd = local_picker_cwd_filter(&cwd_filter, uses_remote_workspace);
-    let provider_filter = picker_provider_filter(config, uses_remote_workspace);
+    let provider_filter =
+        picker_provider_filter(SessionPickerAction::Resume, config, uses_remote_workspace);
     let runtime_keymap = picker_runtime_keymap(config)?;
     let options = SessionPickerRunOptions {
         show_all,
@@ -472,7 +473,8 @@ pub async fn run_fork_picker_with_app_server(
         app_server.remote_cwd_override(),
     );
     let local_filter_cwd = local_picker_cwd_filter(&cwd_filter, uses_remote_workspace);
-    let provider_filter = picker_provider_filter(config, uses_remote_workspace);
+    let provider_filter =
+        picker_provider_filter(SessionPickerAction::Fork, config, uses_remote_workspace);
     let runtime_keymap = picker_runtime_keymap(config)?;
     let options = SessionPickerRunOptions {
         show_all,
@@ -622,11 +624,25 @@ fn local_picker_cwd_filter(
     }
 }
 
-fn picker_provider_filter(config: &Config, uses_remote_workspace: bool) -> ProviderFilter {
-    if uses_remote_workspace {
-        ProviderFilter::Any
-    } else {
-        ProviderFilter::MatchDefault(config.model_provider_id.to_string())
+/// Resolves the provider filter applied when listing sessions for a picker action.
+///
+/// Resume always lists sessions from every provider: the picker re-attaches to an existing
+/// thread, so switching the default provider (e.g. via `/provider`) must not hide sessions
+/// that were started under other providers.
+///
+/// Fork keeps the previous behavior of only offering sessions of the currently configured
+/// provider when running against a local workspace.
+fn picker_provider_filter(
+    action: SessionPickerAction,
+    config: &Config,
+    uses_remote_workspace: bool,
+) -> ProviderFilter {
+    match action {
+        SessionPickerAction::Resume => ProviderFilter::Any,
+        SessionPickerAction::Fork if uses_remote_workspace => ProviderFilter::Any,
+        SessionPickerAction::Fork => {
+            ProviderFilter::MatchDefault(config.model_provider_id.to_string())
+        }
     }
 }
 
@@ -3439,10 +3455,12 @@ fn render_empty_state_line(state: &PickerState) -> Line<'static> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::legacy_core::config::ConfigBuilder;
     use chrono::Duration;
     use workx_app_server_protocol::ThreadItem;
     use workx_app_server_protocol::ThreadSourceKind;
     use workx_config::CONFIG_TOML_FILE;
+    use workx_config::LoaderOverrides;
     use workx_protocol::ThreadId;
     use workx_utils_absolute_path::test_support::PathBufExt;
     use workx_utils_absolute_path::test_support::test_path_buf;
@@ -4007,6 +4025,61 @@ mod tests {
         assert_eq!(params.model_providers, None);
         let source_kinds = crate::resume_source_kinds(/*include_non_interactive*/ true);
         assert_eq!(params.source_kinds, Some(source_kinds));
+    }
+
+    async fn test_config_with_provider(default_provider: &str) -> Config {
+        let mut config = ConfigBuilder::default()
+            .workx_home(std::env::temp_dir())
+            .loader_overrides(LoaderOverrides::without_managed_config_for_tests())
+            .build()
+            .await
+            .expect("load config");
+        config.model_provider_id = default_provider.to_string();
+        config
+    }
+
+    #[tokio::test]
+    async fn resume_picker_lists_sessions_from_every_provider() {
+        let config = test_config_with_provider("openai").await;
+        // Resume re-attaches to an existing thread, so the currently configured
+        // provider must not scope the listing on local or remote workspaces.
+        assert!(matches!(
+            picker_provider_filter(
+                SessionPickerAction::Resume,
+                &config,
+                /*uses_remote_workspace*/ false
+            ),
+            ProviderFilter::Any
+        ));
+        assert!(matches!(
+            picker_provider_filter(
+                SessionPickerAction::Resume,
+                &config,
+                /*uses_remote_workspace*/ true
+            ),
+            ProviderFilter::Any
+        ));
+    }
+
+    #[tokio::test]
+    async fn fork_picker_keeps_scoping_to_the_default_provider_locally() {
+        let config = test_config_with_provider("openai").await;
+        assert!(matches!(
+            picker_provider_filter(
+                SessionPickerAction::Fork,
+                &config,
+                /*uses_remote_workspace*/ false
+            ),
+            ProviderFilter::MatchDefault(provider) if provider == "openai"
+        ));
+        assert!(matches!(
+            picker_provider_filter(
+                SessionPickerAction::Fork,
+                &config,
+                /*uses_remote_workspace*/ true
+            ),
+            ProviderFilter::Any
+        ));
     }
 
     #[test]
