@@ -1,28 +1,35 @@
 name: release
 
-# Manual multi-platform release pipeline.
+# One-shot multi-platform release pipeline.
 #
-# Each matrix job runs the same builder used for the manual macOS releases
-# (`scripts/build_workx_package.py`) on a native runner for its platform, so no
-# cross-compilation from a single host is needed:
+# Enter a version (e.g. 0.0.3) and the workflow:
 #
-#   - ubuntu-24.04        -> x86_64-unknown-linux-musl   (WSL / Linux x64)
-#   - windows-latest      -> x86_64-pc-windows-msvc      (Windows x64)
-#   - macos-14            -> aarch64-apple-darwin        (macOS Apple Silicon)
+#   1. Bumps the release version across the repo manifests with
+#      `scripts/bump_release_version.py`, commits it to the current branch, and
+#      creates/pushes the `rust-v<version>` tag at that commit.
+#   2. Builds `workx-package-<target>.tar.gz` from that tag on a native runner
+#      per platform (no cross-compilation from a single host):
+#        - ubuntu-24.04   -> x86_64-unknown-linux-musl  (WSL / Linux x64)
+#        - windows-latest -> x86_64-pc-windows-msvc     (Windows x64)
+#        - macos-14       -> aarch64-apple-darwin       (macOS Apple Silicon)
+#   3. Publishes the release with a combined `workx-package_SHA256SUMS`.
 #
-# Optional extra rows (uncomment the matching `include` entry):
-#   - linux arm64:        os: ubuntu-24.04-arm,  target: aarch64-unknown-linux-musl
-#   - macOS Intel:        os: macos-13,          target: x86_64-apple-darwin
+# Optional extra matrix rows (uncomment the matching `include` entry):
+#   - linux arm64: os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl
+#   - macOS Intel: os: macos-13,         target: x86_64-apple-darwin
 #
-# Usage: Actions -> Run workflow -> version 0.0.3 publishes tag rust-v0.0.3
-# with `workx-package-<target>.tar.gz` assets plus a combined
-# `workx-package_SHA256SUMS` file, then flips the release to public.
+# Notes:
+#   - The bump commit and tag are pushed with the default GITHUB_TOKEN, which
+#     does not re-trigger other workflows. If the default branch is protected,
+#     provide a PAT (e.g. a RELEASE_PAT secret) and push with it instead.
+#   - Rerunning the same version rebuilds from current `main` HEAD and moves the
+#     tag there, so a failed or outdated run can be republished in place.
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Semantic version to publish (e.g. 0.0.3). Tag is rust-v<version>."
+        description: "Semantic version to publish (e.g. 0.0.3). Bumps repo manifests and tags rust-v<version>."
         required: true
         type: string
 
@@ -34,44 +41,89 @@ permissions:
   contents: write
 
 jobs:
+  bump-version:
+    name: Bump version, commit, and tag
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      changed: ${{ steps.resolve.outputs.changed }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git identity
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version manifests
+        id: resolve
+        shell: bash
+        run: |
+          version="${{ github.event.inputs.version }}"
+          python3 scripts/bump_release_version.py "$version"
+          if git diff --quiet; then
+            changed="false"
+            echo "Version $version is already committed; nothing to bump."
+          else
+            changed="true"
+            git add -u
+            git commit -m "chore: bump version to $version"
+          fi
+          {
+            echo "version=$version"
+            echo "tag=rust-v$version"
+            echo "sha=$(git rev-parse HEAD)"
+            echo "changed=$changed"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push bump commit and release tag
+        shell: bash
+        run: |
+          if [ "${{ steps.resolve.outputs.changed }}" = "true" ]; then
+            git push origin HEAD:"${{ github.ref_name }}"
+          fi
+          git tag -f "${{ steps.resolve.outputs.tag }}" "${{ steps.resolve.outputs.sha }}"
+          git push origin --force "refs/tags/${{ steps.resolve.outputs.tag }}"
+
   create-release:
     name: Create draft release
+    needs: bump-version
     runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
       version: ${{ steps.resolve.outputs.version }}
     steps:
-      - name: Validate version
+      - name: Resolve release metadata
         id: resolve
         shell: bash
         run: |
-          version="${{ github.event.inputs.version }}"
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
-            echo "Invalid version: $version (expected e.g. 0.0.3 or 0.0.3-alpha.1)" >&2
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=rust-v$version" >> "$GITHUB_OUTPUT"
+          echo "version=${{ needs.bump-version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ needs.bump-version.outputs.tag }}" >> "$GITHUB_OUTPUT"
 
       - name: Create or update draft release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="${{ steps.resolve.outputs.tag }}"
+          tag="${{ needs.bump-version.outputs.tag }}"
+          version="${{ needs.bump-version.outputs.version }}"
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --draft=true --title "Workx ${{ steps.resolve.outputs.version }}"
+            gh release edit "$tag" --draft=true --title "Workx $version"
           else
             gh release create "$tag" \
               --draft=true \
-              --title "Workx ${{ steps.resolve.outputs.version }}" \
-              --notes "Preparing release ${{ steps.resolve.outputs.version }}..." \
-              --target "$GITHUB_SHA"
+              --title "Workx $version" \
+              --notes "Preparing release $version..."
           fi
 
   build-package:
     name: ${{ matrix.name }}
-    needs: create-release
+    needs:
+      - bump-version
+      - create-release
     runs-on: ${{ matrix.os }}
     env:
       WORKX_REPO_ROOT: ${{ github.workspace }}
@@ -98,6 +150,8 @@ jobs:
             python: python3
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.bump-version.outputs.tag }}
 
       - name: Install Linux cross-compile dependencies
         if: matrix.apt != ''
