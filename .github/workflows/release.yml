@@ -171,6 +171,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # bubblewrap.c/network.c include Linux UAPI headers (linux/loop.h,
+          # linux/capability.h); musl-gcc does not search the glibc include
+          # dirs, so expose the kernel headers via -idirafter.
+          sudo apt-get install -y linux-libc-dev
           prefix="$RUNNER_TEMP/musl-libcap"
           src="$RUNNER_TEMP/libcap"
           git clone --depth=1 https://git.kernel.org/pub/scm/libs/libcap/libcap.git "$src"
@@ -194,6 +198,7 @@ jobs:
             echo "PKG_CONFIG_ALLOW_CROSS=1"
             echo "CC_x86_64_unknown_linux_musl=musl-gcc"
             echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc"
+            echo "CFLAGS_X86_64_UNKNOWN_LINUX_MUSL=-idirafter/usr/include -idirafter/usr/include/x86_64-linux-gnu"
           } >> "$GITHUB_ENV"
 
       - name: Install Rust 1.95.0
