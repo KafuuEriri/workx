@@ -35,6 +35,7 @@ export function App() {
     project: ProjectView | null;
   } | null>(null);
   const [removeTarget, setRemoveTarget] = useState<ProjectView | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<ProjectView | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,6 +140,7 @@ export function App() {
           void workx.newThreadInProject(projectId);
         }}
         onAddProject={() => setProjectDialog({ mode: 'create', project: null })}
+        onArchiveProjectChats={(project) => setArchiveTarget(project)}
         onEditProject={(project) => setProjectDialog({ mode: 'edit', project })}
         onRemoveProject={(project) => setRemoveTarget(project)}
         searchTerm={workx.searchTerm}
@@ -284,6 +286,23 @@ export function App() {
           setRemoveTarget(null);
           if (target) {
             void workx.deleteProject(target.id);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={archiveTarget !== null}
+        title={`Archive ${archiveTarget?.threads.length ?? 0} ${
+          archiveTarget?.threads.length === 1 ? 'chat' : 'chats'
+        }?`}
+        description={`This will archive the chats in ${archiveTarget?.name ?? 'this project'}. You can find them later in your archived chats.`}
+        confirmLabel="Archive all"
+        onCancel={() => setArchiveTarget(null)}
+        onConfirm={() => {
+          const target = archiveTarget;
+          setArchiveTarget(null);
+          if (target) {
+            void Promise.all(target.threads.map((thread) => workx.archiveThread(thread.id)));
           }
         }}
       />

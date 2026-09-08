@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronRight,
   CircleHelp,
-  Copy,
   Folder,
   FolderOpen,
   Layers,
@@ -66,6 +65,7 @@ interface SidebarProps {
   onSelectProject: (projectId: string) => void;
   onNewChatInProject: (projectId: string) => void;
   onAddProject: () => void;
+  onArchiveProjectChats: (project: ProjectView) => void;
   onEditProject: (project: ProjectView) => void;
   onRemoveProject: (project: ProjectView) => void;
   searchTerm: string;
@@ -99,6 +99,7 @@ export function Sidebar({
   onSelectProject,
   onNewChatInProject,
   onAddProject,
+  onArchiveProjectChats,
   onEditProject,
   onRemoveProject,
   searchTerm,
@@ -341,6 +342,7 @@ export function Sidebar({
                           project={project}
                           onToggle={() => toggleProject(project)}
                           onNewChat={() => onNewChatInProject(project.id)}
+                          onArchiveChats={() => onArchiveProjectChats(project)}
                           onEdit={() => onEditProject(project)}
                           onRemove={() => onRemoveProject(project)}
                         />
@@ -467,12 +469,14 @@ function ProjectRow({
   project,
   onToggle,
   onNewChat,
+  onArchiveChats,
   onEdit,
   onRemove,
 }: {
   project: ProjectView;
   onToggle: () => void;
   onNewChat: () => void;
+  onArchiveChats: () => void;
   onEdit: () => void;
   onRemove: () => void;
 }) {
@@ -516,7 +520,7 @@ function ProjectRow({
             />
             <MenuAction
               icon={FolderOpen}
-              label="Open folder"
+              label="Reveal in Finder"
               onClick={() => {
                 setMenuOpen(false);
                 if (project.primaryRoot) {
@@ -524,19 +528,19 @@ function ProjectRow({
                 }
               }}
             />
-            <MenuAction
-              icon={Copy}
-              label="Copy path"
-              onClick={() => {
-                setMenuOpen(false);
-                if (project.primaryRoot) {
-                  void navigator.clipboard.writeText(project.primaryRoot);
-                }
-              }}
-            />
+            {project.threads.length > 0 ? (
+              <MenuAction
+                icon={Archive}
+                label="Archive chats"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onArchiveChats();
+                }}
+              />
+            ) : null}
             <MenuAction
               icon={Pencil}
-              label="Edit project"
+              label="Edit"
               onClick={() => {
                 setMenuOpen(false);
                 onEdit();
