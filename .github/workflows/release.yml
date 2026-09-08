@@ -141,6 +141,7 @@ jobs:
             target: x86_64-unknown-linux-musl
             apt: musl-tools nasm pkg-config
             python: python3
+            build_musl_libcap: true
           - name: Windows x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -162,6 +163,36 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ${{ matrix.apt }}
+
+      - name: Build static libcap for musl bwrap
+        if: matrix.build_musl_libcap
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="$RUNNER_TEMP/musl-libcap"
+          src="$RUNNER_TEMP/libcap"
+          git clone --depth=1 https://git.kernel.org/pub/scm/libs/libcap/libcap.git "$src"
+          make -C "$src/libcap" -j"$(nproc)" libcap.a CC=musl-gcc
+          mkdir -p "$prefix/lib/pkgconfig" "$prefix/include/sys"
+          cp "$src/libcap/libcap.a" "$prefix/lib/"
+          cp "$src/libcap/include/sys/capability.h" "$prefix/include/sys/"
+          cat > "$prefix/lib/pkgconfig/libcap.pc" <<EOF
+          prefix=$prefix
+          libdir=\${prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: libcap
+          Description: libcap built with musl-gcc for the static Workx bwrap
+          Version: 2.69
+          Libs: -L\${libdir} -lcap
+          Cflags: -I\${includedir}
+          EOF
+          {
+            echo "PKG_CONFIG_PATH=$prefix/lib/pkgconfig"
+            echo "PKG_CONFIG_ALLOW_CROSS=1"
+            echo "CC_x86_64_unknown_linux_musl=musl-gcc"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc"
+          } >> "$GITHUB_ENV"
 
       - name: Install Rust 1.95.0
         shell: bash
