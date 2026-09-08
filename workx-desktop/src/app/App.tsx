@@ -113,7 +113,6 @@ export function App() {
   return (
     <div className="flex h-full w-full overflow-hidden bg-app text-fg">
       <Sidebar
-        status={workx.status}
         activeNav={activeNav}
         onSelectNav={setActiveNav}
         onOpenSettings={() => setSettingsOpen(true)}

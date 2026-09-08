@@ -30,20 +30,12 @@ import { NAV_ITEMS, type NavKey } from '../data/workspace';
 import { cn } from '../lib/cn';
 import { IconButton } from './IconButton';
 import { ProjectHoverCard } from './ProjectHoverCard';
-import type { ConnectionStatus } from './TopBar';
 
 const NAV_ICONS: Record<NavKey, ComponentType<SVGProps<SVGSVGElement>>> = {
   'new-chat': SquarePen,
   plugins: Puzzle,
   skills: Sparkles,
   mcp: Plug,
-};
-
-const STATUS_DOT: Record<ConnectionStatus, string> = {
-  connecting: 'bg-amber-500',
-  ready: 'bg-emerald-500',
-  error: 'bg-danger',
-  stopped: 'bg-fg-tertiary',
 };
 
 const PROJECT_LIMIT = 5;
@@ -53,7 +45,6 @@ type ProjectOrganize = 'project' | 'list';
 type ProjectSort = 'manual' | 'updated';
 
 interface SidebarProps {
-  status: ConnectionStatus;
   activeNav: NavKey | null;
   onSelectNav: (key: NavKey) => void;
   onOpenSettings: () => void;
@@ -88,7 +79,6 @@ export function threadTitle(thread: Thread): string {
 }
 
 export function Sidebar({
-  status,
   activeNav,
   onSelectNav,
   onOpenSettings,
@@ -392,17 +382,6 @@ export function Sidebar({
       </div>
 
       <div className="no-drag flex h-[52px] shrink-0 items-center gap-2 px-2.5">
-        <div className="relative shrink-0">
-          <div className="flex size-7 items-center justify-center rounded-full bg-fg text-[11px] font-medium text-fg-inverse">
-            WX
-          </div>
-          <span
-            className={cn(
-              'absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-sidebar',
-              STATUS_DOT[status],
-            )}
-          />
-        </div>
         <div className="ml-auto flex items-center gap-0.5">
           <IconButton size="sm" aria-label="Settings" onClick={onOpenSettings}>
             <Settings2 className="size-4" strokeWidth={1.75} />
