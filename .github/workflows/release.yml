@@ -92,6 +92,8 @@ jobs:
     name: Create draft release
     needs: bump-version
     runs-on: ubuntu-24.04
+    env:
+      GH_REPO: ${{ github.repository }}
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
       version: ${{ steps.resolve.outputs.version }}
@@ -129,6 +131,7 @@ jobs:
       WORKX_REPO_ROOT: ${{ github.workspace }}
       VERSION: ${{ needs.create-release.outputs.version }}
       TAG: ${{ needs.create-release.outputs.tag }}
+      GH_REPO: ${{ github.repository }}
     strategy:
       fail-fast: false
       matrix:
@@ -193,6 +196,8 @@ jobs:
       - create-release
       - build-package
     runs-on: ubuntu-24.04
+    env:
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Rebuild checksums from uploaded packages
         shell: bash
