@@ -121,6 +121,15 @@ jobs:
               --notes "Preparing release $version..."
           fi
 
+          # Drop package assets left over from previous attempts so the
+          # published set always matches the current build. This must run
+          # before the matrix jobs upload their fresh packages.
+          for asset in $(gh release view "$tag" --json assets -q '.assets[].name'); do
+            case "$asset" in
+              workx-package-*) gh release delete-asset "$tag" "$asset" -y ;;
+            esac
+          done
+
   build-package:
     name: ${{ matrix.name }}
     needs:
@@ -247,15 +256,6 @@ jobs:
         run: |
           tag="${{ needs.create-release.outputs.tag }}"
           assets_dir="$(mktemp -d)"
-
-          # Drop package assets/checksums from a previous (failed) run so the
-          # published set always matches the current build.
-          for asset in $(gh release view "$tag" --json assets -q '.assets[].name'); do
-            case "$asset" in
-              workx-package-*) gh release delete-asset "$tag" "$asset" -y ;;
-            esac
-          done
-
           cd "$assets_dir"
           gh release download "$tag" --pattern 'workx-package-*.tar.gz'
           sha256sum workx-package-*.tar.gz > workx-package_SHA256SUMS
