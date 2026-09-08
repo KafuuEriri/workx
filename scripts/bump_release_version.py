@@ -16,7 +16,7 @@ from pathlib import Path
 
 WORKSPACE_VERSION_LINE = re.compile(r'^version\s*=\s*"([^"]+)"')
 JSON_VERSION_LINE = re.compile(r'^(\s*"version"\s*:\s*)"[^"]*"(,?)\s*$')
-README_VERSION_LINE = re.compile(r'^(- 当前项目版本：`)[^`]+(`)$')
+README_VERSION_LINE = re.compile(r"^(- 当前项目版本：`)[^`]+(`)$")
 SEMVER = re.compile(r"^\d+\.\d+\.\d+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$")
 
 
@@ -64,7 +64,7 @@ def replace_json_version(path: Path, old: str, new: str) -> bool:
     for index, line in enumerate(lines):
         match = JSON_VERSION_LINE.match(line)
         if match is not None and f'"{old}"' in line:
-            lines[index] = f"{match.group(1)}\"{new}\"{match.group(2)}\n"
+            lines[index] = f'{match.group(1)}"{new}"{match.group(2)}\n'
             path.write_text("".join(lines), encoding="utf-8")
             return True
     return False
