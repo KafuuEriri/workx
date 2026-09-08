@@ -544,34 +544,43 @@ export function useWorkx(): WorkxController {
 
   const openThread = useCallback(
     async (id: string) => {
+      let thread: Thread | null = null;
+      let writerConflict = false;
       try {
         const response = await request<ThreadResumeResponse>('thread/resume', { threadId: id });
-        threadIdRef.current = response.thread.id;
-        turnIdRef.current = null;
-        dispatch({
-          type: 'thread',
-          thread: response.thread,
-          turns: response.thread.turns.map(turnView),
-        });
+        thread = response.thread;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (!message.includes('already has an active writer')) {
           dispatch({ type: 'error', message });
           return;
         }
-        const response = await request<ThreadReadResponse>('thread/read', {
-          threadId: id,
-          includeTurns: true,
-        });
-        threadIdRef.current = response.thread.id;
-        turnIdRef.current = null;
-        dispatch({
-          type: 'thread',
-          thread: response.thread,
-          turns: response.thread.turns.map(turnView),
-          writerConflict: id,
-        });
+        writerConflict = true;
+        try {
+          const response = await request<ThreadReadResponse>('thread/read', {
+            threadId: id,
+            includeTurns: true,
+          });
+          thread = response.thread;
+        } catch (readError) {
+          dispatch({
+            type: 'error',
+            message: readError instanceof Error ? readError.message : String(readError),
+          });
+          return;
+        }
       }
+      if (!thread) {
+        return;
+      }
+      threadIdRef.current = thread.id;
+      turnIdRef.current = null;
+      dispatch({
+        type: 'thread',
+        thread,
+        turns: thread.turns.map(turnView),
+        writerConflict: writerConflict ? id : null,
+      });
     },
     [request],
   );
