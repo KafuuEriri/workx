@@ -78,22 +78,6 @@ OpenAI 保留 ChatGPT 登录、Device Code 和 API key 三种认证方式。
 - 保存前验证模型目录，失败时提示检查配置。切换后开启新会话，旧会话可继续恢复。
 - 自定义来源在启动、切换及打开 `/model` 时查询模型目录，不混入 OpenAI 内置模型或其他来源的缓存。
 
-配置示例：
-
-```toml
-model_provider = "my_service"
-model = "your-model-id"
-
-[model_providers.my_service]
-name = "My model service"
-base_url = "https://your-service.example/v1"
-experimental_bearer_token = "your-api-key"
-models_endpoint = "/v1/models"
-wire_api = "responses"
-requires_openai_auth = false
-```
-
-`experimental_bearer_token` 保存 API key，也可使用配置别名 `api_key`；本地无认证服务可省略。
 模型目录支持 `{"data":[{"id":"model-name"}]}` 和原有的详细 `models` 目录。
 通用目录没有上下文窗口等能力信息时，不从模型名称猜测；可使用已有模型配置覆盖机制补充。
 `wire_api` 也支持显式 `auto`：完整路径 `/chat/completions` 识别为 Chat，其余地址使用 Responses，不发送协议探测请求。
