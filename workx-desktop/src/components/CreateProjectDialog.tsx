@@ -68,6 +68,10 @@ export function CreateProjectDialog({
     setRoots((current) => (current.includes(picked) ? current : [...current, picked]));
   };
 
+  const makePrimary = (path: string) => {
+    setRoots((current) => [path, ...current.filter((candidate) => candidate !== path)]);
+  };
+
   const submit = async () => {
     if (roots.length === 0) {
       setError('Add at least one source folder.');
@@ -139,7 +143,16 @@ export function CreateProjectDialog({
                 <span className="shrink-0 rounded-md border border-line px-1.5 py-0.5 text-[11px] text-fg-tertiary">
                   Primary
                 </span>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Make ${basename(root)} primary`}
+                  onClick={() => makePrimary(root)}
+                  className="shrink-0 rounded-md px-1.5 py-0.5 text-[12px] text-fg-secondary opacity-0 hover:bg-hover hover:text-fg group-hover/root:opacity-100 focus:opacity-100"
+                >
+                  Make primary
+                </button>
+              )}
               <IconButton
                 size="sm"
                 aria-label={`Remove ${basename(root)}`}
