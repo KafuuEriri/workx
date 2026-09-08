@@ -382,7 +382,7 @@ export function Sidebar({
       </div>
 
       <div className="no-drag flex h-[52px] shrink-0 items-center gap-2 px-2.5">
-        <div className="ml-auto flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5">
           <IconButton size="sm" aria-label="Settings" onClick={onOpenSettings}>
             <Settings2 className="size-4" strokeWidth={1.75} />
           </IconButton>
