@@ -23,13 +23,14 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
+import { useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
 
 import type { ProjectView } from '../app/useWorkx';
 import type { Thread } from '@protocol/v2/Thread';
 import { EXPLORE_ITEMS, NAV_ITEMS, type NavKey } from '../data/workspace';
 import { cn } from '../lib/cn';
 import { IconButton } from './IconButton';
+import { ProjectHoverCard } from './ProjectHoverCard';
 import type { ConnectionStatus } from './TopBar';
 
 const NAV_ICONS: Record<NavKey, ComponentType<SVGProps<SVGSVGElement>>> = {
@@ -67,6 +68,7 @@ interface SidebarProps {
   onAddProject: () => void;
   onArchiveProjectChats: (project: ProjectView) => void;
   onEditProject: (project: ProjectView) => void;
+  onRenameProject: (project: ProjectView, name: string) => void;
   onRemoveProject: (project: ProjectView) => void;
   searchTerm: string;
   searchResults: Thread[];
@@ -101,6 +103,7 @@ export function Sidebar({
   onAddProject,
   onArchiveProjectChats,
   onEditProject,
+  onRenameProject,
   onRemoveProject,
   searchTerm,
   searchResults,
@@ -344,6 +347,7 @@ export function Sidebar({
                           onNewChat={() => onNewChatInProject(project.id)}
                           onArchiveChats={() => onArchiveProjectChats(project)}
                           onEdit={() => onEditProject(project)}
+                          onRename={(name) => onRenameProject(project, name)}
                           onRemove={() => onRemoveProject(project)}
                         />
 
@@ -471,6 +475,7 @@ function ProjectRow({
   onNewChat,
   onArchiveChats,
   onEdit,
+  onRename,
   onRemove,
 }: {
   project: ProjectView;
@@ -478,26 +483,123 @@ function ProjectRow({
   onNewChat: () => void;
   onArchiveChats: () => void;
   onEdit: () => void;
+  onRename: (name: string) => void;
   onRemove: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hoverOpen, setHoverOpen] = useState(false);
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const openTimer = useRef<number | null>(null);
+  const closeTimer = useRef<number | null>(null);
+
+  const cancelOpen = () => {
+    if (openTimer.current !== null) {
+      window.clearTimeout(openTimer.current);
+      openTimer.current = null;
+    }
+  };
+
+  const cancelClose = () => {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  useEffect(
+    () => () => {
+      if (openTimer.current !== null) {
+        window.clearTimeout(openTimer.current);
+      }
+      if (closeTimer.current !== null) {
+        window.clearTimeout(closeTimer.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (menuOpen) {
+      setHoverOpen(false);
+    }
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!hoverOpen) {
+      return;
+    }
+    const close = () => setHoverOpen(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [hoverOpen]);
+
+  const scheduleOpen = () => {
+    cancelClose();
+    if (hoverOpen || openTimer.current !== null) {
+      return;
+    }
+    openTimer.current = window.setTimeout(() => {
+      openTimer.current = null;
+      if (rowRef.current) {
+        setAnchor(rowRef.current.getBoundingClientRect());
+        setHoverOpen(true);
+      }
+    }, 300);
+  };
+
+  const scheduleClose = () => {
+    cancelOpen();
+    if (closeTimer.current !== null) {
+      return;
+    }
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
+      setHoverOpen(false);
+    }, 180);
+  };
+
+  const closeHover = () => {
+    cancelOpen();
+    cancelClose();
+    setHoverOpen(false);
+  };
 
   return (
-    <div className="group/row relative">
+    <div
+      ref={rowRef}
+      className="group/row relative"
+      onMouseEnter={scheduleOpen}
+      onMouseLeave={scheduleClose}
+    >
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-[30px] w-full items-center gap-2.5 rounded-lg px-2.5 pr-8 text-left text-[14px] hover:bg-hover"
+        className="flex h-[30px] w-full items-center gap-2.5 rounded-lg px-2.5 pr-[58px] text-left text-[14px] hover:bg-hover"
       >
         <Folder className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
         <span className="truncate">{project.name}</span>
       </button>
       <div
         className={cn(
-          'absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/row:opacity-100',
+          'absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100',
           menuOpen && 'opacity-100',
         )}
       >
+        <IconButton
+          size="sm"
+          aria-label={`New chat in ${project.name}`}
+          onClick={() => {
+            closeHover();
+            onNewChat();
+          }}
+        >
+          <Plus className="size-3.5" strokeWidth={1.75} />
+        </IconButton>
         <IconButton
           size="sm"
           aria-label="Project actions"
@@ -506,6 +608,20 @@ function ProjectRow({
           <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
         </IconButton>
       </div>
+      {hoverOpen && anchor ? (
+        <ProjectHoverCard
+          project={project}
+          anchor={anchor}
+          onEdit={() => {
+            closeHover();
+            onEdit();
+          }}
+          onRename={onRename}
+          onOpenSource={(path) => void window.workx.openPath(path)}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+        />
+      ) : null}
       {menuOpen ? (
         <>
           <div className="fixed inset-0 z-40" onMouseDown={() => setMenuOpen(false)} />

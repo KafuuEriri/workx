@@ -142,6 +142,9 @@ export function App() {
         onAddProject={() => setProjectDialog({ mode: 'create', project: null })}
         onArchiveProjectChats={(project) => setArchiveTarget(project)}
         onEditProject={(project) => setProjectDialog({ mode: 'edit', project })}
+        onRenameProject={(project, name) =>
+          void workx.updateProject(project.id, name, project.roots)
+        }
         onRemoveProject={(project) => setRemoveTarget(project)}
         searchTerm={workx.searchTerm}
         searchResults={workx.searchResults}
@@ -274,9 +277,7 @@ export function App() {
             await workx.updateProject(dialog.project.id, name, roots);
             return;
           }
-          const project = await workx.createProject(name, roots);
-          setActiveNav('new-chat');
-          await workx.newThreadInProject(project.id);
+          await workx.createProject(name, roots);
         }}
       />
 
