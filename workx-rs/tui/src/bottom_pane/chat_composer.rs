@@ -10232,7 +10232,7 @@ mod tests {
         let (_result, _needs_redraw) =
             composer.handle_key_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE));
 
-        assert_eq!(composer.draft.textarea.text(), "/codex ");
+        assert_eq!(composer.draft.textarea.text(), "/compact ");
         assert_eq!(
             composer.draft.textarea.cursor(),
             composer.draft.textarea.text().len()

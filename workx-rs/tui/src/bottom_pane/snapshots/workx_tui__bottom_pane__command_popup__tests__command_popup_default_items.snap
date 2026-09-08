@@ -1,5 +1,6 @@
 ---
 source: tui/src/bottom_pane/command_popup.rs
+assertion_line: 430
 expression: commands
 ---
 /model - choose what model and reasoning effort to use
@@ -20,7 +21,6 @@ expression: commands
 /archive - archive this session and exit
 /delete - permanently delete this session and exit
 /resume - resume a saved chat
-/codex - copy chats from Codex and resume them here
 /fork - fork the current chat
 /app - continue this session in the Desktop app
 /init - create an AGENTS.md file with instructions for Workx
@@ -50,3 +50,4 @@ expression: commands
 /clear - clear the terminal and start a new chat
 /test-approval - test approval request
 /subagents - switch between this session's subagents
+/codex - copy chats from Codex and resume them here
