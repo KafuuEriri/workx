@@ -158,6 +158,7 @@ export function Composer({
   const [chatResults, setChatResults] = useState<Thread[]>([]);
   const [searching, setSearching] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composingRef = useRef(false);
   const bindingsRef = useRef(new Map<string, ComposerMenuBinding>());
 
   useEffect(() => {
@@ -426,7 +427,7 @@ export function Composer({
 
   const submit = () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) {
+    if (!trimmed || disabled || composingRef.current) {
       return;
     }
     if (trimmed.startsWith('/')) {
@@ -476,10 +477,24 @@ export function Composer({
           rows={1}
           value={value}
           disabled={disabled}
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            composingRef.current = false;
+          }}
+          onBlur={() => {
+            composingRef.current = false;
+          }}
           onChange={(event) =>
             handleValueChange(event.target.value, event.target.selectionStart ?? 0)
           }
           onKeyDown={(event) => {
+            // IME confirmation/navigation belongs to the input method, including
+            // browsers that end composition before dispatching the Enter key.
+            if (composingRef.current || event.nativeEvent.isComposing || event.keyCode === 229) {
+              return;
+            }
             if (menu && flatItems.length > 0) {
               if (event.key === 'ArrowDown') {
                 event.preventDefault();
