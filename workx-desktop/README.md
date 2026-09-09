@@ -119,7 +119,12 @@ Packaged apps resolve the Workx CLI from `WORKX_BIN`, a bundled
 Code signing is optional. Set `APPLE_IDENTITY`, `APPLE_ID`,
 `APPLE_APP_PASSWORD`, and `APPLE_TEAM_ID` for macOS signing/notarization, or
 `WINDOWS_CERTIFICATE_FILE` and `WINDOWS_CERTIFICATE_PASSWORD` for Windows.
-Without those secrets the release workflow builds unsigned installers.
+
+Without a Developer ID the macOS build is ad-hoc signed. That is required:
+renaming and editing the bundled `Electron.app` invalidates its shipped
+signature, and macOS reports a broken signature as "damaged". An ad-hoc
+signature makes the app launchable, but users still see the unidentified
+developer prompt until the app is signed with a Developer ID and notarized.
 
 ## Scope
 
