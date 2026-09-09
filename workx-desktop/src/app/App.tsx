@@ -228,6 +228,7 @@ export function App() {
         projects={workx.projects}
         recents={workx.recents}
         activeThreadId={activeThread?.id ?? null}
+        draft={workx.draft}
         onSelectThread={(id) => {
           setActiveNav(null);
           void workx.openThread(id);
