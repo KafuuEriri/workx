@@ -30,7 +30,13 @@ const osxNotarize =
 // signature so the app can run (with the usual unidentified-developer prompt).
 const osxSign = appleIdentity
   ? { identity: appleIdentity }
-  : { identity: '-', identityValidation: false };
+  : {
+      identity: '-',
+      identityValidation: false,
+      // Hardened runtime turns on library validation, which rejects the nested
+      // frameworks because ad-hoc signatures carry no Team ID to match.
+      optionsForFile: () => ({ hardenedRuntime: false }),
+    };
 
 const config: ForgeConfig = {
   packagerConfig: {
