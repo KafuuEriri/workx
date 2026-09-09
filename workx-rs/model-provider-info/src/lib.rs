@@ -21,6 +21,7 @@ use workx_protocol::config_types::ModelProviderAuthInfo;
 use workx_protocol::error::EnvVarError;
 use workx_protocol::error::Result as WorkxResult;
 use workx_protocol::error::WorkxErr;
+use workx_protocol::openai_models::CustomModelEntry;
 use workx_utils_redacted_string::RedactedString;
 
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS: u64 = 300_000;
@@ -70,12 +71,13 @@ pub struct ModelProviderInfo {
     pub base_url: Option<String>,
     /// 模型列表地址；支持同源绝对路径或完整 URL，默认 /v1/models。
     pub models_endpoint: Option<String>,
-    /// Additional model IDs to register for this provider even when its models
+    /// Additional models to register for this provider even when its models
     /// endpoint does not list them (for example internal or beta models). Each
     /// entry appears in the model picker without needing to be present in
-    /// `/v1/models`.
+    /// `/v1/models`. Entries may be bare IDs or tables with per-model metadata
+    /// such as context window and input modalities.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub custom_models: Vec<String>,
+    pub custom_models: Vec<CustomModelEntry>,
     /// Environment variable that stores the user's API key for this provider.
     pub env_key: Option<String>,
 
@@ -181,6 +183,39 @@ impl ModelProviderInfo {
     }
 
     pub fn validate(&self) -> std::result::Result<(), String> {
+        for entry in &self.custom_models {
+            let id = entry.id().trim();
+            if id.is_empty() {
+                return Err(
+                    "provider custom_models entries must include a non-empty id".to_string()
+                );
+            }
+            let Some(metadata) = entry.metadata() else {
+                continue;
+            };
+            if metadata.context_window.is_some_and(|window| window <= 0) {
+                return Err(format!(
+                    "provider custom_models.{id} context_window must be positive"
+                ));
+            }
+            if metadata
+                .max_context_window
+                .is_some_and(|window| window <= 0)
+            {
+                return Err(format!(
+                    "provider custom_models.{id} max_context_window must be positive"
+                ));
+            }
+            if let (Some(context_window), Some(max_context_window)) =
+                (metadata.context_window, metadata.max_context_window)
+                && max_context_window < context_window
+            {
+                return Err(format!(
+                    "provider custom_models.{id} max_context_window must be greater than or equal to context_window"
+                ));
+            }
+        }
+
         if self.aws.is_some() {
             if self.supports_websockets {
                 // TODO(celia-oai): Support AWS SigV4 signing for WebSocket

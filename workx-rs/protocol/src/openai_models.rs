@@ -182,6 +182,61 @@ pub fn default_input_modalities() -> Vec<InputModality> {
     vec![InputModality::Text, InputModality::Image]
 }
 
+/// A custom model registered directly on a model provider.
+///
+/// Accepts either a bare model ID or a table with per-model metadata:
+///
+/// ```toml
+/// custom_models = [
+///   "plain-model",
+///   { id = "rich-model", context_window = 128000, input_modalities = ["text", "image"] },
+/// ]
+/// ```
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[serde(untagged)]
+pub enum CustomModelEntry {
+    /// A model ID that uses Workx defaults.
+    Id(String),
+    /// A model ID plus explicit metadata.
+    Metadata(CustomModelMetadata),
+}
+
+impl CustomModelEntry {
+    /// Model ID used as the catalog slug.
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Id(id) => id,
+            Self::Metadata(metadata) => &metadata.id,
+        }
+    }
+
+    /// Explicit metadata when the entry is a table rather than a bare ID.
+    pub fn metadata(&self) -> Option<&CustomModelMetadata> {
+        match self {
+            Self::Id(_) => None,
+            Self::Metadata(metadata) => Some(metadata),
+        }
+    }
+}
+
+/// Per-model metadata for a [`CustomModelEntry`].
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct CustomModelMetadata {
+    /// Model ID used as the catalog slug.
+    pub id: String,
+    /// Context window advertised for the model.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_window: Option<i64>,
+    /// Maximum context window allowed for config overrides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_context_window: Option<i64>,
+    /// Input modalities accepted by the model. When omitted, Workx assumes text
+    /// and images.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input_modalities: Vec<InputModality>,
+}
+
 /// A reasoning effort option that can be surfaced for a model.
 #[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema, PartialEq, Eq)]
 pub struct ReasoningEffortPreset {

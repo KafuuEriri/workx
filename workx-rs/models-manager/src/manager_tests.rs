@@ -25,6 +25,9 @@ use workx_login::ExternalAuthRefreshContext;
 use workx_login::TokenData;
 use workx_login::WorkxAuth;
 use workx_protocol::auth::AuthMode;
+use workx_protocol::openai_models::CustomModelEntry;
+use workx_protocol::openai_models::CustomModelMetadata;
+use workx_protocol::openai_models::InputModality;
 use workx_protocol::openai_models::ModelsResponse;
 
 #[path = "model_info_overrides_tests.rs"]
@@ -88,7 +91,7 @@ fn assert_models_contain(actual: &[ModelInfo], expected: &[ModelInfo]) {
 struct TestModelsEndpoint {
     has_command_auth: bool,
     uses_workx_backend: bool,
-    custom_models: Vec<String>,
+    custom_models: Vec<CustomModelEntry>,
     responses: Mutex<VecDeque<Vec<ModelInfo>>>,
     fetch_count: AtomicUsize,
     observed_proxy_policy: Mutex<Option<OutboundProxyPolicy>>,
@@ -262,7 +265,7 @@ impl ExternalAuth for TestUnresolvedExternalApiKeyAuth {
 }
 
 impl ModelsEndpointClient for TestModelsEndpoint {
-    fn custom_models(&self) -> Vec<String> {
+    fn custom_models(&self) -> Vec<CustomModelEntry> {
         self.custom_models.clone()
     }
 
@@ -1453,7 +1456,10 @@ async fn build_available_models_appends_custom_models() {
     let endpoint = TestModelsEndpoint {
         has_command_auth: false,
         uses_workx_backend: true,
-        custom_models: vec!["beta-model".to_string(), "internal-gpt".to_string()],
+        custom_models: vec![
+            CustomModelEntry::Id("beta-model".to_string()),
+            CustomModelEntry::Id("internal-gpt".to_string()),
+        ],
         responses: Mutex::new(VecDeque::from([vec![remote]])),
         fetch_count: AtomicUsize::new(0),
         observed_proxy_policy: Mutex::new(None),
@@ -1480,6 +1486,51 @@ async fn build_available_models_appends_custom_models() {
         .expect("custom model should be present");
     assert!(beta.show_in_picker);
     assert!(beta.description.is_empty());
+}
+
+#[tokio::test]
+async fn custom_model_metadata_applies_to_presets_and_model_info() {
+    let endpoint = TestModelsEndpoint {
+        has_command_auth: false,
+        uses_workx_backend: true,
+        custom_models: vec![CustomModelEntry::Metadata(CustomModelMetadata {
+            id: "rich-model".to_string(),
+            context_window: Some(128_000),
+            max_context_window: Some(200_000),
+            input_modalities: vec![InputModality::Text, InputModality::Image],
+        })],
+        responses: Mutex::new(VecDeque::from([Vec::new()])),
+        fetch_count: AtomicUsize::new(0),
+        observed_proxy_policy: Mutex::new(None),
+    };
+    let manager = OpenAiModelsManager::new_without_cache(
+        Arc::new(endpoint),
+        Some(AuthManager::from_auth_for_testing(
+            WorkxAuth::create_dummy_chatgpt_auth_for_testing(),
+        )),
+    );
+
+    let presets = manager
+        .list_models(RefreshStrategy::Online, DEFAULT_HTTP_CLIENT_FACTORY)
+        .await;
+    let rich = presets
+        .iter()
+        .find(|preset| preset.model == "rich-model")
+        .expect("custom model should be present");
+    assert_eq!(
+        rich.input_modalities,
+        vec![InputModality::Text, InputModality::Image]
+    );
+
+    let info = manager
+        .get_model_info("rich-model", &ModelsManagerConfig::default())
+        .await;
+    assert_eq!(info.context_window, Some(128_000));
+    assert_eq!(info.max_context_window, Some(200_000));
+    assert_eq!(
+        info.input_modalities,
+        vec![InputModality::Text, InputModality::Image]
+    );
 }
 
 #[tokio::test]

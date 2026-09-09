@@ -21,6 +21,8 @@ use workx_login::AuthManager;
 use workx_protocol::auth::AuthMode;
 use workx_protocol::config_types::CollaborationModeMask;
 use workx_protocol::error::Result as CoreResult;
+use workx_protocol::openai_models::CustomModelEntry;
+use workx_protocol::openai_models::CustomModelMetadata;
 use workx_protocol::openai_models::ModelInfo;
 use workx_protocol::openai_models::ModelPreset;
 use workx_protocol::openai_models::ModelVisibility;
@@ -40,11 +42,11 @@ pub trait ModelsEndpointClient: fmt::Debug + Send + Sync {
         false
     }
 
-    /// Additional user-defined model IDs to register beyond those returned by
+    /// Additional user-defined models to register beyond those returned by
     /// [`Self::list_models`]. These are merged into the picker catalog even when
     /// the provider's models endpoint does not list them (for example internal
-    /// or beta models).
-    fn custom_models(&self) -> Vec<String> {
+    /// or beta models). Entries may carry per-model metadata.
+    fn custom_models(&self) -> Vec<CustomModelEntry> {
         Vec::new()
     }
 
@@ -352,6 +354,21 @@ impl ModelsManager for OpenAiModelsManager {
         build_presets_from_models(self.auth_manager(), models)
     }
 
+    fn get_model_info<'a>(
+        &'a self,
+        model: &'a str,
+        config: &'a ModelsManagerConfig,
+    ) -> ModelsManagerFuture<'a, ModelInfo> {
+        Box::pin(
+            async move {
+                let mut candidates = self.get_remote_models().await;
+                append_custom_models(&mut candidates, &self.endpoint_client.custom_models());
+                construct_model_info_from_candidates(model, &candidates, config)
+            }
+            .instrument(tracing::info_span!("get_model_info", model = model)),
+        )
+    }
+
     fn list_collaboration_modes(&self) -> Vec<CollaborationModeMask> {
         builtin_collaboration_mode_presets()
     }
@@ -644,20 +661,40 @@ fn build_presets_from_models(
     presets
 }
 
-fn append_custom_models(models: &mut Vec<ModelInfo>, custom_models: &[String]) {
-    for slug in custom_models {
-        if slug.trim().is_empty() {
+fn append_custom_models(models: &mut Vec<ModelInfo>, custom_models: &[CustomModelEntry]) {
+    for entry in custom_models {
+        let slug = entry.id().trim();
+        if slug.is_empty() {
             continue;
         }
-        if models.iter().any(|model| model.slug == *slug) {
+        if let Some(existing) = models.iter_mut().find(|model| model.slug == slug) {
+            // An entry that also exists in the remote catalog keeps its remote
+            // metadata unless the user configured explicit overrides.
+            apply_custom_model_metadata(existing, entry.metadata());
             continue;
         }
-        let mut model = model_info::model_info_from_slug(slug.trim());
+        let mut model = model_info::model_info_from_slug(slug);
         model.visibility = ModelVisibility::List;
         model.supports_reasoning_summary_parameter = false;
         model.context_window = None;
         model.max_context_window = None;
+        apply_custom_model_metadata(&mut model, entry.metadata());
         models.push(model);
+    }
+}
+
+fn apply_custom_model_metadata(model: &mut ModelInfo, metadata: Option<&CustomModelMetadata>) {
+    let Some(metadata) = metadata else {
+        return;
+    };
+    if let Some(context_window) = metadata.context_window {
+        model.context_window = Some(context_window);
+    }
+    if let Some(max_context_window) = metadata.max_context_window {
+        model.max_context_window = Some(max_context_window);
+    }
+    if !metadata.input_modalities.is_empty() {
+        model.input_modalities = metadata.input_modalities.clone();
     }
 }
 
