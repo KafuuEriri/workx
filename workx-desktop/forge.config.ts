@@ -24,13 +24,21 @@ const osxNotarize =
     ? { appleId, appleIdPassword, teamId: appleTeamId }
     : undefined;
 
+// Without a Developer ID the app still needs a valid signature: renaming and
+// editing the bundled Electron.app invalidates its shipped signature, and
+// macOS then reports the app as damaged. Ad-hoc signing restores a valid
+// signature so the app can run (with the usual unidentified-developer prompt).
+const osxSign = appleIdentity
+  ? { identity: appleIdentity }
+  : { identity: '-', identityValidation: false };
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: path.join(__dirname, 'assets/icon'),
     appBundleId: 'com.workx.desktop',
     appCategoryType: 'public.app-category.developer-tools',
-    ...(appleIdentity ? { osxSign: { identity: appleIdentity } } : {}),
+    osxSign,
     ...(osxNotarize ? { osxNotarize } : {}),
   },
   rebuildConfig: {},
