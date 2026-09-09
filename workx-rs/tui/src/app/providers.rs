@@ -10,7 +10,7 @@ impl App {
         tui: &mut tui::Tui,
         app_server: &mut AppServerSession,
         id: String,
-        provider: ModelProviderInfo,
+        mut provider: ModelProviderInfo,
         model: Option<String>,
     ) -> Result<()> {
         if provider.uses_external_models()
@@ -24,9 +24,26 @@ impl App {
         let mut selected_model = model;
         let mut catalog = None;
         if provider.uses_external_models() {
+            // The optional default-model field is comma-separated so callers can
+            // register several models at once. The first entry becomes the active
+            // default; every entry is also registered as a custom model so model
+            // IDs absent from `/models` (for example beta models) still work and
+            // appear in the picker.
+            let model_tokens = selected_model
+                .as_deref()
+                .map(|value| {
+                    value
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|token| !token.is_empty())
+                        .map(str::to_string)
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            selected_model = model_tokens.first().cloned();
             let runtime = create_model_provider(provider.clone(), None);
             let manager = runtime.models_manager_without_cache(None);
-            let models = manager
+            let mut models = manager
                 .list_models(RefreshStrategy::Online, self.config.http_client_factory())
                 .await;
             // 模型发现仅用于选择默认值，不能用作内测模型或私有别名的准入校验。
@@ -34,6 +51,22 @@ impl App {
                 return Err(color_eyre::eyre::eyre!(
                     "The models endpoint returned no usable models or could not be reached. Check the URL and API key in /provider."
                 ));
+            }
+            let mut added_custom_model = false;
+            for token in &model_tokens {
+                if !models.iter().any(|preset| &preset.model == token)
+                    && !provider.custom_models.contains(token)
+                {
+                    provider.custom_models.push(token.clone());
+                    added_custom_model = true;
+                }
+            }
+            if added_custom_model {
+                let runtime = create_model_provider(provider.clone(), None);
+                let manager = runtime.models_manager_without_cache(None);
+                models = manager
+                    .list_models(RefreshStrategy::Online, self.config.http_client_factory())
+                    .await;
             }
             if selected_model.is_none() {
                 selected_model = models.first().map(|preset| preset.model.clone());

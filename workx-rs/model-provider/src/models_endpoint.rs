@@ -179,6 +179,10 @@ impl ModelsEndpointClient for OpenAiModelsEndpoint {
         self.provider_info.uses_external_models()
     }
 
+    fn custom_models(&self) -> Vec<String> {
+        self.provider_info.custom_models.clone()
+    }
+
     fn supports_model_discovery(&self) -> bool {
         self.provider_info.uses_external_models()
             || self.provider_info.has_command_auth()

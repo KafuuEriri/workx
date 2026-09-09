@@ -70,6 +70,12 @@ pub struct ModelProviderInfo {
     pub base_url: Option<String>,
     /// 模型列表地址；支持同源绝对路径或完整 URL，默认 /v1/models。
     pub models_endpoint: Option<String>,
+    /// Additional model IDs to register for this provider even when its models
+    /// endpoint does not list them (for example internal or beta models). Each
+    /// entry appears in the model picker without needing to be present in
+    /// `/v1/models`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom_models: Vec<String>,
     /// Environment variable that stores the user's API key for this provider.
     pub env_key: Option<String>,
 
@@ -373,6 +379,7 @@ impl ModelProviderInfo {
             env_key: None,
             env_key_instructions: None,
             models_endpoint: None,
+            custom_models: Vec::new(),
             experimental_bearer_token: None,
             auth: None,
             aws: None,
@@ -417,6 +424,7 @@ impl ModelProviderInfo {
             env_key: None,
             env_key_instructions: None,
             models_endpoint: None,
+            custom_models: Vec::new(),
             experimental_bearer_token: None,
             auth: None,
             aws: Some(aws.unwrap_or(ModelProviderAwsAuthInfo {
@@ -601,6 +609,7 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         env_key: None,
         env_key_instructions: None,
         models_endpoint: None,
+        custom_models: Vec::new(),
         experimental_bearer_token: None,
         auth: None,
         aws: None,

@@ -72,6 +72,7 @@ async fn responses_stream_includes_subagent_header_on_review() {
     .await;
 
     let provider = ModelProviderInfo {
+        custom_models: Vec::new(),
         models_endpoint: None,
         name: "mock".into(),
         base_url: Some(format!("{}/v1", server.uri())),
@@ -210,6 +211,7 @@ async fn responses_stream_includes_subagent_header_on_other() {
     .await;
 
     let provider = ModelProviderInfo {
+        custom_models: Vec::new(),
         models_endpoint: None,
         name: "mock".into(),
         base_url: Some(format!("{}/v1", server.uri())),
@@ -329,6 +331,7 @@ async fn responses_respects_model_info_overrides_from_config() {
     let request_recorder = responses::mount_sse_once(&server, response_body).await;
 
     let provider = ModelProviderInfo {
+        custom_models: Vec::new(),
         models_endpoint: None,
         name: "mock".into(),
         base_url: Some(format!("{}/v1", server.uri())),
