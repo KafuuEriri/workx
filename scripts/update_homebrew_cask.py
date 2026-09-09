@@ -25,7 +25,7 @@ TEMPLATE = """cask "workx" do
   homepage "https://github.com/RonanXiao/workx"
 
   depends_on formula: "workx"
-  depends_on macos: ">= :monterey"
+  depends_on macos: :monterey
 
   app "Workx.app"
 end

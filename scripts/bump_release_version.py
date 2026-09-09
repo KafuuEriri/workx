@@ -91,6 +91,43 @@ def replace_readme_version(path: Path, old: str, new: str) -> bool:
     return False
 
 
+def replace_cargo_lock_versions(lock: Path, old: str, new: str) -> bool:
+    """Update workspace-member versions in Cargo.lock.
+
+    Workspace members are path packages, so their `[[package]]` blocks have no
+    `source` line while registry crates do. Only those path entries are
+    rewritten, keeping the lock file in sync with the bumped workspace version.
+    """
+    parts = lock.read_text(encoding="utf-8").split("[[package]]")
+    changed = False
+    updated = [parts[0]]
+    for block in parts[1:]:
+        if "source = " not in block and f'version = "{old}"' in block:
+            block = block.replace(f'version = "{old}"', f'version = "{new}"', 1)
+            changed = True
+        updated.append(block)
+    if changed:
+        lock.write_text("[[package]]".join(updated), encoding="utf-8")
+    return changed
+
+
+def replace_snapshot_versions(root: Path, old: str, new: str) -> list[Path]:
+    """Rewrite embedded workspace versions in insta snapshots.
+
+    Several TUI snapshots render the current version (update banners, status
+    lines), so a version bump must keep them in sync or the snapshot tests fail
+    on the bumped commit.
+    """
+    changed: list[Path] = []
+    for pattern in ("*.snap", "*.snap.new"):
+        for path in sorted((root / "workx-rs").glob(f"**/{pattern}")):
+            text = path.read_text(encoding="utf-8")
+            if old in text:
+                path.write_text(text.replace(old, new), encoding="utf-8")
+                changed.append(path)
+    return changed
+
+
 def bump(root: Path, new_version: str) -> list[Path]:
     cargo_toml = root / "workx-rs" / "Cargo.toml"
     old_version = read_workspace_version(cargo_toml)
@@ -100,6 +137,7 @@ def bump(root: Path, new_version: str) -> list[Path]:
 
     manifests = [
         (cargo_toml, replace_workspace_version),
+        (root / "workx-rs" / "Cargo.lock", replace_cargo_lock_versions),
         (root / "workx-cli" / "package.json", replace_json_version),
         (root / "sdk" / "typescript" / "package.json", replace_json_version),
         (root / "sdk" / "python" / "pyproject.toml", replace_pyproject_version),
@@ -119,6 +157,12 @@ def bump(root: Path, new_version: str) -> list[Path]:
             )
         changed.append(path)
         print(f"bumped {path.relative_to(root)}: {old_version} -> {new_version}")
+
+    for path in replace_snapshot_versions(root, old_version, new_version):
+        changed.append(path)
+        print(
+            f"updated snapshot {path.relative_to(root)}: {old_version} -> {new_version}"
+        )
     return changed
 
 
