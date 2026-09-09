@@ -58,8 +58,13 @@ export function buildMarkdown(
     }
 
     const body = entry.text.trim();
+    const activityItems = activityLines(entry);
+    if (!body && activityItems.length === 0) {
+      continue;
+    }
+    lines.push(`## ${translate(language, 'export.workx')}`, '');
     if (body) {
-      lines.push(`## ${translate(language, 'export.workx')}`, '', body, '');
+      lines.push(body, '');
     }
 
     const meta: string[] = [];
@@ -70,7 +75,7 @@ export function buildMarkdown(
         })}_`,
       );
     }
-    meta.push(...activityLines(entry));
+    meta.push(...activityItems);
     if (meta.length > 0) {
       lines.push(...meta, '');
     }
