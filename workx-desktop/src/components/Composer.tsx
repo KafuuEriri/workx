@@ -158,6 +158,7 @@ export function Composer({
   const [chatResults, setChatResults] = useState<Thread[]>([]);
   const [searching, setSearching] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composingRef = useRef(false);
   const bindingsRef = useRef(new Map<string, ComposerMenuBinding>());
 
   useEffect(() => {
@@ -479,7 +480,22 @@ export function Composer({
           onChange={(event) =>
             handleValueChange(event.target.value, event.target.selectionStart ?? 0)
           }
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            composingRef.current = false;
+          }}
+          onBlur={() => {
+            composingRef.current = false;
+          }}
           onKeyDown={(event) => {
+            // Let the IME consume Enter while a candidate is being confirmed.
+            // `isComposing` covers Chromium; keyCode 229 covers IMEs that end
+            // composition before the confirming keydown reaches the page.
+            if (composingRef.current || event.nativeEvent.isComposing || event.keyCode === 229) {
+              return;
+            }
             if (menu && flatItems.length > 0) {
               if (event.key === 'ArrowDown') {
                 event.preventDefault();
