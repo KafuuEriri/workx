@@ -8,6 +8,7 @@ import { registerAppServerIpc } from './main/appServer/ipc';
 import {
   gitCommit,
   gitDiff,
+  gitNumstat,
   gitPush,
   gitRevertFile,
   gitStage,
@@ -394,4 +395,11 @@ ipcMain.handle('workx:delete-file', async (_event, target: string): Promise<bool
   } catch {
     return false;
   }
+});
+
+ipcMain.handle('workx:git-numstat', (_event, cwd: string, scope: 'unstaged' | 'staged') => {
+  if (typeof cwd !== 'string' || cwd.length === 0) {
+    return [];
+  }
+  return gitNumstat(cwd, scope === 'staged' ? 'staged' : 'unstaged');
 });

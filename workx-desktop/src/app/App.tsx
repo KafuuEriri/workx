@@ -9,6 +9,7 @@ import { GoalBanner } from '../components/GoalBanner';
 import { GoalDialog } from '../components/GoalDialog';
 import { MessageList } from '../components/MessageList';
 import { ProviderManagerDialog } from '../components/ProviderManagerDialog';
+import { ReviewPanel } from '../components/ReviewPanel';
 import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar, threadTitle } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
@@ -42,6 +43,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [providersOpen, setProvidersOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [searchRequest, setSearchRequest] = useState(0);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [projectDialog, setProjectDialog] = useState<{
@@ -376,6 +378,8 @@ export function App() {
           exportDisabled={workx.transcript.length === 0}
           explorerOpen={explorerOpen}
           onToggleExplorer={() => setExplorerOpen((open) => !open)}
+          reviewOpen={reviewOpen}
+          onToggleReview={() => setReviewOpen((open) => !open)}
           onExportPdf={() => void exportChat('pdf')}
           onExportMarkdown={() => void exportChat('markdown')}
         />
@@ -493,6 +497,14 @@ export function App() {
           </>
         )}
       </main>
+
+      {reviewOpen ? (
+        <ReviewPanel
+          cwd={activeCwd}
+          onClose={() => setReviewOpen(false)}
+          onChanged={() => undefined}
+        />
+      ) : null}
 
       {explorerOpen ? (
         <FileExplorerPanel

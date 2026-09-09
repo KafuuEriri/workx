@@ -157,3 +157,49 @@ export function reverseApplyUnifiedDiff(content: string, diff: string): string |
   const result = lines.join('\n');
   return trailingNewline ? `${result}\n` : result;
 }
+
+/** Parse a full `git diff` output into renderable lines. */
+export function gitDiffLines(diff: string): DiffLine[] {
+  const raw = diff.split('\n');
+  if (raw[raw.length - 1] === '') {
+    raw.pop();
+  }
+  return raw.map((line) => {
+    if (
+      line.startsWith('diff --git') ||
+      line.startsWith('index ') ||
+      line.startsWith('--- ') ||
+      line.startsWith('+++ ') ||
+      line.startsWith('new file') ||
+      line.startsWith('deleted file') ||
+      line.startsWith('similarity index') ||
+      line.startsWith('rename ') ||
+      line.startsWith('\\ No newline')
+    ) {
+      return { kind: 'meta', text: line };
+    }
+    if (line.startsWith('@@')) {
+      return { kind: 'hunk', text: line };
+    }
+    if (line.startsWith('+')) {
+      return { kind: 'add', text: line.slice(1) };
+    }
+    if (line.startsWith('-')) {
+      return { kind: 'remove', text: line.slice(1) };
+    }
+    return { kind: 'context', text: line.startsWith(' ') ? line.slice(1) : line };
+  });
+}
+
+export function gitDiffStats(diff: string): DiffStats {
+  let additions = 0;
+  let deletions = 0;
+  for (const line of gitDiffLines(diff)) {
+    if (line.kind === 'add') {
+      additions += 1;
+    } else if (line.kind === 'remove') {
+      deletions += 1;
+    }
+  }
+  return { additions, deletions };
+}

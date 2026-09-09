@@ -153,3 +153,33 @@ export async function gitPush(cwd: string): Promise<GitCommandResult> {
   const result = await runGit(cwd, ['push']);
   return { ok: result.code === 0, stdout: result.stdout, stderr: result.stderr };
 }
+
+export interface GitNumstat {
+  path: string;
+  additions: number;
+  deletions: number;
+}
+
+export async function gitNumstat(cwd: string, scope: GitScope): Promise<GitNumstat[]> {
+  const args = scope === 'staged' ? ['diff', '--cached', '--numstat'] : ['diff', '--numstat'];
+  const result = await runGit(cwd, args);
+  if (result.code !== 0) {
+    return [];
+  }
+  const stats: GitNumstat[] = [];
+  for (const line of result.stdout.split('\n')) {
+    if (!line) {
+      continue;
+    }
+    const [added, removed, ...rest] = line.split('\t');
+    if (rest.length === 0) {
+      continue;
+    }
+    stats.push({
+      path: rest.join('\t'),
+      additions: added === '-' ? 0 : Number(added),
+      deletions: removed === '-' ? 0 : Number(removed),
+    });
+  }
+  return stats;
+}

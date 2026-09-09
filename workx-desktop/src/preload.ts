@@ -47,6 +47,12 @@ export interface GitDiffResult {
   error: string | null;
 }
 
+export interface GitNumstat {
+  path: string;
+  additions: number;
+  deletions: number;
+}
+
 export interface GitCommandResult {
   ok: boolean;
   stdout: string;
@@ -142,6 +148,8 @@ const api = {
   gitCommit: (cwd: string, message: string): Promise<GitCommandResult> =>
     ipcRenderer.invoke('workx:git-commit', cwd, message),
   gitPush: (cwd: string): Promise<GitCommandResult> => ipcRenderer.invoke('workx:git-push', cwd),
+  gitNumstat: (cwd: string, scope: 'unstaged' | 'staged'): Promise<GitNumstat[]> =>
+    ipcRenderer.invoke('workx:git-numstat', cwd, scope),
   readTextFile: (target: string): Promise<string | null> =>
     ipcRenderer.invoke('workx:read-text-file', target),
   writeTextFile: (target: string, content: string): Promise<boolean> =>

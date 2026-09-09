@@ -1,4 +1,12 @@
-import { ChevronDown, Columns2, FileText, MoreHorizontal, PanelRight, Share2 } from 'lucide-react';
+import {
+  ChevronDown,
+  Columns2,
+  FileDiff,
+  FileText,
+  MoreHorizontal,
+  PanelRight,
+  Share2,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { cn } from '../lib/cn';
@@ -15,6 +23,8 @@ interface TopBarProps {
   exportDisabled?: boolean;
   explorerOpen: boolean;
   onToggleExplorer: () => void;
+  reviewOpen: boolean;
+  onToggleReview: () => void;
   onExportPdf: () => void;
   onExportMarkdown: () => void;
 }
@@ -33,6 +43,8 @@ export function TopBar({
   exportDisabled = false,
   explorerOpen,
   onToggleExplorer,
+  reviewOpen,
+  onToggleReview,
   onExportPdf,
   onExportMarkdown,
 }: TopBarProps) {
@@ -95,6 +107,14 @@ export function TopBar({
         </div>
         <IconButton size="sm" aria-label={t('topbar.toggleSplit')}>
           <Columns2 className="size-4" strokeWidth={1.75} />
+        </IconButton>
+        <IconButton
+          size="sm"
+          aria-label={t('review.toggle')}
+          active={reviewOpen}
+          onClick={onToggleReview}
+        >
+          <FileDiff className="size-4" strokeWidth={1.75} />
         </IconButton>
         <IconButton
           size="sm"
