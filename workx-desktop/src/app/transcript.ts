@@ -1,6 +1,9 @@
 import type { ThreadItem } from '@protocol/v2/ThreadItem';
 import type { TurnStatus } from '@protocol/v2/TurnStatus';
 import type { UserInput } from '@protocol/v2/UserInput';
+import type { MessageKey } from '../lib/i18n';
+
+type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
 export type ActivityIcon =
   | 'terminal'
@@ -26,6 +29,7 @@ export type TranscriptEntry =
   | {
       kind: 'assistant';
       id: string;
+      turnId: string;
       text: string;
       activities: Activity[];
       durationMs: number | null;
@@ -48,7 +52,7 @@ export function textFromUserInput(content: UserInput[]): string {
     .join('\n');
 }
 
-export function activityFromItem(item: ThreadItem): Activity | null {
+export function activityFromItem(item: ThreadItem, t: Translate): Activity | null {
   switch (item.type) {
     case 'commandExecution':
       return {
@@ -63,7 +67,10 @@ export function activityFromItem(item: ThreadItem): Activity | null {
       return {
         id: item.id,
         icon: 'file',
-        label: `${item.changes.length} file${item.changes.length === 1 ? '' : 's'} changed`,
+        label: t(
+          item.changes.length === 1 ? 'activity.filesChangedOne' : 'activity.filesChanged',
+          { count: item.changes.length },
+        ),
         detail: item.changes.map((change) => change.path).join(', '),
         status: item.status,
         active: item.status === 'inProgress',
@@ -88,36 +95,38 @@ export function activityFromItem(item: ThreadItem): Activity | null {
       return {
         id: item.id,
         icon: 'search',
-        label: item.query ? `Searched the web for ${item.query}` : 'Searched the web',
+        label: item.query
+          ? t('activity.searchedFor', { query: item.query })
+          : t('activity.searched'),
         active: false,
       };
     case 'reasoning':
       return {
         id: item.id,
         icon: 'reasoning',
-        label: item.summary[0] ?? 'Thinking',
+        label: item.summary[0] ?? t('activity.thinking'),
         active: false,
       };
     case 'plan':
-      return { id: item.id, icon: 'plan', label: 'Updated the plan', active: false };
+      return { id: item.id, icon: 'plan', label: t('activity.updatedPlan'), active: false };
     case 'functionCallOutput':
       return { id: item.id, icon: 'output', label: item.name, active: false };
     case 'imageView':
-      return { id: item.id, icon: 'image', label: 'Viewed an image', active: false };
+      return { id: item.id, icon: 'image', label: t('activity.viewedImage'), active: false };
     case 'imageGeneration':
-      return { id: item.id, icon: 'image', label: 'Generated an image', active: false };
+      return { id: item.id, icon: 'image', label: t('activity.generatedImage'), active: false };
     case 'contextCompaction':
-      return { id: item.id, icon: 'plan', label: 'Compacted context', active: false };
+      return { id: item.id, icon: 'plan', label: t('activity.compacted'), active: false };
     case 'subAgentActivity':
-      return { id: item.id, icon: 'tool', label: 'Sub-agent activity', active: false };
+      return { id: item.id, icon: 'tool', label: t('activity.subAgent'), active: false };
     case 'sleep':
-      return { id: item.id, icon: 'plan', label: 'Waiting', active: true };
+      return { id: item.id, icon: 'plan', label: t('activity.waiting'), active: true };
     default:
       return null;
   }
 }
 
-export function buildTranscript(turns: TurnView[]): TranscriptEntry[] {
+export function buildTranscript(turns: TurnView[], t: Translate): TranscriptEntry[] {
   const entries: TranscriptEntry[] = [];
 
   for (const turn of turns) {
@@ -133,6 +142,7 @@ export function buildTranscript(turns: TurnView[]): TranscriptEntry[] {
         assistantEntry = {
           kind: 'assistant',
           id: item.id,
+          turnId: turn.id,
           text: item.text,
           activities: [...activities],
           durationMs: null,
@@ -143,7 +153,7 @@ export function buildTranscript(turns: TurnView[]): TranscriptEntry[] {
         activities.length = 0;
         continue;
       }
-      const activity = activityFromItem(item);
+      const activity = activityFromItem(item, t);
       if (activity) {
         const index = activities.findIndex((existing) => existing.id === activity.id);
         if (index >= 0) {
@@ -159,6 +169,7 @@ export function buildTranscript(turns: TurnView[]): TranscriptEntry[] {
       ({
         kind: 'assistant',
         id: `${turn.id}-summary`,
+        turnId: turn.id,
         text: '',
         activities: [],
         durationMs: null,

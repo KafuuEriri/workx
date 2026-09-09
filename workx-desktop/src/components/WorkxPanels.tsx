@@ -6,6 +6,7 @@ import type { PluginMarketplaceEntry } from '@protocol/v2/PluginMarketplaceEntry
 import type { SkillErrorInfo } from '@protocol/v2/SkillErrorInfo';
 import type { SkillMetadata } from '@protocol/v2/SkillMetadata';
 import { cn } from '../lib/cn';
+import { useI18n } from '../lib/i18n';
 
 interface PanelShellProps {
   title: string;
@@ -16,6 +17,7 @@ interface PanelShellProps {
 }
 
 function PanelShell({ title, description, loading, onRefresh, children }: PanelShellProps) {
+  const { t } = useI18n();
   return (
     <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-5 px-8 py-6">
       <div className="flex items-start gap-3">
@@ -34,7 +36,7 @@ function PanelShell({ title, description, loading, onRefresh, children }: PanelS
           ) : (
             <RefreshCw className="size-3.5" strokeWidth={1.75} />
           )}
-          Refresh
+          {t('common.refresh')}
         </button>
       </div>
       {children}
@@ -69,11 +71,12 @@ export function PluginsPanel({
   const plugins = marketplaces.flatMap((marketplace) =>
     marketplace.plugins.map((plugin) => ({ marketplace, plugin })),
   );
+  const { t } = useI18n();
 
   return (
     <PanelShell
-      title="Plugins"
-      description="Extend Workx with marketplaces, tools, and integrations."
+      title={t('panels.plugins.title')}
+      description={t('panels.plugins.description')}
       loading={loading}
       onRefresh={onRefresh}
     >
@@ -82,10 +85,7 @@ export function PluginsPanel({
       ))}
 
       {plugins.length === 0 ? (
-        <Empty>
-          No plugins found. Add a marketplace file to{' '}
-          <span className="font-mono">~/.workx/plugins</span> to get started.
-        </Empty>
+        <Empty>{t('panels.plugins.empty')}</Empty>
       ) : (
         <div className="flex flex-col gap-2">
           {plugins.map(({ marketplace, plugin }) => (
@@ -107,7 +107,11 @@ export function PluginsPanel({
                         : 'bg-hover text-fg-tertiary',
                     )}
                   >
-                    {plugin.installed ? (plugin.enabled ? 'Installed' : 'Disabled') : 'Available'}
+                    {plugin.installed
+                      ? plugin.enabled
+                        ? t('common.installed')
+                        : t('common.disabled')
+                      : t('common.available')}
                   </span>
                 </div>
                 {plugin.interface?.shortDescription ?? plugin.interface?.longDescription ? (
@@ -136,10 +140,11 @@ export function SkillsPanel({
   loading: boolean;
   onRefresh: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <PanelShell
-      title="Skills"
-      description="Reusable instructions Workx can load for this workspace."
+      title={t('panels.skills.title')}
+      description={t('panels.skills.description')}
       loading={loading}
       onRefresh={onRefresh}
     >
@@ -148,7 +153,7 @@ export function SkillsPanel({
       ))}
 
       {skills.length === 0 ? (
-        <Empty>No skills found for this workspace.</Empty>
+        <Empty>{t('panels.skills.empty')}</Empty>
       ) : (
         <div className="flex flex-col gap-2">
           {skills.map((skill) => (
@@ -162,7 +167,7 @@ export function SkillsPanel({
                   <span className="truncate text-[14px] font-medium">{skill.name}</span>
                   {!skill.enabled ? (
                     <span className="rounded-full bg-hover px-1.5 py-px text-[11px] text-fg-tertiary">
-                      Disabled
+                      {t('common.disabled')}
                     </span>
                   ) : null}
                 </div>
@@ -188,15 +193,16 @@ export function McpPanel({
   loading: boolean;
   onRefresh: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <PanelShell
-      title="MCP servers"
-      description="Model Context Protocol connections available to Workx."
+      title={t('panels.mcp.title')}
+      description={t('panels.mcp.description')}
       loading={loading}
       onRefresh={onRefresh}
     >
       {servers.length === 0 ? (
-        <Empty>No MCP servers configured.</Empty>
+        <Empty>{t('panels.mcp.empty')}</Empty>
       ) : (
         <div className="flex flex-col gap-2">
           {servers.map((server) => {
@@ -218,11 +224,12 @@ export function McpPanel({
                           : 'bg-hover text-fg-tertiary',
                       )}
                     >
-                      {server.runtimeStatus ?? 'unknown'}
+                      {server.runtimeStatus ?? t('common.unknown')}
                     </span>
                   </div>
                   <p className="mt-0.5 text-[13px] text-fg-tertiary">
-                    {toolCount} tool{toolCount === 1 ? '' : 's'} · auth {server.authStatus}
+                    {t(toolCount === 1 ? 'common.tool' : 'common.tools', { count: toolCount })} ·{' '}
+                    {t('common.auth', { status: server.authStatus })}
                   </p>
                 </div>
               </div>

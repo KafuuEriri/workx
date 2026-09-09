@@ -17,6 +17,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import type { MessageKey } from '../lib/i18n';
+
 export interface ComposerMenuBinding {
   type: 'skill' | 'mention';
   name: string;
@@ -25,104 +27,59 @@ export interface ComposerMenuBinding {
 
 export interface ComposerCommand {
   id: string;
-  title: string;
-  description: string;
+  titleKey: MessageKey;
+  descriptionKey: MessageKey;
   icon: LucideIcon;
   acceptsArgs?: boolean;
 }
 
 export const COMPOSER_COMMANDS: ComposerCommand[] = [
-  {
-    id: 'new',
-    title: 'New chat',
-    description: 'Start a blank chat in the same workspace',
-    icon: SquarePen,
-  },
-  {
-    id: 'model',
-    title: 'Model',
-    description: 'Choose what model and reasoning effort to use',
-    icon: Cpu,
-  },
+  { id: 'new', titleKey: 'command.new.title', descriptionKey: 'command.new.description', icon: SquarePen },
+  { id: 'model', titleKey: 'command.model.title', descriptionKey: 'command.model.description', icon: Cpu },
   {
     id: 'provider',
-    title: 'Provider',
-    description: 'Switch the model provider',
+    titleKey: 'command.provider.title',
+    descriptionKey: 'command.provider.description',
     icon: Server,
   },
   {
     id: 'permissions',
-    title: 'Permissions',
-    description: 'Choose what Workx is allowed to do',
+    titleKey: 'command.permissions.title',
+    descriptionKey: 'command.permissions.description',
     icon: ShieldAlert,
   },
   {
     id: 'compact',
-    title: 'Compact',
-    description: "Compact this chat's context",
+    titleKey: 'command.compact.title',
+    descriptionKey: 'command.compact.description',
     icon: Shrink,
   },
-  {
-    id: 'review',
-    title: 'Review',
-    description: 'Review my current changes and find issues',
-    icon: Eye,
-  },
-  {
-    id: 'init',
-    title: 'Init',
-    description: 'Create an AGENTS.md file with instructions for Workx',
-    icon: FileText,
-  },
+  { id: 'review', titleKey: 'command.review.title', descriptionKey: 'command.review.description', icon: Eye },
+  { id: 'init', titleKey: 'command.init.title', descriptionKey: 'command.init.description', icon: FileText },
   {
     id: 'rename',
-    title: 'Rename',
-    description: 'Rename the current chat',
+    titleKey: 'command.rename.title',
+    descriptionKey: 'command.rename.description',
     icon: Pencil,
     acceptsArgs: true,
   },
   {
     id: 'archive',
-    title: 'Archive',
-    description: 'Archive the current chat',
+    titleKey: 'command.archive.title',
+    descriptionKey: 'command.archive.description',
     icon: Archive,
   },
   {
     id: 'delete',
-    title: 'Delete',
-    description: 'Permanently delete the current chat',
+    titleKey: 'command.delete.title',
+    descriptionKey: 'command.delete.description',
     icon: Trash2,
   },
-  {
-    id: 'skills',
-    title: 'Skills',
-    description: 'Browse skills',
-    icon: Sparkles,
-  },
-  {
-    id: 'plugins',
-    title: 'Plugins',
-    description: 'Browse plugins',
-    icon: Puzzle,
-  },
-  {
-    id: 'mcp',
-    title: 'MCP',
-    description: 'Show MCP server status',
-    icon: Plug,
-  },
-  {
-    id: 'resume',
-    title: 'Resume',
-    description: 'Search your saved chats',
-    icon: History,
-  },
-  {
-    id: 'clear',
-    title: 'Clear',
-    description: 'Clear the composer and start a new chat',
-    icon: Eraser,
-  },
+  { id: 'skills', titleKey: 'command.skills.title', descriptionKey: 'command.skills.description', icon: Sparkles },
+  { id: 'plugins', titleKey: 'command.plugins.title', descriptionKey: 'command.plugins.description', icon: Puzzle },
+  { id: 'mcp', titleKey: 'command.mcp.title', descriptionKey: 'command.mcp.description', icon: Plug },
+  { id: 'resume', titleKey: 'command.resume.title', descriptionKey: 'command.resume.description', icon: History },
+  { id: 'clear', titleKey: 'command.clear.title', descriptionKey: 'command.clear.description', icon: Eraser },
 ];
 
 export const INIT_AGENTS_PROMPT = [

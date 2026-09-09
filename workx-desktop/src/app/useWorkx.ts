@@ -22,6 +22,7 @@ import type { SkillsListResponse } from '@protocol/v2/SkillsListResponse';
 import type { Thread } from '@protocol/v2/Thread';
 import type { ThreadArchivedNotification } from '@protocol/v2/ThreadArchivedNotification';
 import type { ThreadDeletedNotification } from '@protocol/v2/ThreadDeletedNotification';
+import type { ThreadForkResponse } from '@protocol/v2/ThreadForkResponse';
 import type { ThreadItem } from '@protocol/v2/ThreadItem';
 import type { ThreadListResponse } from '@protocol/v2/ThreadListResponse';
 import type { ThreadNameUpdatedNotification } from '@protocol/v2/ThreadNameUpdatedNotification';
@@ -39,6 +40,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 
 import { INIT_AGENTS_PROMPT, type ComposerMenuBinding } from '../data/composerMenu';
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
+import { useI18n } from '../lib/i18n';
 import {
   type ProjectCreateResponse,
   type ProjectDeleteResponse,
@@ -111,6 +113,7 @@ export interface WorkxController {
   newThread: () => Promise<void>;
   newThreadInProject: (projectId: string) => Promise<void>;
   openThread: (id: string) => Promise<void>;
+  forkThread: (lastTurnId: string) => Promise<void>;
   retryActiveThread: () => Promise<void>;
   writerConflict: boolean;
   sendMessage: (text: string, bindings?: ComposerMenuBinding[]) => Promise<void>;
@@ -421,6 +424,7 @@ function turnView(turn: Turn): TurnView {
 }
 
 export function useWorkx(): WorkxController {
+  const { t } = useI18n();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [providerId, setProviderId] = useState<string | null>(null);
@@ -679,6 +683,23 @@ export function useWorkx(): WorkxController {
       await openThread(threadId);
     }
   }, [openThread]);
+
+  const forkThread = useCallback(
+    async (lastTurnId: string) => {
+      const threadId = threadIdRef.current;
+      if (!threadId) {
+        return;
+      }
+      const response = await request<ThreadForkResponse>('thread/fork', {
+        threadId,
+        lastTurnId,
+      });
+      pendingThreadsRef.current.set(response.thread.id, response.thread);
+      dispatch({ type: 'threadUpsert', thread: response.thread });
+      await openThread(response.thread.id);
+    },
+    [openThread, request],
+  );
 
   const sendMessage = useCallback(
     async (text: string, bindings: ComposerMenuBinding[] = []) => {
@@ -985,7 +1006,7 @@ export function useWorkx(): WorkxController {
             approval: {
               id: serverRequest.id,
               kind: 'command',
-              title: params.command ?? 'Run a command',
+              title: params.command ?? t('approval.runCommand'),
               detail: params.cwd ?? undefined,
               reason: params.reason ?? null,
             },
@@ -999,7 +1020,7 @@ export function useWorkx(): WorkxController {
             approval: {
               id: serverRequest.id,
               kind: 'file',
-              title: 'Apply file changes',
+              title: t('approval.applyFileChanges'),
               detail: params.grantRoot ?? undefined,
               reason: params.reason ?? null,
             },
@@ -1013,7 +1034,7 @@ export function useWorkx(): WorkxController {
           });
       }
     },
-    [],
+    [t],
   );
 
   useEffect(() => {
@@ -1109,7 +1130,7 @@ export function useWorkx(): WorkxController {
     return () => window.clearTimeout(handle);
   }, [state.searchTerm, request]);
 
-  const transcript = useMemo(() => buildTranscript(state.turns), [state.turns]);
+  const transcript = useMemo(() => buildTranscript(state.turns, t), [state.turns, t]);
 
   const projects = useMemo<ProjectView[]>(() => {
     const byProject = new Map<string, Thread[]>();
@@ -1194,6 +1215,7 @@ export function useWorkx(): WorkxController {
     newThread,
     newThreadInProject,
     openThread,
+    forkThread,
     retryActiveThread,
     writerConflict: state.writerConflict !== null,
     sendMessage,

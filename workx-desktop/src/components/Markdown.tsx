@@ -4,6 +4,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { cn } from '../lib/cn';
+import { useI18n } from '../lib/i18n';
 
 function extractText(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') {
@@ -19,6 +20,7 @@ function extractText(node: ReactNode): string {
 }
 
 function CodeBlock({ language, code }: { language?: string; code: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const copy = () => {
@@ -34,7 +36,7 @@ function CodeBlock({ language, code }: { language?: string; code: string }) {
         <button
           type="button"
           onClick={copy}
-          aria-label="Copy code"
+          aria-label={copied ? t('common.copied') : t('common.copyCode')}
           className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover"
         >
           {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}

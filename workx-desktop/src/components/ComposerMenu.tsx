@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import type { ComposerMenuBinding } from '../data/composerMenu';
 import { cn } from '../lib/cn';
+import { useI18n } from '../lib/i18n';
 
 export interface ComposerMenuItem {
   id: string;
@@ -40,6 +41,7 @@ export function ComposerMenu({
   onSelect,
   onDismiss,
 }: ComposerMenuProps) {
+  const { t } = useI18n();
   const hasItems = sections.some((section) => section.items.length > 0);
   return (
     <>
@@ -49,7 +51,9 @@ export function ComposerMenu({
         className="absolute bottom-full left-0 z-50 mb-2 max-h-[340px] w-full overflow-y-auto rounded-xl border border-line bg-elevated p-1.5 shadow-xl"
       >
         {loading && !hasItems ? (
-          <p className="px-2.5 py-2 text-[13px] text-fg-tertiary">Searching…</p>
+          <p className="px-2.5 py-2 text-[13px] text-fg-tertiary">
+            {t('composer.searching')}
+          </p>
         ) : null}
         {!loading && !hasItems ? (
           <p className="px-2.5 py-2 text-[13px] text-fg-tertiary">{emptyLabel}</p>

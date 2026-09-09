@@ -26,6 +26,7 @@ import {
 } from '../data/composerMenu';
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
 import { cn } from '../lib/cn';
+import { useI18n } from '../lib/i18n';
 import { ComposerMenu, type ComposerMenuItem, type ComposerMenuSection } from './ComposerMenu';
 import { IconButton } from './IconButton';
 import { Menu, MenuItem } from './Menu';
@@ -145,6 +146,7 @@ export function Composer({
   onCommand,
   onInterrupt,
 }: ComposerProps) {
+  const { t } = useI18n();
   const [value, setValue] = useState('');
   const [modelOpen, setModelOpen] = useState(false);
   const [providerOpen, setProviderOpen] = useState(false);
@@ -221,10 +223,10 @@ export function Composer({
     }));
     const chatItems: ComposerMenuItem[] = chatResults.map((thread) => ({
       id: `chat:${thread.id}`,
-      title: threadTitle(thread),
+      title: threadTitle(thread, t('common.newChat')),
       description: thread.cwd,
       icon: MessageSquare,
-      insertText: `@${threadTitle(thread)}`,
+      insertText: `@${threadTitle(thread, t('common.newChat'))}`,
     }));
     const skillItems: ComposerMenuItem[] = skills
       .filter((skill) => skill.enabled)
@@ -268,7 +270,7 @@ export function Composer({
         id: `mcp:${server.name}`,
         title: server.name,
         description: server.serverInfo?.name ?? undefined,
-        meta: `${Object.keys(server.tools ?? {}).length} tools`,
+        meta: t('common.tools', { count: Object.keys(server.tools ?? {}).length }),
         icon: Plug,
         insertText: `$${server.name}`,
         binding: { type: 'mention', name: server.name, path: `mcp://${server.name}` },
@@ -276,30 +278,30 @@ export function Composer({
     return [
       {
         id: 'filesAndChats',
-        label: 'Files and chats',
-        hint: query ? undefined : 'Type to search files or chats',
+        label: t('composer.filesAndChats'),
+        hint: query ? undefined : t('composer.typeToSearch'),
         items: [...fileItems, ...chatItems],
       },
-      { id: 'skills', label: 'Skills', items: skillItems },
-      { id: 'plugins', label: 'Plugins', items: pluginItems },
-      { id: 'mcp', label: 'MCP servers', items: mcpItems },
+      { id: 'skills', label: t('composer.skills'), items: skillItems },
+      { id: 'plugins', label: t('composer.plugins'), items: pluginItems },
+      { id: 'mcp', label: t('composer.mcpServers'), items: mcpItems },
     ];
-  }, [chatResults, fileResults, mcpServers, plugins, query, skills]);
+  }, [chatResults, fileResults, mcpServers, plugins, query, skills, t]);
 
   const slashSections = useMemo<ComposerMenuSection[]>(() => {
     const items: ComposerMenuItem[] = COMPOSER_COMMANDS.filter((command) =>
-      matches([command.id, command.title], query),
+      matches([command.id, t(command.titleKey)], query),
     ).map((command) => ({
       id: `command:${command.id}`,
-      title: command.title,
-      description: command.description,
+      title: t(command.titleKey),
+      description: t(command.descriptionKey),
       meta: `/${command.id}`,
       icon: command.icon,
       insertText: `/${command.id}`,
       commandId: command.id,
     }));
-    return [{ id: 'commands', label: 'Commands', items }];
-  }, [query]);
+    return [{ id: 'commands', label: t('composer.commands'), items }];
+  }, [query, t]);
 
   const sections = menu?.mode === 'slash' ? slashSections : mentionSections;
   const flatItems = useMemo(() => sections.flatMap((section) => section.items), [sections]);
@@ -462,7 +464,7 @@ export function Composer({
             sections={sections}
             activeId={activeId}
             loading={menu.mode === 'mention' && searching}
-            emptyLabel="No results"
+            emptyLabel={t('composer.noResults')}
             onHover={setActiveId}
             onSelect={applyItem}
             onDismiss={closeMenu}
@@ -509,15 +511,17 @@ export function Composer({
             }
           }}
           placeholder={
-            disabled ? (disabledPlaceholder ?? 'Connecting to app-server…') : 'Do anything'
+            disabled
+              ? (disabledPlaceholder ?? t('composer.connecting'))
+              : t('composer.placeholder')
           }
           className="max-h-[240px] w-full resize-none bg-transparent px-4 pt-3.5 text-[16px] leading-[1.5] outline-none placeholder:text-fg-tertiary disabled:opacity-60"
         />
 
         <div className="flex items-center gap-1 px-3 pb-2.5 pt-0.5">
           <IconButton
-            aria-label="Add files and more"
-            title="Add files and more (@)"
+            aria-label={t('composer.addFiles')}
+            title={`${t('composer.addFiles')} (@)`}
             disabled={disabled}
             active={menu !== null}
             onClick={() => {
@@ -542,14 +546,14 @@ export function Composer({
               {permission.warning ? (
                 <AlertTriangle className="size-3.5" strokeWidth={1.75} />
               ) : null}
-              {permission.label}
+              {t(permission.labelKey)}
             </button>
             <Menu open={permissionOpen} onClose={() => setPermissionOpen(false)}>
               {PERMISSION_MODES.map((mode) => (
                 <MenuItem
                   key={mode.id}
-                  title={mode.label}
-                  description={mode.description}
+                  title={t(mode.labelKey)}
+                  description={t(mode.descriptionKey)}
                   selected={mode.id === permission.id}
                   onClick={() => {
                     onPermissionChange(mode);
@@ -568,7 +572,9 @@ export function Composer({
                 onClick={() => setProviderOpen((open) => !open)}
                 className="flex h-7 items-center gap-1 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover disabled:opacity-60"
               >
-                <span className="max-w-[140px] truncate">{providerId ?? 'Provider'}</span>
+                <span className="max-w-[140px] truncate">
+                  {providerId ?? t('composer.provider')}
+                </span>
                 <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
               </button>
               <Menu open={providerOpen} onClose={() => setProviderOpen(false)} align="right">
@@ -593,7 +599,7 @@ export function Composer({
                 className="flex h-7 items-center gap-1 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover"
               >
                 <span className="max-w-[180px] truncate">
-                  {selectedModel?.displayName ?? selectedModelId ?? 'Model'}
+                  {selectedModel?.displayName ?? selectedModelId ?? t('composer.model')}
                 </span>
                 <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
               </button>
@@ -613,7 +619,7 @@ export function Composer({
               </Menu>
             </div>
 
-            <IconButton aria-label="Dictate">
+            <IconButton aria-label={t('composer.dictate')}>
               <Mic className="size-4" strokeWidth={1.75} />
             </IconButton>
 
@@ -621,7 +627,7 @@ export function Composer({
               <button
                 type="button"
                 onClick={onInterrupt}
-                aria-label="Stop"
+                aria-label={t('composer.stop')}
                 className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg"
               >
                 <Square className="size-3.5" strokeWidth={2} />
@@ -629,7 +635,7 @@ export function Composer({
             ) : (
               <button
                 type="submit"
-                aria-label="Send"
+                aria-label={t('composer.send')}
                 disabled={value.trim().length === 0 || disabled}
                 className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
               >

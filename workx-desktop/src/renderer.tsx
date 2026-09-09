@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from './app/App';
 import './index.css';
+import { I18nProvider } from './lib/i18n';
 
 const container = document.getElementById('root');
 
@@ -12,6 +13,8 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <I18nProvider>
+      <App />
+    </I18nProvider>
   </StrictMode>,
 );

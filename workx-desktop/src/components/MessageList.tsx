@@ -1,6 +1,9 @@
 import {
+  Check,
   ChevronDown,
+  Copy,
   FileDiff,
+  GitBranch,
   Globe,
   Image as ImageIcon,
   ListChecks,
@@ -16,6 +19,7 @@ import { useState, type ComponentType, type ReactNode, type SVGProps } from 'rea
 import type { ApprovalRequest } from '../app/useWorkx';
 import type { Activity, ActivityIcon, TranscriptEntry } from '../app/transcript';
 import { cn } from '../lib/cn';
+import { useI18n, type MessageKey } from '../lib/i18n';
 import { Markdown } from './Markdown';
 
 const ACTIVITY_ICONS: Record<ActivityIcon, ComponentType<SVGProps<SVGSVGElement>>> = {
@@ -29,15 +33,15 @@ const ACTIVITY_ICONS: Record<ActivityIcon, ComponentType<SVGProps<SVGSVGElement>
   output: ScrollText,
 };
 
-const ACTIVITY_VERBS: Record<ActivityIcon, string> = {
-  terminal: 'ran commands',
-  file: 'edited files',
-  tool: 'called tools',
-  search: 'searched the web',
-  reasoning: 'reasoned',
-  plan: 'planned',
-  image: 'used images',
-  output: 'read tool output',
+const ACTIVITY_VERB_KEYS: Record<ActivityIcon, MessageKey> = {
+  terminal: 'activity.terminal',
+  file: 'activity.file',
+  tool: 'activity.tool',
+  search: 'activity.search',
+  reasoning: 'activity.reasoning',
+  plan: 'activity.plan',
+  image: 'activity.image',
+  output: 'activity.output',
 };
 
 interface MessageListProps {
@@ -51,6 +55,7 @@ interface MessageListProps {
   onResolveApproval: (id: string | number, decision: 'accept' | 'decline') => void;
   onDismissError: () => void;
   onRetryWriter: () => void;
+  onBranch: (turnId: string) => void;
 }
 
 export function MessageList({
@@ -64,6 +69,7 @@ export function MessageList({
   onResolveApproval,
   onDismissError,
   onRetryWriter,
+  onBranch,
 }: MessageListProps) {
   return (
     <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-7 px-6 pb-10 pt-2">
@@ -79,7 +85,7 @@ export function MessageList({
             </div>
           </div>
         ) : (
-          <AssistantTurn key={entry.id} entry={entry} />
+          <AssistantTurn key={entry.id} entry={entry} onBranch={onBranch} />
         ),
       )}
 
@@ -105,6 +111,7 @@ export function MessageList({
 }
 
 function WriterConflict({ onRetry }: { onRetry: () => void }) {
+  const { t } = useI18n();
   return (
     <div
       role="alert"
@@ -112,23 +119,38 @@ function WriterConflict({ onRetry }: { onRetry: () => void }) {
     >
       <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" strokeWidth={1.75} />
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-medium">This is open in another app</p>
-        <p className="mt-0.5 text-[13px] text-fg-secondary">Close it there to continue here.</p>
+        <p className="text-[14px] font-medium">{t('message.openElsewhere')}</p>
+        <p className="mt-0.5 text-[13px] text-fg-secondary">{t('message.closeThere')}</p>
       </div>
       <button
         type="button"
         onClick={onRetry}
         className="shrink-0 rounded-lg border border-line px-2.5 py-1 text-[13px] hover:bg-hover"
       >
-        Retry
+        {t('common.retry')}
       </button>
     </div>
   );
 }
 
-function AssistantTurn({ entry }: { entry: Extract<TranscriptEntry, { kind: 'assistant' }> }) {
+function AssistantTurn({
+  entry,
+  onBranch,
+}: {
+  entry: Extract<TranscriptEntry, { kind: 'assistant' }>;
+  onBranch: (turnId: string) => void;
+}) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const hasActivities = entry.activities.length > 0;
+
+  const copy = () => {
+    void navigator.clipboard.writeText(entry.text).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  };
 
   return (
     <div className="group/turn">
@@ -141,10 +163,10 @@ function AssistantTurn({ entry }: { entry: Extract<TranscriptEntry, { kind: 'ass
         >
           <span>
             {entry.active
-              ? 'Working…'
+              ? t('message.working')
               : entry.durationMs !== null
-                ? `Worked for ${formatDuration(entry.durationMs)}`
-                : 'Worked'}
+                ? t('message.workedFor', { duration: formatDuration(entry.durationMs) })
+                : t('message.worked')}
           </span>
           {hasActivities ? (
             <ChevronDown
@@ -158,7 +180,7 @@ function AssistantTurn({ entry }: { entry: Extract<TranscriptEntry, { kind: 'ass
 
       {open && hasActivities ? (
         <div className="mt-2.5">
-          <p className="text-[14px] text-fg-secondary">{summarize(entry.activities)}</p>
+          <p className="text-[14px] text-fg-secondary">{summarize(entry.activities, t)}</p>
           <div className="mt-1.5 flex flex-col gap-px">
             {entry.activities.map((activity) => (
               <ActivityRow key={activity.id} activity={activity} />
@@ -177,9 +199,38 @@ function AssistantTurn({ entry }: { entry: Extract<TranscriptEntry, { kind: 'ass
         </div>
       ) : null}
 
+      {entry.text ? (
+        <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity group-hover/turn:opacity-100 focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={copy}
+            aria-label={copied ? t('message.copied') : t('message.copy')}
+            title={copied ? t('message.copied') : t('message.copy')}
+            className="flex size-7 items-center justify-center rounded-md text-fg-tertiary hover:bg-hover hover:text-fg"
+          >
+            {copied ? (
+              <Check className="size-4" strokeWidth={1.75} />
+            ) : (
+              <Copy className="size-4" strokeWidth={1.75} />
+            )}
+          </button>
+          {!entry.active ? (
+            <button
+              type="button"
+              onClick={() => onBranch(entry.turnId)}
+              aria-label={t('message.branch')}
+              title={t('message.branch')}
+              className="flex size-7 items-center justify-center rounded-md text-fg-tertiary hover:bg-hover hover:text-fg"
+            >
+              <GitBranch className="size-4" strokeWidth={1.75} />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {entry.status === 'failed' ? (
         <div className="mt-3">
-          <Banner tone="error">This turn failed. Check the error above for details.</Banner>
+          <Banner tone="error">{t('message.turnFailed')}</Banner>
         </div>
       ) : null}
     </div>
@@ -224,13 +275,16 @@ function ApprovalCard({
   approval: ApprovalRequest;
   onResolve: (id: string | number, decision: 'accept' | 'decline') => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-xl border border-line bg-elevated p-3.5">
       <div className="flex items-start gap-2.5">
         <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" strokeWidth={1.75} />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-medium">
-            {approval.kind === 'command' ? 'Approve command?' : 'Approve file changes?'}
+            {approval.kind === 'command'
+              ? t('message.approveCommand')
+              : t('message.approveFileChanges')}
           </p>
           <p className="mt-1 break-words font-mono text-[13px] text-fg-secondary">
             {approval.title}
@@ -249,14 +303,14 @@ function ApprovalCard({
           onClick={() => onResolve(approval.id, 'decline')}
           className="h-7 rounded-full border border-line px-3 text-[13px] hover:bg-hover"
         >
-          Decline
+          {t('message.decline')}
         </button>
         <button
           type="button"
           onClick={() => onResolve(approval.id, 'accept')}
           className="h-7 rounded-full bg-send px-3 text-[13px] text-send-fg"
         >
-          Approve
+          {t('message.approve')}
         </button>
       </div>
     </div>
@@ -272,6 +326,7 @@ function Banner({
   children: ReactNode;
   onDismiss?: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={cn(
@@ -284,7 +339,12 @@ function Banner({
       <TriangleAlert className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 break-words">{children}</span>
       {onDismiss ? (
-        <button type="button" onClick={onDismiss} aria-label="Dismiss" className="shrink-0">
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label={t('common.dismiss')}
+          className="shrink-0"
+        >
           <X className="size-3.5" strokeWidth={1.75} />
         </button>
       ) : null}
@@ -293,36 +353,42 @@ function Banner({
 }
 
 function Thinking() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-2 text-[14px] text-fg-tertiary">
       <span className="size-1.5 animate-pulse rounded-full bg-fg-tertiary" />
-      Thinking…
+      {t('message.thinking')}
     </div>
   );
 }
 
 function EmptyState({ cwd }: { cwd: string }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col items-center gap-2 py-20 text-center">
-      <p className="text-[17px] font-medium">What should Workx work on?</p>
+      <p className="text-[17px] font-medium">{t('message.emptyTitle')}</p>
       <p className="max-w-[360px] text-[13px] text-fg-tertiary">
-        Ask a question or describe a task. Workx will work in{' '}
-        <span className="break-all font-mono">{cwd || 'the current directory'}</span>.
+        {t('message.emptyPrefix')}
+        <span className="break-all font-mono">{cwd || t('message.currentDirectory')}</span>
+        {t('message.emptySuffix')}
       </p>
     </div>
   );
 }
 
-function summarize(activities: Activity[]): string {
+function summarize(
+  activities: Activity[],
+  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+): string {
   const verbs: string[] = [];
   for (const activity of activities) {
-    const verb = ACTIVITY_VERBS[activity.icon];
+    const verb = t(ACTIVITY_VERB_KEYS[activity.icon]);
     if (!verbs.includes(verb)) {
       verbs.push(verb);
     }
   }
   if (verbs.length === 0) {
-    return 'Worked';
+    return t('activity.worked');
   }
   return verbs.join(', ');
 }

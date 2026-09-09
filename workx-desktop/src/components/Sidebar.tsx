@@ -28,6 +28,7 @@ import type { ProjectView } from '../app/useWorkx';
 import type { Thread } from '@protocol/v2/Thread';
 import { NAV_ITEMS, type NavKey } from '../data/workspace';
 import { cn } from '../lib/cn';
+import { useI18n } from '../lib/i18n';
 import { IconButton } from './IconButton';
 import { ProjectHoverCard } from './ProjectHoverCard';
 
@@ -70,13 +71,13 @@ interface SidebarProps {
   onDeleteThread: (id: string) => void;
 }
 
-export function threadTitle(thread: Thread): string {
+export function threadTitle(thread: Thread, fallback = 'New chat'): string {
   const name = thread.name?.trim();
   if (name) {
     return name;
   }
   const preview = thread.preview?.trim();
-  return preview ? preview : 'New chat';
+  return preview ? preview : fallback;
 }
 
 export function Sidebar({
@@ -104,6 +105,7 @@ export function Sidebar({
   onArchiveThread,
   onDeleteThread,
 }: SidebarProps) {
+  const { t } = useI18n();
   const [searchOpen, setSearchOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
@@ -197,12 +199,12 @@ export function Sidebar({
         <div className="no-drag ml-auto flex items-center gap-0.5">
           <IconButton
             size="sm"
-            aria-label="Search"
+            aria-label={t('common.search')}
             onClick={() => setSearchOpen((value) => !value)}
           >
             <Search className="size-4" strokeWidth={1.75} />
           </IconButton>
-          <IconButton size="sm" aria-label="Notifications">
+          <IconButton size="sm" aria-label={t('common.notifications')}>
             <Bell className="size-4" strokeWidth={1.75} />
           </IconButton>
         </div>
@@ -220,10 +222,10 @@ export function Sidebar({
                 closeSearch();
               }
             }}
-            placeholder="Search chats"
+            placeholder={t('sidebar.searchChats')}
             className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-fg-tertiary"
           />
-          <button type="button" onClick={closeSearch} aria-label="Close search">
+          <button type="button" onClick={closeSearch} aria-label={t('sidebar.closeSearch')}>
             <X className="size-3.5 text-fg-tertiary hover:text-fg" strokeWidth={1.75} />
           </button>
         </div>
@@ -251,7 +253,7 @@ export function Sidebar({
                 )}
               >
                 <Icon className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate">{t(item.labelKey)}</span>
                 {item.key === 'new-chat' ? (
                   <Plus className="ml-auto size-4 shrink-0 text-fg-tertiary" strokeWidth={1.75} />
                 ) : null}
@@ -263,12 +265,16 @@ export function Sidebar({
 
       <div className="no-drag mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pb-2">
         {searching_ ? (
-          <SidebarSection label="Search results">
+          <SidebarSection label={t('sidebar.searchResults')}>
             {searching ? (
-              <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">Searching…</p>
+              <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">
+                {t('sidebar.searching')}
+              </p>
             ) : null}
             {!searching && searchTerm.trim() && searchResults.length === 0 ? (
-              <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No matching chats</p>
+              <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">
+                {t('sidebar.noMatchingChats')}
+              </p>
             ) : null}
             {searchResults.map((thread) => renderThread(thread))}
           </SidebarSection>
@@ -277,18 +283,20 @@ export function Sidebar({
             <div className="relative">
               {organize === 'list' ? (
                 <SidebarSection
-                  label="Chats"
+                  label={t('sidebar.chats')}
                   onAdd={onNewChat}
                   onMore={() => setProjectsMenuOpen((value) => !value)}
                 >
                   {flatThreads.map((thread) => renderThread(thread))}
                   {flatThreads.length === 0 ? (
-                    <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No chats yet</p>
+                    <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">
+                      {t('sidebar.noChats')}
+                    </p>
                   ) : null}
                 </SidebarSection>
               ) : (
                 <SidebarSection
-                  label="Projects"
+                  label={t('sidebar.projects')}
                   onAdd={onAddProject}
                   onMore={() => setProjectsMenuOpen((value) => !value)}
                 >
@@ -315,7 +323,9 @@ export function Sidebar({
                     );
                   })}
                   {projects.length === 0 ? (
-                    <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No projects yet</p>
+                    <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">
+                      {t('sidebar.noProjects')}
+                    </p>
                   ) : null}
                   {projects.length > PROJECT_LIMIT ? (
                     <button
@@ -323,7 +333,7 @@ export function Sidebar({
                       onClick={() => setShowAllProjects((value) => !value)}
                       className="flex h-[30px] w-full items-center rounded-lg px-2.5 text-left text-[14px] text-fg-tertiary hover:bg-hover"
                     >
-                      {showAllProjects ? 'Show less' : 'Show more'}
+                      {showAllProjects ? t('common.showLess') : t('common.showMore')}
                     </button>
                   ) : null}
                 </SidebarSection>
@@ -336,9 +346,9 @@ export function Sidebar({
                     onMouseDown={() => setProjectsMenuOpen(false)}
                   />
                   <div className="absolute right-2 top-9 z-50 min-w-[200px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
-                    <MenuSubmenu icon={Layers} label="Organize sidebar">
+                    <MenuSubmenu icon={Layers} label={t('sidebar.organize')}>
                       <MenuRadio
-                        label="By project"
+                        label={t('sidebar.byProject')}
                         checked={organize === 'project'}
                         onClick={() => {
                           setOrganize('project');
@@ -346,7 +356,7 @@ export function Sidebar({
                         }}
                       />
                       <MenuRadio
-                        label="In one list"
+                        label={t('sidebar.inOneList')}
                         checked={organize === 'list'}
                         onClick={() => {
                           setOrganize('list');
@@ -354,9 +364,9 @@ export function Sidebar({
                         }}
                       />
                     </MenuSubmenu>
-                    <MenuSubmenu icon={ArrowUpDown} label="Sort chats by">
+                    <MenuSubmenu icon={ArrowUpDown} label={t('sidebar.sortChatsBy')}>
                       <MenuRadio
-                        label="Manual order"
+                        label={t('sidebar.manualOrder')}
                         checked={projectSort === 'manual'}
                         onClick={() => {
                           setProjectSort('manual');
@@ -364,7 +374,7 @@ export function Sidebar({
                         }}
                       />
                       <MenuRadio
-                        label="Last updated"
+                        label={t('sidebar.lastUpdated')}
                         checked={projectSort === 'updated'}
                         onClick={() => {
                           setProjectSort('updated');
@@ -378,10 +388,12 @@ export function Sidebar({
             </div>
 
             {organize === 'project' ? (
-              <SidebarSection label="Recents" onAdd={onNewChat}>
+              <SidebarSection label={t('sidebar.recents')} onAdd={onNewChat}>
                 {recents.map((thread) => renderThread(thread))}
                 {recents.length === 0 ? (
-                  <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">No chats yet</p>
+                  <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">
+                    {t('sidebar.noChats')}
+                  </p>
                 ) : null}
               </SidebarSection>
             ) : null}
@@ -391,10 +403,10 @@ export function Sidebar({
 
       <div className="no-drag flex h-[52px] shrink-0 items-center gap-2 px-2.5">
         <div className="flex items-center gap-0.5">
-          <IconButton size="sm" aria-label="Settings" onClick={onOpenSettings}>
+          <IconButton size="sm" aria-label={t('common.settings')} onClick={onOpenSettings}>
             <Settings2 className="size-4" strokeWidth={1.75} />
           </IconButton>
-          <IconButton size="sm" aria-label="Help">
+          <IconButton size="sm" aria-label={t('common.help')}>
             <CircleHelp className="size-4" strokeWidth={1.75} />
           </IconButton>
         </div>
@@ -420,6 +432,7 @@ function ProjectRow({
   onRename: (name: string) => void;
   onRemove: () => void;
 }) {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hoverOpen, setHoverOpen] = useState(false);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
@@ -526,7 +539,7 @@ function ProjectRow({
       >
         <IconButton
           size="sm"
-          aria-label={`New chat in ${project.name}`}
+          aria-label={t('sidebar.newChatIn', { name: project.name })}
           onClick={() => {
             closeHover();
             onNewChat();
@@ -536,7 +549,7 @@ function ProjectRow({
         </IconButton>
         <IconButton
           size="sm"
-          aria-label="Project actions"
+          aria-label={t('sidebar.projectActions')}
           onClick={() => setMenuOpen((value) => !value)}
         >
           <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
@@ -562,7 +575,7 @@ function ProjectRow({
           <div className="absolute right-1 top-[28px] z-50 min-w-[190px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
             <MenuAction
               icon={MessageSquarePlus}
-              label="New chat"
+              label={t('common.newChat')}
               onClick={() => {
                 setMenuOpen(false);
                 onNewChat();
@@ -570,7 +583,7 @@ function ProjectRow({
             />
             <MenuAction
               icon={FolderOpen}
-              label="Reveal in Finder"
+              label={t('sidebar.revealInFinder')}
               onClick={() => {
                 setMenuOpen(false);
                 if (project.primaryRoot) {
@@ -581,7 +594,7 @@ function ProjectRow({
             {project.threads.length > 0 ? (
               <MenuAction
                 icon={Archive}
-                label="Archive chats"
+                label={t('sidebar.archiveChats')}
                 onClick={() => {
                   setMenuOpen(false);
                   onArchiveChats();
@@ -590,7 +603,7 @@ function ProjectRow({
             ) : null}
             <MenuAction
               icon={Pencil}
-              label="Edit"
+              label={t('common.edit')}
               onClick={() => {
                 setMenuOpen(false);
                 onEdit();
@@ -598,7 +611,7 @@ function ProjectRow({
             />
             <MenuAction
               icon={Trash2}
-              label="Remove project"
+              label={t('sidebar.removeProject')}
               danger
               onClick={() => {
                 setMenuOpen(false);
@@ -635,8 +648,9 @@ function ThreadRow({
   onArchive: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [draft, setDraft] = useState(threadTitle(thread));
+  const [draft, setDraft] = useState(threadTitle(thread, t('common.newChat')));
 
   if (renaming) {
     return (
@@ -670,7 +684,7 @@ function ThreadRow({
           active && 'bg-active text-fg',
         )}
       >
-        <span className="truncate">{threadTitle(thread)}</span>
+        <span className="truncate">{threadTitle(thread, t('common.newChat'))}</span>
       </button>
       <div
         className={cn(
@@ -680,7 +694,7 @@ function ThreadRow({
       >
         <IconButton
           size="sm"
-          aria-label="Chat actions"
+          aria-label={t('sidebar.chatActions')}
           onClick={() => setMenuOpen((value) => !value)}
         >
           <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
@@ -692,16 +706,16 @@ function ThreadRow({
           <div className="absolute right-1 top-[28px] z-50 min-w-[160px] rounded-xl border border-line bg-elevated p-1 shadow-xl">
             <MenuAction
               icon={Pencil}
-              label="Rename"
+              label={t('common.rename')}
               onClick={() => {
                 setMenuOpen(false);
-                setDraft(threadTitle(thread));
+                setDraft(threadTitle(thread, t('common.newChat')));
                 onStartRename();
               }}
             />
             <MenuAction
               icon={Archive}
-              label="Archive"
+              label={t('common.archive')}
               onClick={() => {
                 setMenuOpen(false);
                 onArchive();
@@ -709,7 +723,7 @@ function ThreadRow({
             />
             <MenuAction
               icon={Trash2}
-              label="Delete"
+              label={t('common.delete')}
               danger
               onClick={() => {
                 setMenuOpen(false);
@@ -814,18 +828,19 @@ function SidebarSection({
   onAdd?: () => void;
   onMore?: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <section className="group/section">
       <div className="flex h-8 items-center gap-1 px-2.5 pt-3">
         <span className="text-[13px] text-fg-tertiary">{label}</span>
         <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover/section:opacity-100">
           {onMore ? (
-            <IconButton size="sm" aria-label={`More ${label}`} onClick={onMore}>
+            <IconButton size="sm" aria-label={t('sidebar.more', { label })} onClick={onMore}>
               <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
             </IconButton>
           ) : null}
           {onAdd ? (
-            <IconButton size="sm" aria-label={`Add to ${label}`} onClick={onAdd}>
+            <IconButton size="sm" aria-label={t('sidebar.add', { label })} onClick={onAdd}>
               <Plus className="size-3.5" strokeWidth={1.75} />
             </IconButton>
           ) : null}

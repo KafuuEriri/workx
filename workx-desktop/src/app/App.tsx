@@ -16,15 +16,17 @@ import {
   THEME_STORAGE_KEY,
   type ThemePreference,
 } from '../lib/theme';
+import { useI18n, type MessageKey } from '../lib/i18n';
 import { useWorkx, type ProjectView } from './useWorkx';
 
-const PANEL_TITLES: Partial<Record<NavKey, string>> = {
-  plugins: 'Plugins',
-  skills: 'Skills',
-  mcp: 'MCP servers',
+const PANEL_TITLES: Partial<Record<NavKey, MessageKey>> = {
+  plugins: 'app.panelPlugins',
+  skills: 'app.panelSkills',
+  mcp: 'app.panelMcp',
 };
 
 export function App() {
+  const { t } = useI18n();
   const workx = useWorkx();
   const [theme, setTheme] = useState<ThemePreference>(readStoredTheme);
   const [activeNav, setActiveNav] = useState<NavKey | null>(null);
@@ -108,8 +110,8 @@ export function App() {
   const disabled = workx.status !== 'ready';
   const panel = PANEL_TITLES[activeNav ?? 'new-chat'] ? activeNav : null;
   const title =
-    (panel ? PANEL_TITLES[panel] : null) ??
-    (activeThread ? threadTitle(activeThread) : 'New chat');
+    (panel && PANEL_TITLES[panel] ? t(PANEL_TITLES[panel]) : null) ??
+    (activeThread ? threadTitle(activeThread, t('common.newChat')) : t('common.newChat'));
 
   const plugins = workx.pluginMarketplaces.flatMap((marketplace) => marketplace.plugins);
 
@@ -256,7 +258,7 @@ export function App() {
                     workx.error ??
                     (workx.status === 'error' ? workx.statusMessage : null) ??
                     (workx.status === 'stopped'
-                      ? 'The Workx app-server stopped. Restart Workx to reconnect.'
+                      ? t('app.stopped')
                       : null)
                   }
                   warnings={workx.warnings}
@@ -266,6 +268,7 @@ export function App() {
                   onResolveApproval={(id, decision) => void workx.resolveApproval(id, decision)}
                   onDismissError={workx.dismissError}
                   onRetryWriter={() => void workx.retryActiveThread()}
+                  onBranch={(turnId) => void workx.forkThread(turnId)}
                 />
               </div>
 
@@ -273,7 +276,7 @@ export function App() {
                 <button
                   type="button"
                   onClick={scrollToBottom}
-                  aria-label="Scroll to bottom"
+                  aria-label={t('message.scrollToBottom')}
                   className="absolute bottom-4 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-elevated text-fg-secondary shadow-lg hover:text-fg"
                 >
                   <ArrowDown className="size-4" strokeWidth={1.75} />
@@ -299,7 +302,7 @@ export function App() {
               running={workx.running}
               disabled={disabled || workx.writerConflict}
               disabledPlaceholder={
-                workx.writerConflict ? 'This chat is open in another app' : undefined
+                workx.writerConflict ? t('composer.openElsewhere') : undefined
               }
               onSubmit={(text, bindings) => {
                 void workx.sendMessage(text, bindings);
@@ -346,9 +349,9 @@ export function App() {
 
       <ConfirmDialog
         open={removeTarget !== null}
-        title={`Remove ${removeTarget?.name ?? 'project'}?`}
-        description="This only removes the project from the app. Files on your computer and existing chats won't be deleted."
-        confirmLabel="Remove project"
+        title={t('app.removeTitle', { name: removeTarget?.name ?? 'project' })}
+        description={t('app.removeDescription')}
+        confirmLabel={t('app.removeConfirm')}
         onCancel={() => setRemoveTarget(null)}
         onConfirm={() => {
           const target = removeTarget;
@@ -361,11 +364,14 @@ export function App() {
 
       <ConfirmDialog
         open={archiveTarget !== null}
-        title={`Archive ${archiveTarget?.threads.length ?? 0} ${
-          archiveTarget?.threads.length === 1 ? 'chat' : 'chats'
-        }?`}
-        description={`This will archive the chats in ${archiveTarget?.name ?? 'this project'}. You can find them later in your archived chats.`}
-        confirmLabel="Archive all"
+        title={t(
+          archiveTarget?.threads.length === 1 ? 'app.archiveTitleOne' : 'app.archiveTitle',
+          { count: archiveTarget?.threads.length ?? 0 },
+        )}
+        description={t('app.archiveDescription', {
+          name: archiveTarget?.name ?? 'this project',
+        })}
+        confirmLabel={t('app.archiveConfirm')}
         onCancel={() => setArchiveTarget(null)}
         onConfirm={() => {
           const target = archiveTarget;

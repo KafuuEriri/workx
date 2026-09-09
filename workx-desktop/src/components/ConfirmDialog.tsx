@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 
+import { useI18n } from '../lib/i18n';
+
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -17,6 +19,7 @@ export function ConfirmDialog({
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) {
       return;
@@ -56,7 +59,7 @@ export function ConfirmDialog({
             onClick={onCancel}
             className="flex h-9 items-center rounded-lg px-3 text-[14px] text-fg-secondary hover:bg-hover"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"

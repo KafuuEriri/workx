@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import type { Model } from '@protocol/v2/Model';
 import { cn } from '../lib/cn';
+import { LANGUAGE_OPTIONS, useI18n } from '../lib/i18n';
 import type { ThemePreference } from '../lib/theme';
 
 interface SettingsDialogProps {
@@ -17,12 +18,6 @@ interface SettingsDialogProps {
   onThemeChange: (theme: ThemePreference) => void;
 }
 
-const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
-];
-
 export function SettingsDialog({
   open,
   onClose,
@@ -34,9 +29,16 @@ export function SettingsDialog({
   theme,
   onThemeChange,
 }: SettingsDialogProps) {
+  const { t, language, setLanguage } = useI18n();
   const [draftModelId, setDraftModelId] = useState(selectedModelId);
   const [draftEffort, setDraftEffort] = useState(selectedEffort);
   const [draftTheme, setDraftTheme] = useState(theme);
+
+  const themeOptions: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
+    { value: 'light', label: t('settings.light'), icon: Sun },
+    { value: 'dark', label: t('settings.dark'), icon: Moon },
+    { value: 'system', label: t('settings.system'), icon: Monitor },
+  ];
 
   useEffect(() => {
     if (open) {
@@ -70,7 +72,7 @@ export function SettingsDialog({
       : [
           {
             reasoningEffort: draftModel.defaultReasoningEffort,
-            description: 'Default for this model',
+            description: t('settings.defaultForModel'),
           },
         ]
     : [];
@@ -83,14 +85,14 @@ export function SettingsDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Settings"
+        aria-label={t('settings.title')}
         onMouseDown={(event) => event.stopPropagation()}
         className="w-[420px] max-w-full rounded-2xl border border-line bg-elevated p-6 shadow-2xl"
       >
-        <h2 className="text-[17px] font-semibold">Settings</h2>
+        <h2 className="text-[17px] font-semibold">{t('settings.title')}</h2>
 
         <div className="mt-5 flex flex-col gap-4">
-          <Field label="Model">
+          <Field label={t('settings.model')}>
             <select
               value={draftModelId ?? ''}
               onChange={(event) => {
@@ -109,7 +111,7 @@ export function SettingsDialog({
             </select>
           </Field>
 
-          <Field label="Reasoning effort">
+          <Field label={t('settings.reasoningEffort')}>
             <select
               value={draftEffort ?? ''}
               onChange={(event) => setDraftEffort(event.target.value)}
@@ -123,9 +125,32 @@ export function SettingsDialog({
             </select>
           </Field>
 
-          <Field label="Theme">
+          <Field label={t('settings.language')}>
             <div className="flex gap-1.5">
-              {THEME_OPTIONS.map((option) => {
+              {LANGUAGE_OPTIONS.map((option) => {
+                const selected = language === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setLanguage(option.value)}
+                    className={cn(
+                      'flex h-9 flex-1 items-center justify-center rounded-lg border text-[13px]',
+                      selected
+                        ? 'border-line-strong bg-active text-fg'
+                        : 'border-line text-fg-secondary hover:bg-hover',
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <Field label={t('settings.theme')}>
+            <div className="flex gap-1.5">
+              {themeOptions.map((option) => {
                 const Icon = option.icon;
                 const selected = draftTheme === option.value;
                 return (
@@ -155,7 +180,7 @@ export function SettingsDialog({
             onClick={onClose}
             className="h-8 rounded-full border border-line px-4 text-[13px] hover:bg-hover"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -171,7 +196,7 @@ export function SettingsDialog({
             }}
             className="h-8 rounded-full bg-send px-4 text-[13px] text-send-fg"
           >
-            Save
+            {t('common.save')}
           </button>
         </div>
       </div>

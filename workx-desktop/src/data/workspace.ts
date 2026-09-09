@@ -1,6 +1,8 @@
 import type { AskForApproval } from '@protocol/v2/AskForApproval';
 import type { SandboxMode } from '@protocol/v2/SandboxMode';
 
+import type { MessageKey } from '../lib/i18n';
+
 export type NavKey =
   | 'new-chat'
   | 'plugins'
@@ -9,20 +11,20 @@ export type NavKey =
 
 export interface NavItem {
   key: NavKey;
-  label: string;
+  labelKey: MessageKey;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { key: 'new-chat', label: 'New chat' },
-  { key: 'plugins', label: 'Plugins' },
-  { key: 'skills', label: 'Skills' },
-  { key: 'mcp', label: 'MCP servers' },
+  { key: 'new-chat', labelKey: 'nav.newChat' },
+  { key: 'plugins', labelKey: 'nav.plugins' },
+  { key: 'skills', labelKey: 'nav.skills' },
+  { key: 'mcp', labelKey: 'nav.mcp' },
 ];
 
 export interface PermissionMode {
   id: string;
-  label: string;
-  description: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
   warning?: boolean;
   sandbox: SandboxMode;
   approvalPolicy: AskForApproval;
@@ -31,30 +33,29 @@ export interface PermissionMode {
 export const PERMISSION_MODES: PermissionMode[] = [
   {
     id: 'read-only',
-    label: 'Read only',
-    description: 'Workx can read files but cannot make changes.',
+    labelKey: 'permission.readOnly.label',
+    descriptionKey: 'permission.readOnly.description',
     sandbox: 'read-only',
     approvalPolicy: 'never',
   },
   {
     id: 'auto',
-    label: 'Auto',
-    description: 'Workx can read and edit files in the workspace.',
+    labelKey: 'permission.auto.label',
+    descriptionKey: 'permission.auto.description',
     sandbox: 'workspace-write',
     approvalPolicy: 'on-request',
   },
   {
     id: 'workspace-write',
-    label: 'Workspace write',
-    description: 'Workx can edit files inside the workspace, without asking to leave it.',
+    labelKey: 'permission.workspaceWrite.label',
+    descriptionKey: 'permission.workspaceWrite.description',
     sandbox: 'workspace-write',
     approvalPolicy: 'never',
   },
   {
     id: 'full-access',
-    label: 'Full access',
-    description:
-      'Workx can run commands and edit files anywhere on your computer without asking.',
+    labelKey: 'permission.fullAccess.label',
+    descriptionKey: 'permission.fullAccess.description',
     warning: true,
     sandbox: 'danger-full-access',
     approvalPolicy: 'never',

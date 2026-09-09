@@ -2,16 +2,13 @@ import { Folder, MessageSquare, Pencil } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import type { ProjectView } from '../app/useWorkx';
+import { useI18n } from '../lib/i18n';
 
 const CARD_GAP = 8;
 const VIEWPORT_MARGIN = 8;
 
 function shortenPath(path: string): string {
   return path.replace(/^\/Users\/[^/]+(?=\/|$)/u, '~');
-}
-
-function chatCountLabel(count: number): string {
-  return `${count} ${count === 1 ? 'chat' : 'chats'}`;
 }
 
 interface ProjectHoverCardProps {
@@ -33,6 +30,7 @@ export function ProjectHoverCard({
   onMouseEnter,
   onMouseLeave,
 }: ProjectHoverCardProps) {
+  const { t } = useI18n();
   const cardRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(project.name);
@@ -77,7 +75,7 @@ export function ProjectHoverCard({
     <div
       ref={cardRef}
       role="dialog"
-      aria-label={`${project.name} details`}
+      aria-label={t('sidebar.projectDetails', { name: project.name })}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{ left: position.left, top: position.top }}
@@ -89,7 +87,7 @@ export function ProjectHoverCard({
           {renaming ? (
             <input
               autoFocus
-              aria-label="Project name"
+              aria-label={t('sidebar.projectName')}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onFocus={(event) => event.currentTarget.select()}
@@ -122,7 +120,12 @@ export function ProjectHoverCard({
         </div>
         <div className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-sm leading-5 text-fg-secondary">
           <MessageSquare className="size-3.5 shrink-0" strokeWidth={1.75} />
-          <span className="min-w-0 truncate">{chatCountLabel(project.threads.length)}</span>
+          <span className="min-w-0 truncate">
+            {t(
+              project.threads.length === 1 ? 'sidebar.chatCountOne' : 'sidebar.chatCount',
+              { count: project.threads.length },
+            )}
+          </span>
         </div>
       </div>
 
@@ -135,7 +138,7 @@ export function ProjectHoverCard({
                 key={root}
                 type="button"
                 title={short}
-                aria-label={`Open ${short}`}
+                aria-label={t('sidebar.openPath', { path: short })}
                 onClick={() => onOpenSource(root)}
                 className="flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-sm leading-5 text-fg-secondary hover:bg-hover hover:text-fg"
               >
@@ -154,7 +157,7 @@ export function ProjectHoverCard({
           className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm leading-5 hover:bg-hover"
         >
           <Pencil className="size-3.5 shrink-0 text-fg-tertiary" strokeWidth={1.75} />
-          <span className="min-w-0 flex-1 truncate">Edit project</span>
+          <span className="min-w-0 flex-1 truncate">{t('sidebar.editProject')}</span>
         </button>
       </div>
     </div>
