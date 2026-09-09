@@ -21,14 +21,14 @@ Colors, radii, spacing, and layout constants were extracted from the installed
 Codex app bundle (`/Applications/ChatGPT.app/Contents/Resources/app.asar`) rather
 than approximated. The notable values:
 
-| Token | Value |
-| --- | --- |
-| Sidebar width | `275px` (`clamp(240px, 275px, min(520px, 100vw - 320px))`) |
-| Toolbar height | `46px` |
-| Transcript column | `42rem` |
-| Light surface | `#ffffff`, sidebar `#f9f9f9`, foreground `#1a1c1f` |
-| Dark surface | `#181818`, sidebar `#212121`, foreground `#dfdfdf` |
-| Borders | foreground at 5% / 8% / 12% (light), white at 4% / 8% / 16% (dark) |
+| Token             | Value                                                              |
+| ----------------- | ------------------------------------------------------------------ |
+| Sidebar width     | `275px` (`clamp(240px, 275px, min(520px, 100vw - 320px))`)         |
+| Toolbar height    | `46px`                                                             |
+| Transcript column | `42rem`                                                            |
+| Light surface     | `#ffffff`, sidebar `#f9f9f9`, foreground `#1a1c1f`                 |
+| Dark surface      | `#181818`, sidebar `#212121`, foreground `#dfdfdf`                 |
+| Borders           | foreground at 5% / 8% / 12% (light), white at 4% / 8% / 16% (dark) |
 
 The proprietary OpenAI Sans font is not bundled. Workx uses the system UI font
 stack instead.
@@ -93,6 +93,33 @@ JSON-RPC `-32601` error instead of hanging.
 - `npm run make` — build distributables
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run lint` — ESLint
+
+Use Node 22 for packaging. Node 26 currently crashes `extract-zip` while
+unpacking the Electron template, which aborts `electron-forge package` without
+an error.
+
+## Packaging
+
+Installers are built with Electron Forge:
+
+- macOS arm64: `npm run make -- --platform=darwin --arch=arm64` produces
+  `out/make/Workx-<version>-arm64.dmg` and a `.zip`.
+- Windows x64: `npm run make -- --platform=win32 --arch=x64` produces
+  `out/make/squirrel.windows/x64/Workx-<version> Setup.exe`.
+
+The app icon lives in `assets/` (`icon.icns`, `icon.ico`, `icon.png`) and is
+applied through `packagerConfig.icon`.
+
+Packaged apps resolve the Workx CLI from `WORKX_BIN`, a bundled
+`Resources/bin/workx`, the Homebrew locations (`/opt/homebrew/bin/workx`,
+`/usr/local/bin/workx`), then `PATH`. macOS GUI apps do not inherit the shell
+`PATH`, so the explicit Homebrew paths are required for
+`brew install --cask workx`.
+
+Code signing is optional. Set `APPLE_IDENTITY`, `APPLE_ID`,
+`APPLE_APP_PASSWORD`, and `APPLE_TEAM_ID` for macOS signing/notarization, or
+`WINDOWS_CERTIFICATE_FILE` and `WINDOWS_CERTIFICATE_PASSWORD` for Windows.
+Without those secrets the release workflow builds unsigned installers.
 
 ## Scope
 

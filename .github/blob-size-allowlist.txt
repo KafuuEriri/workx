@@ -9,3 +9,4 @@ workx-rs/models-manager/models.json
 workx-rs/tui/tests/fixtures/oss-story.jsonl
 workx-rs/tui_app_server/tests/fixtures/oss-story.jsonl
 workx-rs/tui/src/app.rs
+workx-desktop/assets/icon.icns
