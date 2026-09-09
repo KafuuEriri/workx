@@ -1114,6 +1114,13 @@ client_request_definitions! {
         serialization: None,
         response: v2::CollaborationModeListResponse,
     },
+    #[experimental("slashCommands/list")]
+    /// Lists built-in slash commands shared by the TUI and desktop clients.
+    SlashCommandsList => "slashCommands/list" {
+        params: v2::SlashCommandsListParams,
+        serialization: None,
+        response: v2::SlashCommandsListResponse,
+    },
     #[experimental("mock/experimentalMethod")]
     /// Test-only method used to validate experimental gating.
     MockExperimentalMethod => "mock/experimentalMethod" {

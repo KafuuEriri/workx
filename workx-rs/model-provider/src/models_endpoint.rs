@@ -28,6 +28,7 @@ use workx_models_manager::manager::ModelsEndpointFuture;
 use workx_otel::TelemetryAuthMode;
 use workx_protocol::error::Result as CoreResult;
 use workx_protocol::error::WorkxErr;
+use workx_protocol::openai_models::CustomModelEntry;
 use workx_protocol::openai_models::ModelInfo;
 use workx_response_debug_context::extract_response_debug_context;
 use workx_response_debug_context::telemetry_transport_error_message;
@@ -179,7 +180,7 @@ impl ModelsEndpointClient for OpenAiModelsEndpoint {
         self.provider_info.uses_external_models()
     }
 
-    fn custom_models(&self) -> Vec<String> {
+    fn custom_models(&self) -> Vec<CustomModelEntry> {
         self.provider_info.custom_models.clone()
     }
 

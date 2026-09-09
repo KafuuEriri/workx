@@ -55,9 +55,14 @@ impl App {
             let mut added_custom_model = false;
             for token in &model_tokens {
                 if !models.iter().any(|preset| &preset.model == token)
-                    && !provider.custom_models.contains(token)
+                    && !provider
+                        .custom_models
+                        .iter()
+                        .any(|entry| entry.id() == token)
                 {
-                    provider.custom_models.push(token.clone());
+                    provider.custom_models.push(
+                        workx_protocol::openai_models::CustomModelEntry::Id(token.clone()),
+                    );
                     added_custom_model = true;
                 }
             }

@@ -1,0 +1,156 @@
+import type { SlashCommandInfo } from './composerMenu';
+
+/**
+ * Commands shown when the app-server predates `slashCommands/list`. The
+ * canonical list always comes from the server; this keeps the composer usable
+ * with an older CLI that still supports the underlying operations.
+ */
+export const FALLBACK_SLASH_COMMANDS: SlashCommandInfo[] = [
+  {
+    name: 'model',
+    aliases: [],
+    description: 'choose what model and reasoning effort to use',
+    supportsInlineArgs: false,
+    availableDuringTask: true,
+  },
+  {
+    name: 'provider',
+    aliases: [],
+    description: 'add, edit, or switch model providers',
+    supportsInlineArgs: false,
+    availableDuringTask: false,
+  },
+  {
+    name: 'permissions',
+    aliases: [],
+    description: 'choose what Workx is allowed to do',
+    supportsInlineArgs: false,
+    availableDuringTask: true,
+  },
+  {
+    name: 'skills',
+    aliases: [],
+    description: 'use skills to improve how Workx performs specific tasks',
+    supportsInlineArgs: false,
+    availableDuringTask: true,
+  },
+  {
+    name: 'review',
+    aliases: [],
+    description: 'review my current changes and find issues',
+    supportsInlineArgs: true,
+    availableDuringTask: false,
+  },
+  {
+    name: 'rename',
+    aliases: [],
+    description: 'rename the current thread',
+    supportsInlineArgs: true,
+    availableDuringTask: true,
+  },
+  {
+    name: 'new',
+    aliases: [],
+    description: 'start a new chat during a conversation',
+    supportsInlineArgs: true,
+    availableDuringTask: false,
+  },
+  {
+    name: 'archive',
+    aliases: [],
+    description: 'archive this session and exit',
+    supportsInlineArgs: false,
+    availableDuringTask: false,
+  },
+  {
+    name: 'delete',
+    aliases: [],
+    description: 'permanently delete this session and exit',
+    supportsInlineArgs: false,
+    availableDuringTask: false,
+  },
+  {
+    name: 'resume',
+    aliases: [],
+    description: 'resume a saved chat',
+    supportsInlineArgs: true,
+    availableDuringTask: true,
+  },
+  {
+    name: 'fork',
+    aliases: [],
+    description: 'fork the current chat',
+    supportsInlineArgs: true,
+    availableDuringTask: false,
+  },
+  {
+    name: 'init',
+    aliases: [],
+    description: 'create an AGENTS.md file with instructions for Workx',
+    supportsInlineArgs: false,
+    availableDuringTask: false,
+  },
+  {
+    name: 'compact',
+    aliases: [],
+    description: 'summarize conversation to prevent hitting the context limit',
+    supportsInlineArgs: false,
+    availableDuringTask: false,
+  },
+  {
+    name: 'plan',
+    aliases: [],
+    description: 'switch to Plan mode',
+    supportsInlineArgs: true,
+    availableDuringTask: false,
+  },
+  {
+    name: 'goal',
+    aliases: [],
+    description: 'set or view the goal for a long-running task',
+    supportsInlineArgs: true,
+    availableDuringTask: true,
+  },
+  {
+    name: 'copy',
+    aliases: [],
+    description: 'copy the last response, code block, or quote',
+    supportsInlineArgs: false,
+    availableDuringTask: true,
+  },
+  {
+    name: 'export',
+    aliases: [],
+    description: 'export the conversation as markdown',
+    supportsInlineArgs: true,
+    availableDuringTask: true,
+  },
+  {
+    name: 'status',
+    aliases: [],
+    description: 'show current session configuration and token usage',
+    supportsInlineArgs: false,
+    availableDuringTask: true,
+  },
+  {
+    name: 'mcp',
+    aliases: [],
+    description: 'list configured MCP tools; use /mcp verbose for details',
+    supportsInlineArgs: true,
+    availableDuringTask: true,
+  },
+  {
+    name: 'plugins',
+    aliases: [],
+    description: 'browse plugins',
+    supportsInlineArgs: false,
+    availableDuringTask: true,
+  },
+  {
+    name: 'clear',
+    aliases: [],
+    description: 'clear the terminal and start a new chat',
+    supportsInlineArgs: true,
+    availableDuringTask: false,
+  },
+];

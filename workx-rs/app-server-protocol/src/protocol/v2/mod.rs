@@ -1,4 +1,5 @@
 mod shared;
+mod slash;
 
 mod account;
 mod apps;
@@ -63,6 +64,7 @@ pub use realtime::*;
 pub use remote_control::*;
 pub use review::*;
 pub use shared::*;
+pub use slash::*;
 pub use thread::*;
 pub use thread_data::*;
 pub use thread_usage::*;

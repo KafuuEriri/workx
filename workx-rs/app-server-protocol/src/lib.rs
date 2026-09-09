@@ -12,6 +12,7 @@ mod schema_fixtures;
 #[cfg(test)]
 #[path = "schema_fixtures_tests.rs"]
 mod schema_fixtures_tests;
+pub mod slash_commands;
 
 pub use experimental_api::*;
 pub use precomputed_exports::GenerateTsOptions;

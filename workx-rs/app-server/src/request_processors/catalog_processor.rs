@@ -217,6 +217,18 @@ impl CatalogRequestProcessor {
             .map(|response| Some(response.into()))
     }
 
+    pub(crate) async fn slash_commands_list(
+        &self,
+        params: SlashCommandsListParams,
+    ) -> Result<Option<ClientResponsePayload>, JSONRPCErrorError> {
+        let SlashCommandsListParams {} = params;
+        let data = workx_app_server_protocol::slash_commands::built_in_slash_commands()
+            .into_iter()
+            .map(|(_, command)| SlashCommandInfo::from(command))
+            .collect();
+        Ok(Some(SlashCommandsListResponse { data }.into()))
+    }
+
     pub(crate) async fn mock_experimental_method(
         &self,
         params: MockExperimentalMethodParams,
