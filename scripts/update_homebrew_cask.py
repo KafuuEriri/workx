@@ -28,6 +28,13 @@ TEMPLATE = """cask "workx" do
   depends_on macos: :monterey
 
   app "Workx.app"
+
+  # The app is ad-hoc signed until a Developer ID is configured, and macOS
+  # reports quarantined ad-hoc apps as damaged. Strip the quarantine flag so
+  # the installed app opens.
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{{{appdir}}}}/Workx.app"]
+  end
 end
 """
 
