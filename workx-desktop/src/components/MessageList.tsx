@@ -102,6 +102,7 @@ interface MessageListProps {
   onRetryWriter: () => void;
   onBranch: (turnId: string) => void;
   onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
+  onExpandFileCard: (element: HTMLElement) => void;
 }
 
 export function MessageList({
@@ -117,6 +118,7 @@ export function MessageList({
   onRetryWriter,
   onBranch,
   onUndoFileChange,
+  onExpandFileCard,
 }: MessageListProps) {
   const { t } = useI18n();
   return (
@@ -156,6 +158,7 @@ export function MessageList({
             cwd={cwd}
             onBranch={onBranch}
             onUndoFileChange={onUndoFileChange}
+            onExpandFileCard={onExpandFileCard}
           />
         ),
       )}
@@ -209,11 +212,13 @@ function AssistantTurn({
   cwd,
   onBranch,
   onUndoFileChange,
+  onExpandFileCard,
 }: {
   entry: Extract<TranscriptEntry, { kind: 'assistant' }>;
   cwd: string;
   onBranch: (turnId: string) => void;
   onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
+  onExpandFileCard: (element: HTMLElement) => void;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -269,6 +274,7 @@ function AssistantTurn({
                 activity={activity}
                 cwd={cwd}
                 onUndoFileChange={onUndoFileChange}
+                onExpandFileCard={onExpandFileCard}
               />
             ))}
           </div>
@@ -293,6 +299,7 @@ function AssistantTurn({
               activity={activity}
               cwd={cwd}
               onUndoFileChange={onUndoFileChange}
+              onExpandFileCard={onExpandFileCard}
             />
           ))}
         </div>
@@ -340,10 +347,12 @@ function ActivityRow({
   activity,
   cwd,
   onUndoFileChange,
+  onExpandFileCard,
 }: {
   activity: Activity;
   cwd: string;
   onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
+  onExpandFileCard: (element: HTMLElement) => void;
 }) {
   const Icon = ACTIVITY_ICONS[activity.icon];
   if (activity.changes && activity.changes.length > 0) {
@@ -355,6 +364,7 @@ function ActivityRow({
             change={change}
             cwd={cwd}
             onUndo={onUndoFileChange}
+            onExpand={onExpandFileCard}
           />
         ))}
       </div>

@@ -1,5 +1,5 @@
 import { FileDiff, RotateCcw, Undo2 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { FileUpdateChange } from '@protocol/v2/FileUpdateChange';
 import { basename, diffLines, diffStats, relativeTo, type DiffLine } from '../lib/diff';
@@ -10,6 +10,7 @@ interface FileChangeCardProps {
   change: FileUpdateChange;
   cwd: string;
   onUndo: (change: FileUpdateChange) => Promise<void> | void;
+  onExpand?: (element: HTMLElement) => void;
 }
 
 function changeLabelKey(change: FileUpdateChange) {
@@ -52,10 +53,11 @@ function DiffLineRow({ line }: { line: DiffLine }) {
   );
 }
 
-export function FileChangeCard({ change, cwd, onUndo }: FileChangeCardProps) {
+export function FileChangeCard({ change, cwd, onUndo, onExpand }: FileChangeCardProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const stats = diffStats(change);
   const displayPath = relativeTo(cwd, change.path);
 
@@ -68,8 +70,23 @@ export function FileChangeCard({ change, cwd, onUndo }: FileChangeCardProps) {
     }
   };
 
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && onExpand) {
+      window.requestAnimationFrame(() => {
+        if (rootRef.current) {
+          onExpand(rootRef.current);
+        }
+      });
+    }
+  };
+
   return (
-    <div className="my-1.5 overflow-hidden rounded-xl border border-line bg-elevated">
+    <div
+      ref={rootRef}
+      className="my-1.5 overflow-hidden rounded-xl border border-line bg-elevated"
+    >
       <div className="flex items-center gap-3 px-3 py-2.5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-line bg-app text-fg-secondary">
           <FileDiff className="size-4" strokeWidth={1.75} />
@@ -96,7 +113,7 @@ export function FileChangeCard({ change, cwd, onUndo }: FileChangeCardProps) {
           </button>
           <button
             type="button"
-            onClick={() => setOpen((value) => !value)}
+            onClick={toggle}
             className="flex h-8 items-center gap-1.5 rounded-lg border border-line px-2.5 text-[13px] hover:bg-hover"
           >
             <RotateCcw className="size-3.5" strokeWidth={1.75} />

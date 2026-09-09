@@ -118,6 +118,18 @@ export function App() {
     element.scrollTop = element.scrollHeight;
   }, []);
 
+  const scrollFileCardToTop = useCallback((target: HTMLElement) => {
+    const container = scrollRef.current;
+    if (!container) {
+      return;
+    }
+    autoFollowRef.current = false;
+    const offset =
+      target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+    setShowScrollDown(true);
+  }, []);
+
   useEffect(() => {
     const element = scrollRef.current;
     if (!element) {
@@ -437,6 +449,7 @@ export function App() {
                   onRetryWriter={() => void workx.retryActiveThread()}
                   onBranch={(turnId) => void workx.forkThread(turnId)}
                   onUndoFileChange={undoFileChange}
+                  onExpandFileCard={scrollFileCardToTop}
                 />
               </div>
 
