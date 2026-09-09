@@ -111,6 +111,23 @@ def replace_cargo_lock_versions(lock: Path, old: str, new: str) -> bool:
     return changed
 
 
+def replace_snapshot_versions(root: Path, old: str, new: str) -> list[Path]:
+    """Rewrite embedded workspace versions in insta snapshots.
+
+    Several TUI snapshots render the current version (update banners, status
+    lines), so a version bump must keep them in sync or the snapshot tests fail
+    on the bumped commit.
+    """
+    changed: list[Path] = []
+    for pattern in ("*.snap", "*.snap.new"):
+        for path in sorted((root / "workx-rs").glob(f"**/{pattern}")):
+            text = path.read_text(encoding="utf-8")
+            if old in text:
+                path.write_text(text.replace(old, new), encoding="utf-8")
+                changed.append(path)
+    return changed
+
+
 def bump(root: Path, new_version: str) -> list[Path]:
     cargo_toml = root / "workx-rs" / "Cargo.toml"
     old_version = read_workspace_version(cargo_toml)
@@ -140,6 +157,12 @@ def bump(root: Path, new_version: str) -> list[Path]:
             )
         changed.append(path)
         print(f"bumped {path.relative_to(root)}: {old_version} -> {new_version}")
+
+    for path in replace_snapshot_versions(root, old_version, new_version):
+        changed.append(path)
+        print(
+            f"updated snapshot {path.relative_to(root)}: {old_version} -> {new_version}"
+        )
     return changed
 
 
