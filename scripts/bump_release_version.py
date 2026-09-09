@@ -104,6 +104,7 @@ def bump(root: Path, new_version: str) -> list[Path]:
         (root / "sdk" / "typescript" / "package.json", replace_json_version),
         (root / "sdk" / "python" / "pyproject.toml", replace_pyproject_version),
         (root / "sdk" / "python-runtime" / "pyproject.toml", replace_pyproject_version),
+        (root / "workx-desktop" / "package.json", replace_json_version),
         (root / "README.md", replace_readme_version),
     ]
 

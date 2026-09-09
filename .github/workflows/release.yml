@@ -126,7 +126,7 @@ jobs:
           # before the matrix jobs upload their fresh packages.
           for asset in $(gh release view "$tag" --json assets -q '.assets[].name'); do
             case "$asset" in
-              workx-package-*) gh release delete-asset "$tag" "$asset" -y ;;
+              workx-package-* | Workx-*) gh release delete-asset "$tag" "$asset" -y ;;
             esac
           done
 
@@ -240,11 +240,120 @@ jobs:
             "$RUNNER_TEMP/workx-package-${{ matrix.target }}.tar.gz" \
             --clobber
 
+  build-desktop:
+    name: Desktop ${{ matrix.name }}
+    needs:
+      - bump-version
+      - create-release
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.create-release.outputs.version }}
+      TAG: ${{ needs.create-release.outputs.tag }}
+      GH_REPO: ${{ github.repository }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            os: macos-15
+            platform: darwin
+            arch: arm64
+          - name: Windows x64
+            os: windows-latest
+            platform: win32
+            arch: x64
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.bump-version.outputs.tag }}
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workx-desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        working-directory: workx-desktop
+        run: npm ci
+
+      # Signing is optional. Import the certificate when the secret is present;
+      # otherwise the build produces unsigned installers.
+      - name: Import macOS signing certificate
+        if: matrix.platform == 'darwin'
+        shell: bash
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -z "${MACOS_CERTIFICATE:-}" ]; then
+            echo "MACOS_CERTIFICATE is not set; building an unsigned app."
+            exit 0
+          fi
+          cert_path="$RUNNER_TEMP/certificate.p12"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$cert_path"
+          keychain="$RUNNER_TEMP/app-signing.keychain-db"
+          security create-keychain -p actions "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p actions "$keychain"
+          security import "$cert_path" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security list-keychain -d user -s "$keychain" "$(security list-keychains -d user | tr -d '"')"
+          security set-key-partition-list -S apple-tool:,apple: -k actions "$keychain"
+          echo "CSC_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Import Windows signing certificate
+        if: matrix.platform == 'win32'
+        shell: bash
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -z "${WINDOWS_CERTIFICATE:-}" ]; then
+            echo "WINDOWS_CERTIFICATE is not set; building an unsigned installer."
+            exit 0
+          fi
+          cert_path="$RUNNER_TEMP/certificate.pfx"
+          echo "$WINDOWS_CERTIFICATE" | base64 --decode > "$cert_path"
+          {
+            echo "WINDOWS_CERTIFICATE_FILE=$cert_path"
+            echo "WINDOWS_CERTIFICATE_PASSWORD=$WINDOWS_CERTIFICATE_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Build installers
+        working-directory: workx-desktop
+        shell: bash
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+        run: npm run make -- --platform=${{ matrix.platform }} --arch=${{ matrix.arch }}
+
+      - name: Upload desktop assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.platform }}" = "darwin" ]; then
+            dmg="workx-desktop/out/make/Workx-${VERSION}-arm64.dmg"
+            zip="workx-desktop/out/make/zip/darwin/arm64/Workx-darwin-arm64-${VERSION}.zip"
+            test -f "$dmg"
+            test -f "$zip"
+            gh release upload "$TAG" "$dmg" "$zip" --clobber
+          else
+            setup="workx-desktop/out/make/squirrel.windows/x64/Workx-${VERSION} Setup.exe"
+            test -f "$setup"
+            cp "$setup" "$RUNNER_TEMP/Workx-${VERSION}-x64-Setup.exe"
+            gh release upload "$TAG" "$RUNNER_TEMP/Workx-${VERSION}-x64-Setup.exe" --clobber
+          fi
+
   finalize-release:
     name: Publish release
     needs:
       - create-release
       - build-package
+      - build-desktop
     runs-on: ubuntu-24.04
     env:
       GH_REPO: ${{ github.repository }}
@@ -258,7 +367,8 @@ jobs:
           assets_dir="$(mktemp -d)"
           cd "$assets_dir"
           gh release download "$tag" --pattern 'workx-package-*.tar.gz'
-          sha256sum workx-package-*.tar.gz > workx-package_SHA256SUMS
+          gh release download "$tag" --pattern 'Workx-*'
+          sha256sum workx-package-*.tar.gz Workx-* > workx-package_SHA256SUMS
           cat workx-package_SHA256SUMS
           gh release upload "$tag" workx-package_SHA256SUMS --clobber
 
@@ -276,6 +386,17 @@ jobs:
           - Windows x86_64: \`workx-package-x86_64-pc-windows-msvc.tar.gz\`
           - WSL / Linux x86_64: \`workx-package-x86_64-unknown-linux-musl.tar.gz\`
           - macOS Apple Silicon: \`workx-package-aarch64-apple-darwin.tar.gz\`
+
+          Desktop app installers:
+
+          - macOS arm64: \`Workx-$version-arm64.dmg\`
+          - Windows x64: \`Workx-$version-x64-Setup.exe\`
+
+          Install the desktop app and CLI on macOS:
+
+          \`\`\`
+          brew install --cask workx
+          \`\`\`
 
           Install on Windows (PowerShell):
 
@@ -300,6 +421,7 @@ jobs:
     needs:
       - create-release
       - finalize-release
+      - build-desktop
     runs-on: ubuntu-24.04
     env:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -308,6 +430,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       HOMEBREW_REPOSITORY: RonanXiao/homebrew-workx
       HOMEBREW_FORMULA_PATH: homebrew-workx/Formula/workx.rb
+      HOMEBREW_CASK_PATH: homebrew-workx/Casks/workx.rb
     steps:
       - name: Skip Homebrew sync
         if: env.HOMEBREW_TAP_TOKEN == ''
@@ -343,6 +466,11 @@ jobs:
             --pattern 'workx-package-aarch64-apple-darwin.tar.gz'
           arm64_sha="$(sha256sum workx-package-aarch64-apple-darwin.tar.gz | awk '{print $1}')"
 
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "Workx-${VERSION}-arm64.dmg"
+          dmg_sha="$(sha256sum "Workx-${VERSION}-arm64.dmg" | awk '{print $1}')"
+
           curl -fsSL \
             "https://github.com/${{ github.repository }}/archive/refs/tags/$TAG.tar.gz" \
             -o source.tar.gz
@@ -356,13 +484,18 @@ jobs:
             --arm64-sha256 "$arm64_sha" \
             --source-sha256 "$source_sha"
 
+          python3 scripts/update_homebrew_cask.py \
+            --cask "$HOMEBREW_CASK_PATH" \
+            --version "$VERSION" \
+            --sha256 "$dmg_sha"
+
           cd homebrew-workx
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet; then
-            echo "Homebrew formula already up to date."
+            echo "Homebrew formula and cask already up to date."
             exit 0
           fi
-          git add Formula/workx.rb
+          git add Formula/workx.rb Casks/workx.rb
           git commit -m "Workx $VERSION"
           git push origin main

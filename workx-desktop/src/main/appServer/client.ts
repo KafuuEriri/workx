@@ -1,11 +1,48 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import path from 'node:path';
 import { createInterface } from 'node:readline';
 
 import type { ClientInfo } from '@protocol/ClientInfo';
 import type { InitializeResponse } from '@protocol/InitializeResponse';
 
 export type JsonRpcId = string | number;
+
+/**
+ * Resolve the `workx` CLI. Packaged macOS apps launched from Finder inherit a
+ * minimal PATH, so a Homebrew-installed CLI is not discoverable via `workx`
+ * alone. Prefer an explicit override, then a CLI bundled inside the app, then
+ * the common Homebrew and per-user install locations.
+ */
+export function resolveWorkxBinary(): string {
+  const override = process.env.WORKX_BIN?.trim();
+  if (override) {
+    return override;
+  }
+  const executable = process.platform === 'win32' ? 'workx.exe' : 'workx';
+  const candidates: string[] = [];
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, 'bin', executable));
+  }
+  if (process.platform === 'darwin') {
+    candidates.push(path.join('/opt/homebrew/bin', executable), path.join('/usr/local/bin', executable));
+  } else if (process.platform === 'win32') {
+    candidates.push(
+      path.join(homedir(), '.local', 'bin', executable),
+      path.join(process.env.LOCALAPPDATA ?? '', 'Workx', 'bin', executable),
+    );
+  } else {
+    candidates.push(path.join(homedir(), '.local', 'bin', executable));
+  }
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return 'workx';
+}
 
 export interface JsonRpcErrorShape {
   code: number;
@@ -75,7 +112,7 @@ export class AppServerClient extends EventEmitter<AppServerClientEvents> {
       return;
     }
     this.stopped = false;
-    const bin = options.bin ?? process.env.WORKX_BIN ?? 'workx';
+    const bin = options.bin ?? resolveWorkxBinary();
     const args = options.args ?? ['app-server', '--stdio'];
     const child = spawn(bin, args, {
       cwd: options.cwd,
