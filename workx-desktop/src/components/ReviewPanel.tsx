@@ -156,7 +156,7 @@ export function ReviewPanel({ cwd, onClose, onChanged, focusChange, width }: Rev
   return (
     <aside
       style={{ width }}
-      className="flex h-full shrink-0 flex-col border-l border-line bg-app"
+      className="flex h-full shrink-0 flex-col bg-app"
     >
       <div className="flex h-[52px] shrink-0 items-center gap-2 px-4">
         <span className="text-[14px] font-medium">{t('review.title')}</span>

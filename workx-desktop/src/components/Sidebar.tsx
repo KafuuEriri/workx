@@ -190,7 +190,7 @@ export function Sidebar({
   return (
     <aside
       style={{ width }}
-      className="drag flex h-full shrink-0 flex-col border-r border-line-subtle bg-sidebar"
+      className="drag flex h-full shrink-0 flex-col bg-sidebar"
     >
       <div className="h-11 shrink-0" />
 

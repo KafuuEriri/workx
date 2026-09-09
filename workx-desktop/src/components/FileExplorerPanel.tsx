@@ -164,7 +164,7 @@ export function FileExplorerPanel({ roots, onOpenPath, onClose, width }: FileExp
   return (
     <aside
       style={{ width }}
-      className="flex shrink-0 flex-col border-l border-line bg-app"
+      className="flex shrink-0 flex-col bg-app"
     >
       <div className="flex h-[52px] shrink-0 items-center gap-1 border-b border-line px-3">
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium" title={roots[0]}>
