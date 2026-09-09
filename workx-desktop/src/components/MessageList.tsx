@@ -10,6 +10,7 @@ import {
   ScrollText,
   Sparkles,
   SquareTerminal,
+  Target,
   TriangleAlert,
   Wrench,
   X,
@@ -113,6 +114,7 @@ export function MessageList({
   onRetryWriter,
   onBranch,
 }: MessageListProps) {
+  const { t } = useI18n();
   return (
     <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-7 px-6 pb-10 pt-2">
       {writerConflict ? <WriterConflict onRetry={onRetryWriter} /> : null}
@@ -133,6 +135,12 @@ export function MessageList({
               {entry.text ? (
                 <div className="whitespace-pre-wrap rounded-2xl bg-bubble px-4 py-2.5 text-[16px] leading-[1.5]">
                   {entry.text}
+                </div>
+              ) : null}
+              {entry.goal ? (
+                <div className="flex items-center gap-1.5 text-[12px] text-fg-tertiary">
+                  <Target className="size-3.5" strokeWidth={1.75} />
+                  {t('goal.sentAsGoal')}
                 </div>
               ) : null}
             </div>

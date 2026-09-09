@@ -23,6 +23,11 @@ import type { Thread } from '@protocol/v2/Thread';
 import type { ThreadArchivedNotification } from '@protocol/v2/ThreadArchivedNotification';
 import type { ThreadDeletedNotification } from '@protocol/v2/ThreadDeletedNotification';
 import type { ThreadForkResponse } from '@protocol/v2/ThreadForkResponse';
+import type { ThreadGoal } from '@protocol/v2/ThreadGoal';
+import type { ThreadGoalGetResponse } from '@protocol/v2/ThreadGoalGetResponse';
+import type { ThreadGoalSetResponse } from '@protocol/v2/ThreadGoalSetResponse';
+import type { ThreadGoalStatus } from '@protocol/v2/ThreadGoalStatus';
+import type { ThreadGoalUpdatedNotification } from '@protocol/v2/ThreadGoalUpdatedNotification';
 import type { ThreadItem } from '@protocol/v2/ThreadItem';
 import type { ThreadListResponse } from '@protocol/v2/ThreadListResponse';
 import type { ThreadNameUpdatedNotification } from '@protocol/v2/ThreadNameUpdatedNotification';
@@ -38,7 +43,11 @@ import type { UserInput } from '@protocol/v2/UserInput';
 import type { WarningNotification } from '@protocol/v2/WarningNotification';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
-import { INIT_AGENTS_PROMPT, type ComposerMenuBinding } from '../data/composerMenu';
+import {
+  INIT_AGENTS_PROMPT,
+  type ComposerMenuBinding,
+  type SlashCommandInfo,
+} from '../data/composerMenu';
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
 import { useI18n } from '../lib/i18n';
 import {
@@ -281,6 +290,11 @@ export interface WorkxController {
   skillsLoading: boolean;
   mcpServers: McpServerStatus[];
   mcpLoading: boolean;
+  slashCommands: SlashCommandInfo[];
+  goal: ThreadGoal | null;
+  setGoal: (objective: string) => Promise<ThreadGoal | null>;
+  clearGoal: () => Promise<void>;
+  setGoalStatus: (status: ThreadGoalStatus) => Promise<void>;
   setActiveCwd: (cwd: string) => void;
   newThread: () => Promise<void>;
   newThreadInProject: (projectId: string) => Promise<void>;
@@ -292,6 +306,7 @@ export interface WorkxController {
     text: string,
     bindings?: ComposerMenuBinding[],
     images?: string[],
+    options?: { asGoal?: boolean },
   ) => Promise<void>;
   searchMentionFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
   searchMentionChats: (query: string) => Promise<Thread[]>;
@@ -342,6 +357,9 @@ interface State {
   skillsLoading: boolean;
   mcpServers: McpServerStatus[];
   mcpLoading: boolean;
+  slashCommands: SlashCommandInfo[];
+  goal: ThreadGoal | null;
+  goalTurnIds: string[];
 }
 
 type Action =
@@ -375,7 +393,10 @@ type Action =
   | { type: 'skills'; skills: SkillMetadata[]; errors: SkillErrorInfo[] }
   | { type: 'skillsLoading'; loading: boolean }
   | { type: 'mcp'; servers: McpServerStatus[] }
-  | { type: 'mcpLoading'; loading: boolean };
+  | { type: 'mcpLoading'; loading: boolean }
+  | { type: 'slashCommands'; commands: SlashCommandInfo[] }
+  | { type: 'goal'; goal: ThreadGoal | null }
+  | { type: 'goalTurn'; turnId: string };
 
 const initialState: State = {
   status: 'connecting',
@@ -404,6 +425,9 @@ const initialState: State = {
   skillsLoading: false,
   mcpServers: [],
   mcpLoading: false,
+  slashCommands: [],
+  goal: null,
+  goalTurnIds: [],
 };
 
 function upsertItem(items: ThreadItem[], item: ThreadItem): ThreadItem[] {
@@ -486,6 +510,8 @@ function reducer(state: State, action: Action): State {
         error: null,
         warnings: [],
         approvals: [],
+        goal: null,
+        goalTurnIds: [],
       };
     case 'item': {
       const [turns, turn] = upsertTurn(state.turns, action.turnId);
@@ -615,6 +641,14 @@ function reducer(state: State, action: Action): State {
       return { ...state, mcpServers: action.servers, mcpLoading: false };
     case 'mcpLoading':
       return { ...state, mcpLoading: action.loading };
+    case 'slashCommands':
+      return { ...state, slashCommands: action.commands };
+    case 'goal':
+      return { ...state, goal: action.goal };
+    case 'goalTurn':
+      return state.goalTurnIds.includes(action.turnId)
+        ? state
+        : { ...state, goalTurnIds: [...state.goalTurnIds, action.turnId] };
     default:
       return state;
   }
@@ -715,6 +749,29 @@ export function useWorkx(): WorkxController {
       }
     }
   }, [request]);
+
+  const refreshSlashCommands = useCallback(async () => {
+    const response = await request<{ data: SlashCommandInfo[] }>('slashCommands/list', {});
+    dispatch({ type: 'slashCommands', commands: response.data });
+  }, [request]);
+
+  const loadGoal = useCallback(
+    async (threadId: string) => {
+      try {
+        const response = await request<ThreadGoalGetResponse>('thread/goal/get', {
+          threadId,
+        });
+        if (threadIdRef.current === threadId) {
+          dispatch({ type: 'goal', goal: response.goal });
+        }
+      } catch {
+        if (threadIdRef.current === threadId) {
+          dispatch({ type: 'goal', goal: null });
+        }
+      }
+    },
+    [request],
+  );
 
   const applyConfigRead = useCallback((response: ConfigReadResponse) => {
     const raw =
@@ -1026,8 +1083,9 @@ export function useWorkx(): WorkxController {
         turns: thread.turns.map(turnView),
         writerConflict: writerConflict ? id : null,
       });
+      void loadGoal(thread.id);
     },
-    [request],
+    [loadGoal, request],
   );
 
   const retryActiveThread = useCallback(async () => {
@@ -1054,8 +1112,76 @@ export function useWorkx(): WorkxController {
     [openThread, request],
   );
 
+  const setGoal = useCallback(
+    async (objective: string) => {
+      try {
+        const threadId =
+          threadIdRef.current ??
+          (await (pendingStartRef.current ??
+            startThread(activeProjectIdRef.current ?? undefined)));
+        const response = await request<ThreadGoalSetResponse>('thread/goal/set', {
+          threadId,
+          objective,
+          status: 'active' as ThreadGoalStatus,
+        });
+        dispatch({ type: 'goal', goal: response.goal });
+        return response.goal;
+      } catch (error) {
+        dispatch({
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    },
+    [request, startThread],
+  );
+
+  const clearGoal = useCallback(async () => {
+    const threadId = threadIdRef.current;
+    if (!threadId) {
+      return;
+    }
+    try {
+      await request('thread/goal/clear', { threadId });
+      dispatch({ type: 'goal', goal: null });
+    } catch (error) {
+      dispatch({
+        type: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [request]);
+
+  const setGoalStatus = useCallback(
+    async (status: ThreadGoalStatus) => {
+      const threadId = threadIdRef.current;
+      if (!threadId) {
+        return;
+      }
+      try {
+        const response = await request<ThreadGoalSetResponse>('thread/goal/set', {
+          threadId,
+          status,
+        });
+        dispatch({ type: 'goal', goal: response.goal });
+      } catch (error) {
+        dispatch({
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [request],
+  );
+
   const sendMessage = useCallback(
-    async (text: string, bindings: ComposerMenuBinding[] = [], images: string[] = []) => {
+    async (
+      text: string,
+      bindings: ComposerMenuBinding[] = [],
+      images: string[] = [],
+      options?: { asGoal?: boolean },
+    ) => {
       if (state.writerConflict) {
         return;
       }
@@ -1098,6 +1224,10 @@ export function useWorkx(): WorkxController {
                 images: [...images],
               },
             });
+            if (options?.asGoal && text.trim()) {
+              await setGoal(text);
+              dispatch({ type: 'goalTurn', turnId: activeTurnId });
+            }
             return;
           } catch (steerError) {
             const message =
@@ -1138,8 +1268,12 @@ export function useWorkx(): WorkxController {
         turnId: response.turn.id,
         startedAtMs: Date.now(),
       });
+      if (options?.asGoal && text.trim()) {
+        await setGoal(text);
+        dispatch({ type: 'goalTurn', turnId: response.turn.id });
+      }
     },
-    [request, startThread, state.writerConflict],
+    [request, setGoal, startThread, state.writerConflict],
   );
 
   const searchMentionFiles = useCallback(
@@ -1412,6 +1546,20 @@ export function useWorkx(): WorkxController {
           dispatch({ type: 'warning', message: params.message });
           break;
         }
+        case 'thread/goal/updated': {
+          const params = notification.params as ThreadGoalUpdatedNotification;
+          if (params.threadId === threadIdRef.current) {
+            dispatch({ type: 'goal', goal: params.goal });
+          }
+          break;
+        }
+        case 'thread/goal/cleared': {
+          const params = notification.params as { threadId: string };
+          if (params.threadId === threadIdRef.current) {
+            dispatch({ type: 'goal', goal: null });
+          }
+          break;
+        }
         case 'thread/name/updated': {
           const params = notification.params as ThreadNameUpdatedNotification;
           const thread = threadsRef.current.find((candidate) => candidate.id === params.threadId);
@@ -1521,6 +1669,7 @@ export function useWorkx(): WorkxController {
           refreshProjects(),
           refreshProviders(),
           refreshMcpServers(),
+          refreshSlashCommands(),
         ]);
       } catch (error) {
         dispatch({
@@ -1530,7 +1679,14 @@ export function useWorkx(): WorkxController {
         });
       }
     })();
-  }, [refreshMcpServers, refreshModels, refreshProjects, refreshProviders, refreshThreads]);
+  }, [
+    refreshMcpServers,
+    refreshModels,
+    refreshProjects,
+    refreshProviders,
+    refreshSlashCommands,
+    refreshThreads,
+  ]);
 
   useEffect(() => {
     if (state.status !== 'ready') {
@@ -1571,7 +1727,7 @@ export function useWorkx(): WorkxController {
   }, [state.searchTerm, request]);
 
   const transcript = useMemo(() => {
-    const entries = buildTranscript(state.turns, t);
+    const entries = buildTranscript(state.turns, t, new Set(state.goalTurnIds));
     for (const steer of state.pendingSteers) {
       entries.push({
         kind: 'user',
@@ -1581,7 +1737,7 @@ export function useWorkx(): WorkxController {
       });
     }
     return entries;
-  }, [state.turns, state.pendingSteers, t]);
+  }, [state.goalTurnIds, state.turns, state.pendingSteers, t]);
 
   const projects = useMemo<ProjectView[]>(() => {
     const byProject = new Map<string, Thread[]>();
@@ -1664,6 +1820,11 @@ export function useWorkx(): WorkxController {
     skillsLoading: state.skillsLoading,
     mcpServers: state.mcpServers,
     mcpLoading: state.mcpLoading,
+    slashCommands: state.slashCommands,
+    goal: state.goal,
+    setGoal,
+    clearGoal,
+    setGoalStatus,
     setActiveCwd: (next) => {
       cwdRef.current = next;
       setCwd(next);

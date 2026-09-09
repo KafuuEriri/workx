@@ -5,6 +5,8 @@ import { Composer } from '../components/Composer';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CreateProjectDialog } from '../components/CreateProjectDialog';
 import { FileExplorerPanel } from '../components/FileExplorerPanel';
+import { GoalBanner } from '../components/GoalBanner';
+import { GoalDialog } from '../components/GoalDialog';
 import { MessageList } from '../components/MessageList';
 import { ProviderManagerDialog } from '../components/ProviderManagerDialog';
 import { SettingsDialog } from '../components/SettingsDialog';
@@ -47,6 +49,8 @@ export function App() {
   const [removeTarget, setRemoveTarget] = useState<ProjectView | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ProjectView | null>(null);
   const [exportError, setExportError] = useState(false);
+  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoFollowRef = useRef(true);
 
@@ -172,7 +176,16 @@ export function App() {
     [language, title, workx.transcript],
   );
 
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    window.setTimeout(
+      () => setNotice((current) => (current === message ? null : current)),
+      3500,
+    );
+  }, []);
+
   const runCommand = (id: string, args: string) => {
+    const trimmed = args.trim();
     switch (id) {
       case 'new':
       case 'clear':
@@ -189,9 +202,8 @@ export function App() {
         void workx.initAgentsFile();
         return;
       case 'rename': {
-        const name = args.trim();
-        if (name && workx.activeThread) {
-          void workx.renameThread(workx.activeThread.id, name);
+        if (trimmed && workx.activeThread) {
+          void workx.renameThread(workx.activeThread.id, trimmed);
         }
         return;
       }
@@ -217,7 +229,61 @@ export function App() {
       case 'resume':
         setSearchRequest((request) => request + 1);
         return;
+      case 'goal': {
+        const action = trimmed.toLowerCase();
+        if (!trimmed || action === 'edit') {
+          setGoalDialogOpen(true);
+          return;
+        }
+        if (action === 'clear') {
+          void workx.clearGoal();
+          return;
+        }
+        if (action === 'pause') {
+          void workx.setGoalStatus('paused');
+          return;
+        }
+        if (action === 'resume') {
+          void workx.setGoalStatus('active');
+          return;
+        }
+        void workx.sendMessage(trimmed, [], [], { asGoal: true });
+        return;
+      }
+      case 'copy': {
+        const last = [...workx.transcript]
+          .reverse()
+          .find(
+            (entry): entry is Extract<typeof entry, { kind: 'assistant' }> =>
+              entry.kind === 'assistant' && entry.text.length > 0,
+          );
+        if (!last) {
+          showNotice(t('app.commandNothingToCopy'));
+          return;
+        }
+        void navigator.clipboard.writeText(last.text);
+        showNotice(t('app.commandCopied'));
+        return;
+      }
+      case 'export':
+        void exportChat('markdown');
+        return;
+      case 'fork': {
+        const last = [...workx.transcript]
+          .reverse()
+          .find(
+            (entry): entry is Extract<typeof entry, { kind: 'assistant' }> =>
+              entry.kind === 'assistant',
+          );
+        if (!last) {
+          showNotice(t('app.commandNothingToBranch'));
+          return;
+        }
+        void workx.forkThread(last.turnId);
+        return;
+      }
       default:
+        showNotice(t('app.commandTerminalOnly'));
         return;
     }
   };
@@ -347,6 +413,19 @@ export function App() {
               ) : null}
             </div>
 
+            {workx.goal ? (
+              <div className="shrink-0 pb-2">
+                <GoalBanner
+                  goal={workx.goal}
+                  onClear={() => void workx.clearGoal()}
+                  onTogglePause={() =>
+                    void workx.setGoalStatus(workx.goal?.status === 'paused' ? 'active' : 'paused')
+                  }
+                  onExpand={() => setGoalDialogOpen(true)}
+                />
+              </div>
+            ) : null}
+
             <Composer
               models={workx.models}
               selectedModelId={workx.selectedModelId}
@@ -361,6 +440,7 @@ export function App() {
               skills={workx.skills}
               plugins={plugins}
               mcpServers={workx.mcpServers}
+              commands={workx.slashCommands}
               searchFiles={workx.searchMentionFiles}
               searchChats={workx.searchMentionChats}
               running={workx.running}
@@ -398,6 +478,24 @@ export function App() {
         theme={theme}
         onThemeChange={setTheme}
       />
+
+      <GoalDialog
+        open={goalDialogOpen}
+        goal={workx.goal}
+        onClose={() => setGoalDialogOpen(false)}
+        onSave={async (objective) => {
+          await workx.setGoal(objective);
+        }}
+        onClear={workx.clearGoal}
+      />
+
+      {notice ? (
+        <div className="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2">
+          <div className="rounded-full border border-line bg-elevated px-4 py-2 text-[13px] text-fg-secondary shadow-lg">
+            {notice}
+          </div>
+        </div>
+      ) : null}
 
       <ProviderManagerDialog
         open={providersOpen}

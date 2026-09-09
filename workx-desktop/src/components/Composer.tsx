@@ -22,9 +22,13 @@ import type { PluginSummary } from '@protocol/v2/PluginSummary';
 import type { SkillMetadata } from '@protocol/v2/SkillMetadata';
 import type { Thread } from '@protocol/v2/Thread';
 import {
-  COMPOSER_COMMANDS,
-  type ComposerCommand,
+  commandDescription,
+  commandIcon,
+  commandTitle,
+  findCommand,
+  isVisibleInComposerMenu,
   type ComposerMenuBinding,
+  type SlashCommandInfo,
 } from '../data/composerMenu';
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
 import { cn } from '../lib/cn';
@@ -52,6 +56,7 @@ interface ComposerProps {
   skills: SkillMetadata[];
   plugins: PluginSummary[];
   mcpServers: McpServerStatus[];
+  commands: SlashCommandInfo[];
   searchFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
   searchChats: (query: string) => Promise<Thread[]>;
   running: boolean;
@@ -162,6 +167,7 @@ export function Composer({
   skills,
   plugins,
   mcpServers,
+  commands,
   searchFiles,
   searchChats,
   running,
@@ -171,7 +177,7 @@ export function Composer({
   onCommand,
   onInterrupt,
 }: ComposerProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [value, setValue] = useState('');
   const [modelOpen, setModelOpen] = useState(false);
   const [providerOpen, setProviderOpen] = useState(false);
@@ -378,19 +384,21 @@ export function Composer({
   }, [chatResults, fileResults, mcpServers, plugins, query, skills, t]);
 
   const slashSections = useMemo<ComposerMenuSection[]>(() => {
-    const items: ComposerMenuItem[] = COMPOSER_COMMANDS.filter((command) =>
-      matches([command.id, t(command.titleKey)], query),
-    ).map((command) => ({
-      id: `command:${command.id}`,
-      title: t(command.titleKey),
-      description: t(command.descriptionKey),
-      meta: `/${command.id}`,
-      icon: command.icon,
-      insertText: `/${command.id}`,
-      commandId: command.id,
-    }));
+    const items: ComposerMenuItem[] = commands
+      .filter(isVisibleInComposerMenu)
+      .filter((command) => !running || command.availableDuringTask)
+      .filter((command) => matches([command.name, commandTitle(command, language)], query))
+      .map((command) => ({
+        id: `command:${command.name}`,
+        title: commandTitle(command, language),
+        description: commandDescription(command, language),
+        meta: `/${command.name}`,
+        icon: commandIcon(command.name),
+        insertText: `/${command.name}`,
+        commandId: command.name,
+      }));
     return [{ id: 'commands', label: t('composer.commands'), items }];
-  }, [query, t]);
+  }, [commands, language, query, running, t]);
 
   const sections = menu?.mode === 'slash' ? slashSections : mentionSections;
   const flatItems = useMemo(() => sections.flatMap((section) => section.items), [sections]);
@@ -433,33 +441,33 @@ export function Composer({
     setMenu(detected);
   };
 
-  const runCommand = (command: ComposerCommand, args: string) => {
-    if (command.id === 'model') {
+  const runCommand = (command: SlashCommandInfo, args: string) => {
+    if (command.name === 'model') {
       setModelOpen(true);
       return;
     }
-    if (command.id === 'provider') {
+    if (command.name === 'provider') {
       setProviderOpen(true);
       return;
     }
-    if (command.id === 'permissions') {
+    if (command.name === 'permissions') {
       setPermissionOpen(true);
       return;
     }
-    onCommand(command.id, args);
+    onCommand(command.name, args);
   };
 
   const applyItem = (item: ComposerMenuItem) => {
     if (item.commandId) {
-      const command = COMPOSER_COMMANDS.find((candidate) => candidate.id === item.commandId);
+      const command = findCommand(commands, item.commandId);
       setMenu(null);
       setDismissedKey(null);
       setActiveId(null);
       if (!command) {
         return;
       }
-      if (command.acceptsArgs) {
-        setValue(`/${command.id} `);
+      if (command.supportsInlineArgs) {
+        setValue(`/${command.name} `);
         window.requestAnimationFrame(() => {
           const element = textareaRef.current;
           if (element) {
@@ -521,9 +529,7 @@ export function Composer({
     }
     if (trimmed.startsWith('/') && imagePaths.length === 0) {
       const [name, ...rest] = trimmed.slice(1).split(/\s+/);
-      const command = COMPOSER_COMMANDS.find(
-        (candidate) => candidate.id === name.toLowerCase(),
-      );
+      const command = findCommand(commands, name);
       if (command) {
         setValue('');
         setMenu(null);

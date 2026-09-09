@@ -25,7 +25,7 @@ export interface Activity {
 }
 
 export type TranscriptEntry =
-  | { kind: 'user'; id: string; text: string; images: string[] }
+  | { kind: 'user'; id: string; text: string; images: string[]; goal?: boolean }
   | {
       kind: 'assistant';
       id: string;
@@ -138,20 +138,28 @@ export function activityFromItem(item: ThreadItem, t: Translate): Activity | nul
   }
 }
 
-export function buildTranscript(turns: TurnView[], t: Translate): TranscriptEntry[] {
+export function buildTranscript(
+  turns: TurnView[],
+  t: Translate,
+  goalTurnIds: ReadonlySet<string> = new Set(),
+): TranscriptEntry[] {
   const entries: TranscriptEntry[] = [];
 
   for (const turn of turns) {
     const activities: Activity[] = [];
     let assistantEntry: Extract<TranscriptEntry, { kind: 'assistant' }> | null = null;
+    let goalMarked = false;
 
     for (const item of turn.items) {
       if (item.type === 'userMessage') {
+        const isGoal: boolean = goalTurnIds.has(turn.id) && !goalMarked;
+        goalMarked = goalMarked || isGoal;
         entries.push({
           kind: 'user',
           id: item.id,
           text: textFromUserInput(item.content),
           images: imagesFromUserInput(item.content),
+          goal: isGoal,
         });
         continue;
       }
