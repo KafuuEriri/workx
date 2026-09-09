@@ -1,4 +1,5 @@
 import type { ThreadItem } from '@protocol/v2/ThreadItem';
+import type { FileUpdateChange } from '@protocol/v2/FileUpdateChange';
 import type { TurnStatus } from '@protocol/v2/TurnStatus';
 import type { UserInput } from '@protocol/v2/UserInput';
 import type { MessageKey } from '../lib/i18n';
@@ -22,6 +23,7 @@ export interface Activity {
   detail?: string;
   status?: string;
   active: boolean;
+  changes?: FileUpdateChange[];
 }
 
 export type TranscriptEntry =
@@ -86,6 +88,7 @@ export function activityFromItem(item: ThreadItem, t: Translate): Activity | nul
         detail: item.changes.map((change) => change.path).join(', '),
         status: item.status,
         active: item.status === 'inProgress',
+        changes: item.changes,
       };
     case 'mcpToolCall':
       return {

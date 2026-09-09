@@ -5,6 +5,15 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
 import { registerAppServerIpc } from './main/appServer/ipc';
+import {
+  gitCommit,
+  gitDiff,
+  gitPush,
+  gitRevertFile,
+  gitStage,
+  gitStatus,
+  gitUnstage,
+} from './main/git';
 
 app.setName('Workx');
 app.setAboutPanelOptions({ applicationName: 'Workx', applicationVersion: app.getVersion() });
@@ -292,4 +301,97 @@ ipcMain.handle('workx:set-theme', (_event, theme: ThemeSource) => {
     nativeTheme.themeSource = theme;
   }
   return nativeTheme.themeSource;
+});
+
+ipcMain.handle('workx:git-status', (_event, cwd: string) => {
+  if (typeof cwd !== 'string' || cwd.length === 0) {
+    return { isRepo: false, root: null, branch: null, files: [] };
+  }
+  return gitStatus(cwd);
+});
+
+ipcMain.handle(
+  'workx:git-diff',
+  (_event, cwd: string, scope: 'unstaged' | 'staged', filePath: string) => {
+    if (typeof cwd !== 'string' || typeof filePath !== 'string') {
+      return { diff: '', error: 'invalid arguments' };
+    }
+    return gitDiff(cwd, scope === 'staged' ? 'staged' : 'unstaged', filePath);
+  },
+);
+
+ipcMain.handle('workx:git-stage', (_event, cwd: string, filePath: string) => {
+  if (typeof cwd !== 'string' || typeof filePath !== 'string') {
+    return { ok: false, stdout: '', stderr: 'invalid arguments' };
+  }
+  return gitStage(cwd, filePath);
+});
+
+ipcMain.handle('workx:git-unstage', (_event, cwd: string, filePath: string) => {
+  if (typeof cwd !== 'string' || typeof filePath !== 'string') {
+    return { ok: false, stdout: '', stderr: 'invalid arguments' };
+  }
+  return gitUnstage(cwd, filePath);
+});
+
+ipcMain.handle(
+  'workx:git-revert-file',
+  (_event, cwd: string, filePath: string, untracked: boolean) => {
+    if (typeof cwd !== 'string' || typeof filePath !== 'string') {
+      return { ok: false, stdout: '', stderr: 'invalid arguments' };
+    }
+    return gitRevertFile(cwd, filePath, Boolean(untracked));
+  },
+);
+
+ipcMain.handle('workx:git-commit', (_event, cwd: string, message: string) => {
+  if (typeof cwd !== 'string' || typeof message !== 'string' || message.trim().length === 0) {
+    return { ok: false, stdout: '', stderr: 'invalid arguments' };
+  }
+  return gitCommit(cwd, message.trim());
+});
+
+ipcMain.handle('workx:git-push', (_event, cwd: string) => {
+  if (typeof cwd !== 'string' || cwd.length === 0) {
+    return { ok: false, stdout: '', stderr: 'invalid arguments' };
+  }
+  return gitPush(cwd);
+});
+
+ipcMain.handle('workx:read-text-file', async (_event, target: string): Promise<string | null> => {
+  if (typeof target !== 'string' || target.length === 0) {
+    return null;
+  }
+  try {
+    return await readFile(target, 'utf8');
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle(
+  'workx:write-text-file',
+  async (_event, target: string, content: string): Promise<boolean> => {
+    if (typeof target !== 'string' || typeof content !== 'string') {
+      return false;
+    }
+    try {
+      await writeFile(target, content, 'utf8');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+);
+
+ipcMain.handle('workx:delete-file', async (_event, target: string): Promise<boolean> => {
+  if (typeof target !== 'string' || target.length === 0) {
+    return false;
+  }
+  try {
+    await rm(target, { force: true });
+    return true;
+  } catch {
+    return false;
+  }
 });

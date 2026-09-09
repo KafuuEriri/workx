@@ -26,6 +26,33 @@ export interface DirectoryEntry {
   isDirectory: boolean;
 }
 
+export interface GitFileStatus {
+  path: string;
+  code: string;
+  staged: boolean;
+  unstaged: boolean;
+  untracked: boolean;
+  deleted: boolean;
+}
+
+export interface GitStatusResult {
+  isRepo: boolean;
+  root: string | null;
+  branch: string | null;
+  files: GitFileStatus[];
+}
+
+export interface GitDiffResult {
+  diff: string;
+  error: string | null;
+}
+
+export interface GitCommandResult {
+  ok: boolean;
+  stdout: string;
+  stderr: string;
+}
+
 export interface AppServerApi {
   start: () => Promise<{ ok: boolean; info?: InitializeResponse; message?: string }>;
   request: <T = unknown>(method: string, params?: unknown) => Promise<T>;
@@ -96,6 +123,30 @@ const api = {
   exportPdf: (html: string, suggestedName: string): Promise<{ path: string } | null> =>
     ipcRenderer.invoke('workx:export-pdf', html, suggestedName),
   getCwd: (): Promise<string> => ipcRenderer.invoke('workx:get-cwd'),
+  gitStatus: (cwd: string): Promise<GitStatusResult> =>
+    ipcRenderer.invoke('workx:git-status', cwd),
+  gitDiff: (
+    cwd: string,
+    scope: 'unstaged' | 'staged',
+    filePath: string,
+  ): Promise<GitDiffResult> => ipcRenderer.invoke('workx:git-diff', cwd, scope, filePath),
+  gitStage: (cwd: string, filePath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke('workx:git-stage', cwd, filePath),
+  gitUnstage: (cwd: string, filePath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke('workx:git-unstage', cwd, filePath),
+  gitRevertFile: (
+    cwd: string,
+    filePath: string,
+    untracked: boolean,
+  ): Promise<GitCommandResult> => ipcRenderer.invoke('workx:git-revert-file', cwd, filePath, untracked),
+  gitCommit: (cwd: string, message: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke('workx:git-commit', cwd, message),
+  gitPush: (cwd: string): Promise<GitCommandResult> => ipcRenderer.invoke('workx:git-push', cwd),
+  readTextFile: (target: string): Promise<string | null> =>
+    ipcRenderer.invoke('workx:read-text-file', target),
+  writeTextFile: (target: string, content: string): Promise<boolean> =>
+    ipcRenderer.invoke('workx:write-text-file', target, content),
+  deleteFile: (target: string): Promise<boolean> => ipcRenderer.invoke('workx:delete-file', target),
   appServer,
 };
 

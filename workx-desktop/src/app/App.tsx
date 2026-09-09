@@ -13,7 +13,9 @@ import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar, threadTitle } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { McpPanel, PluginsPanel, SkillsPanel } from '../components/WorkxPanels';
+import type { FileUpdateChange } from '@protocol/v2/FileUpdateChange';
 import type { NavKey } from '../data/workspace';
+import { relativeTo, reverseApplyUnifiedDiff } from '../lib/diff';
 import { buildExportHtml, buildMarkdown, exportFileName } from '../lib/export';
 import {
   applyTheme,
@@ -183,6 +185,38 @@ export function App() {
       3500,
     );
   }, []);
+
+  const undoFileChange = useCallback(
+    async (change: FileUpdateChange) => {
+      const target = change.path.startsWith('/')
+        ? change.path
+        : `${activeCwd.replace(/\/+$/, '')}/${change.path}`;
+      if (change.kind.type === 'add') {
+        const ok = await window.workx.deleteFile(target);
+        showNotice(ok ? t('fileChange.undone') : t('fileChange.undoFailed'));
+        return;
+      }
+      if (change.kind.type === 'delete') {
+        const ok = await window.workx.writeTextFile(target, change.diff);
+        showNotice(ok ? t('fileChange.undone') : t('fileChange.undoFailed'));
+        return;
+      }
+      const current = await window.workx.readTextFile(target);
+      const reverted = current === null ? null : reverseApplyUnifiedDiff(current, change.diff);
+      if (reverted === null) {
+        const result = await window.workx.gitRevertFile(
+          activeCwd,
+          relativeTo(activeCwd, change.path),
+          false,
+        );
+        showNotice(result.ok ? t('fileChange.undone') : result.stderr || t('fileChange.undoFailed'));
+        return;
+      }
+      const ok = await window.workx.writeTextFile(target, reverted);
+      showNotice(ok ? t('fileChange.undone') : t('fileChange.undoFailed'));
+    },
+    [activeCwd, showNotice, t],
+  );
 
   const runCommand = (id: string, args: string) => {
     const trimmed = args.trim();
@@ -398,6 +432,7 @@ export function App() {
                   onDismissError={workx.dismissError}
                   onRetryWriter={() => void workx.retryActiveThread()}
                   onBranch={(turnId) => void workx.forkThread(turnId)}
+                  onUndoFileChange={undoFileChange}
                 />
               </div>
 

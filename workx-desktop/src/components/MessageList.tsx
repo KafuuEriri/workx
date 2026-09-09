@@ -18,9 +18,11 @@ import {
 import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
 
 import type { ApprovalRequest } from '../app/useWorkx';
+import type { FileUpdateChange } from '@protocol/v2/FileUpdateChange';
 import type { Activity, ActivityIcon, TranscriptEntry } from '../app/transcript';
 import { cn } from '../lib/cn';
 import { useI18n, type MessageKey } from '../lib/i18n';
+import { FileChangeCard } from './FileChangeCard';
 import { Markdown } from './Markdown';
 
 const ACTIVITY_ICONS: Record<ActivityIcon, ComponentType<SVGProps<SVGSVGElement>>> = {
@@ -99,6 +101,7 @@ interface MessageListProps {
   onDismissError: () => void;
   onRetryWriter: () => void;
   onBranch: (turnId: string) => void;
+  onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
 }
 
 export function MessageList({
@@ -113,6 +116,7 @@ export function MessageList({
   onDismissError,
   onRetryWriter,
   onBranch,
+  onUndoFileChange,
 }: MessageListProps) {
   const { t } = useI18n();
   return (
@@ -146,7 +150,13 @@ export function MessageList({
             </div>
           </div>
         ) : (
-          <AssistantTurn key={entry.id} entry={entry} onBranch={onBranch} />
+          <AssistantTurn
+            key={entry.id}
+            entry={entry}
+            cwd={cwd}
+            onBranch={onBranch}
+            onUndoFileChange={onUndoFileChange}
+          />
         ),
       )}
 
@@ -196,15 +206,25 @@ function WriterConflict({ onRetry }: { onRetry: () => void }) {
 
 function AssistantTurn({
   entry,
+  cwd,
   onBranch,
+  onUndoFileChange,
 }: {
   entry: Extract<TranscriptEntry, { kind: 'assistant' }>;
+  cwd: string;
   onBranch: (turnId: string) => void;
+  onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const hasActivities = entry.activities.length > 0;
+  const fileActivities = entry.activities.filter(
+    (activity) => activity.changes && activity.changes.length > 0,
+  );
+  const otherActivities = entry.activities.filter(
+    (activity) => !activity.changes || activity.changes.length === 0,
+  );
+  const hasActivities = otherActivities.length > 0;
 
   const copy = () => {
     void navigator.clipboard.writeText(entry.text).then(() => {
@@ -241,10 +261,15 @@ function AssistantTurn({
 
       {open && hasActivities ? (
         <div className="mt-2.5">
-          <p className="text-[14px] text-fg-secondary">{summarize(entry.activities, t)}</p>
+          <p className="text-[14px] text-fg-secondary">{summarize(otherActivities, t)}</p>
           <div className="mt-1.5 flex flex-col gap-px">
-            {entry.activities.map((activity) => (
-              <ActivityRow key={activity.id} activity={activity} />
+            {otherActivities.map((activity) => (
+              <ActivityRow
+                key={activity.id}
+                activity={activity}
+                cwd={cwd}
+                onUndoFileChange={onUndoFileChange}
+              />
             ))}
           </div>
         </div>
@@ -257,6 +282,19 @@ function AssistantTurn({
       ) : entry.active ? (
         <div className="mt-3">
           <Thinking />
+        </div>
+      ) : null}
+
+      {fileActivities.length > 0 ? (
+        <div className="mt-2">
+          {fileActivities.map((activity) => (
+            <ActivityRow
+              key={activity.id}
+              activity={activity}
+              cwd={cwd}
+              onUndoFileChange={onUndoFileChange}
+            />
+          ))}
         </div>
       ) : null}
 
@@ -298,8 +336,30 @@ function AssistantTurn({
   );
 }
 
-function ActivityRow({ activity }: { activity: Activity }) {
+function ActivityRow({
+  activity,
+  cwd,
+  onUndoFileChange,
+}: {
+  activity: Activity;
+  cwd: string;
+  onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
+}) {
   const Icon = ACTIVITY_ICONS[activity.icon];
+  if (activity.changes && activity.changes.length > 0) {
+    return (
+      <div>
+        {activity.changes.map((change) => (
+          <FileChangeCard
+            key={`${activity.id}-${change.path}`}
+            change={change}
+            cwd={cwd}
+            onUndo={onUndoFileChange}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       className={cn(
