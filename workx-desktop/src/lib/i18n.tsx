@@ -57,6 +57,11 @@ const en = {
   'topbar.disconnected': 'Disconnected',
   'topbar.stopped': 'Stopped',
   'topbar.share': 'Share',
+  'topbar.exportPdf': 'Export as PDF',
+  'topbar.exportMarkdown': 'Export as Markdown',
+  'topbar.exportPdfDescription': 'Save this chat as a PDF file',
+  'topbar.exportMarkdownDescription': 'Save this chat as a Markdown file',
+  'topbar.exportFailed': "Couldn't export this chat.",
   'topbar.toggleSplit': 'Toggle split view',
   'topbar.toggleSidePanel': 'Toggle side panel',
 
@@ -110,6 +115,8 @@ const en = {
   'message.emptySuffix': '.',
   'message.currentDirectory': 'the current directory',
   'message.scrollToBottom': 'Scroll to bottom',
+  'export.user': 'User',
+  'export.workx': 'Workx',
   'approval.runCommand': 'Run a command',
   'approval.applyFileChanges': 'Apply file changes',
 
@@ -286,6 +293,11 @@ const zh: Record<MessageKey, string> = {
   'topbar.disconnected': '已断开',
   'topbar.stopped': '已停止',
   'topbar.share': '分享',
+  'topbar.exportPdf': '导出为 PDF',
+  'topbar.exportMarkdown': '导出为 Markdown',
+  'topbar.exportPdfDescription': '将本次对话保存为 PDF 文件',
+  'topbar.exportMarkdownDescription': '将本次对话保存为 Markdown 文件',
+  'topbar.exportFailed': '导出失败。',
   'topbar.toggleSplit': '切换分屏视图',
   'topbar.toggleSidePanel': '切换侧边栏',
 
@@ -339,6 +351,8 @@ const zh: Record<MessageKey, string> = {
   'message.emptySuffix': ' 中工作。',
   'message.currentDirectory': '当前目录',
   'message.scrollToBottom': '滚动到底部',
+  'export.user': '用户',
+  'export.workx': 'Workx',
   'approval.runCommand': '运行命令',
   'approval.applyFileChanges': '应用文件修改',
 

@@ -1,4 +1,4 @@
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, TriangleAlert } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Composer } from '../components/Composer';
@@ -10,6 +10,7 @@ import { Sidebar, threadTitle } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { McpPanel, PluginsPanel, SkillsPanel } from '../components/WorkxPanels';
 import type { NavKey } from '../data/workspace';
+import { buildExportHtml, buildMarkdown, exportFileName } from '../lib/export';
 import {
   applyTheme,
   readStoredTheme,
@@ -26,7 +27,7 @@ const PANEL_TITLES: Partial<Record<NavKey, MessageKey>> = {
 };
 
 export function App() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const workx = useWorkx();
   const [theme, setTheme] = useState<ThemePreference>(readStoredTheme);
   const [activeNav, setActiveNav] = useState<NavKey | null>(null);
@@ -39,6 +40,7 @@ export function App() {
   } | null>(null);
   const [removeTarget, setRemoveTarget] = useState<ProjectView | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ProjectView | null>(null);
+  const [exportError, setExportError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,6 +116,38 @@ export function App() {
     (activeThread ? threadTitle(activeThread, t('common.newChat')) : t('common.newChat'));
 
   const plugins = workx.pluginMarketplaces.flatMap((marketplace) => marketplace.plugins);
+
+  useEffect(() => {
+    if (!exportError) {
+      return;
+    }
+    const timer = window.setTimeout(() => setExportError(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [exportError]);
+
+  const exportChat = useCallback(
+    async (format: 'pdf' | 'markdown') => {
+      const entries = workx.transcript;
+      if (entries.length === 0) {
+        return;
+      }
+      const baseName = exportFileName(title);
+      try {
+        if (format === 'markdown') {
+          await window.workx.saveMarkdown(
+            buildMarkdown(title, entries, language),
+            `${baseName}.md`,
+          );
+        } else {
+          await window.workx.exportPdf(buildExportHtml(title, entries, language), `${baseName}.pdf`);
+        }
+        setExportError(false);
+      } catch {
+        setExportError(true);
+      }
+    },
+    [language, title, workx.transcript],
+  );
 
   const runCommand = (id: string, args: string) => {
     switch (id) {
@@ -215,6 +249,9 @@ export function App() {
           title={title}
           subtitle={panel ? null : activeCwd}
           status={workx.status}
+          exportDisabled={workx.transcript.length === 0}
+          onExportPdf={() => void exportChat('pdf')}
+          onExportMarkdown={() => void exportChat('markdown')}
         />
 
         {panel ? (
@@ -361,6 +398,16 @@ export function App() {
           }
         }}
       />
+
+      {exportError ? (
+        <div
+          role="alert"
+          className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 rounded-lg border border-danger/30 bg-elevated px-3.5 py-2 text-[13px] shadow-lg"
+        >
+          <TriangleAlert className="size-4 text-danger" strokeWidth={1.75} />
+          {t('topbar.exportFailed')}
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={archiveTarget !== null}

@@ -7,10 +7,17 @@ interface MenuProps {
   open: boolean;
   onClose: () => void;
   align?: 'left' | 'right';
+  placement?: 'top' | 'bottom';
   children: ReactNode;
 }
 
-export function Menu({ open, onClose, align = 'left', children }: MenuProps) {
+export function Menu({
+  open,
+  onClose,
+  align = 'left',
+  placement = 'top',
+  children,
+}: MenuProps) {
   useEffect(() => {
     if (!open) {
       return;
@@ -33,7 +40,8 @@ export function Menu({ open, onClose, align = 'left', children }: MenuProps) {
       <div className="fixed inset-0 z-40" onMouseDown={onClose} />
       <div
         className={cn(
-          'absolute bottom-full z-50 mb-2 min-w-[280px] rounded-xl border border-line bg-elevated p-1 shadow-xl',
+          'absolute z-50 min-w-[280px] rounded-xl border border-line bg-elevated p-1 shadow-xl',
+          placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
           align === 'right' ? 'right-0' : 'left-0',
         )}
       >

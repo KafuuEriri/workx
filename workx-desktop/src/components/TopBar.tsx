@@ -1,8 +1,10 @@
-import { Columns2, FileText, MoreHorizontal, PanelRight, Share2 } from 'lucide-react';
+import { ChevronDown, Columns2, FileText, MoreHorizontal, PanelRight, Share2 } from 'lucide-react';
+import { useState } from 'react';
 
 import { cn } from '../lib/cn';
 import { useI18n, type MessageKey } from '../lib/i18n';
 import { IconButton } from './IconButton';
+import { Menu, MenuItem } from './Menu';
 
 export type ConnectionStatus = 'connecting' | 'ready' | 'error' | 'stopped';
 
@@ -10,6 +12,9 @@ interface TopBarProps {
   title: string;
   subtitle?: string | null;
   status: ConnectionStatus;
+  exportDisabled?: boolean;
+  onExportPdf: () => void;
+  onExportMarkdown: () => void;
 }
 
 const STATUS_STYLE: Record<ConnectionStatus, { dot: string; labelKey: MessageKey }> = {
@@ -19,8 +24,16 @@ const STATUS_STYLE: Record<ConnectionStatus, { dot: string; labelKey: MessageKey
   stopped: { dot: 'bg-fg-tertiary', labelKey: 'topbar.stopped' },
 };
 
-export function TopBar({ title, subtitle, status }: TopBarProps) {
+export function TopBar({
+  title,
+  subtitle,
+  status,
+  exportDisabled = false,
+  onExportPdf,
+  onExportMarkdown,
+}: TopBarProps) {
   const { t } = useI18n();
+  const [shareOpen, setShareOpen] = useState(false);
   const statusStyle = STATUS_STYLE[status];
   return (
     <header className="drag flex h-[52px] shrink-0 items-center gap-2 px-3">
@@ -38,13 +51,44 @@ export function TopBar({ title, subtitle, status }: TopBarProps) {
           <span className={cn('size-1.5 rounded-full', statusStyle.dot)} />
           {t(statusStyle.labelKey)}
         </div>
-        <button
-          type="button"
-          className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover"
-        >
-          <Share2 className="size-3.5" strokeWidth={1.75} />
-          {t('topbar.share')}
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            disabled={exportDisabled}
+            onClick={() => setShareOpen((value) => !value)}
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <Share2 className="size-3.5" strokeWidth={1.75} />
+            {t('topbar.share')}
+            <ChevronDown
+              className={cn('size-3 transition-transform', shareOpen && 'rotate-180')}
+              strokeWidth={1.75}
+            />
+          </button>
+          <Menu
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+            align="right"
+            placement="bottom"
+          >
+            <MenuItem
+              title={t('topbar.exportPdf')}
+              description={t('topbar.exportPdfDescription')}
+              onClick={() => {
+                setShareOpen(false);
+                onExportPdf();
+              }}
+            />
+            <MenuItem
+              title={t('topbar.exportMarkdown')}
+              description={t('topbar.exportMarkdownDescription')}
+              onClick={() => {
+                setShareOpen(false);
+                onExportMarkdown();
+              }}
+            />
+          </Menu>
+        </div>
         <IconButton size="sm" aria-label={t('topbar.toggleSplit')}>
           <Columns2 className="size-4" strokeWidth={1.75} />
         </IconButton>

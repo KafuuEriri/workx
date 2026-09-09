@@ -77,6 +77,10 @@ const api = {
   getTheme: (): Promise<ThemeSource> => ipcRenderer.invoke('workx:get-theme'),
   setTheme: (theme: ThemeSource): Promise<ThemeSource> =>
     ipcRenderer.invoke('workx:set-theme', theme),
+  saveMarkdown: (content: string, suggestedName: string): Promise<{ path: string } | null> =>
+    ipcRenderer.invoke('workx:save-markdown', content, suggestedName),
+  exportPdf: (html: string, suggestedName: string): Promise<{ path: string } | null> =>
+    ipcRenderer.invoke('workx:export-pdf', html, suggestedName),
   getCwd: (): Promise<string> => ipcRenderer.invoke('workx:get-cwd'),
   appServer,
 };

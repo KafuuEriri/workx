@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
+import { rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
@@ -87,6 +88,58 @@ ipcMain.handle('workx:pick-folder', async () => {
 });
 
 ipcMain.handle('workx:get-theme', () => nativeTheme.themeSource);
+
+ipcMain.handle(
+  'workx:save-markdown',
+  async (_event, content: string, suggestedName: string): Promise<{ path: string } | null> => {
+    if (typeof content !== 'string') {
+      return null;
+    }
+    const result = await dialog.showSaveDialog({
+      defaultPath: suggestedName,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    });
+    if (result.canceled || !result.filePath) {
+      return null;
+    }
+    await writeFile(result.filePath, content, 'utf8');
+    return { path: result.filePath };
+  },
+);
+
+ipcMain.handle(
+  'workx:export-pdf',
+  async (_event, html: string, suggestedName: string): Promise<{ path: string } | null> => {
+    if (typeof html !== 'string') {
+      return null;
+    }
+    const result = await dialog.showSaveDialog({
+      defaultPath: suggestedName,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (result.canceled || !result.filePath) {
+      return null;
+    }
+    const tempPath = path.join(app.getPath('temp'), `workx-export-${Date.now()}.html`);
+    await writeFile(tempPath, html, 'utf8');
+    const printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: true, javascript: false },
+    });
+    try {
+      await printWindow.loadFile(tempPath);
+      const pdf = await printWindow.webContents.printToPDF({
+        printBackground: true,
+        pageSize: 'A4',
+      });
+      await writeFile(result.filePath, pdf);
+    } finally {
+      printWindow.destroy();
+      await rm(tempPath, { force: true });
+    }
+    return { path: result.filePath };
+  },
+);
 
 ipcMain.handle('workx:set-theme', (_event, theme: ThemeSource) => {
   if (theme === 'light' || theme === 'dark' || theme === 'system') {
