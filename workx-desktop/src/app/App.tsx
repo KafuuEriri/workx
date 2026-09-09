@@ -228,6 +228,7 @@ export function App() {
         projects={workx.projects}
         recents={workx.recents}
         activeThreadId={activeThread?.id ?? null}
+        draft={workx.draft}
         onSelectThread={(id) => {
           setActiveNav(null);
           void workx.openThread(id);
@@ -338,6 +339,7 @@ export function App() {
             </div>
 
             <Composer
+              key={workx.composerKey}
               models={workx.models}
               selectedModelId={workx.selectedModelId}
               onModelChange={workx.selectModel}
@@ -358,8 +360,9 @@ export function App() {
                 workx.writerConflict ? t('composer.openElsewhere') : undefined
               }
               onSubmit={(text, bindings) => {
-                void workx.sendMessage(text, bindings);
+                const sending = workx.sendMessage(text, bindings);
                 window.requestAnimationFrame(scrollToBottom);
+                return sending;
               }}
               onCommand={runCommand}
               onInterrupt={() => void workx.interrupt()}

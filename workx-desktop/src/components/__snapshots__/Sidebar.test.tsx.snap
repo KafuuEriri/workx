@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`shows a new project draft immediately and replaces it with the persisted thread > project draft 1`] = `"<div role="status" aria-current="true" class="flex h-[30px] items-center rounded-lg bg-active pr-8 text-[13px] text-fg pl-[38px]"><span class="truncate">New chat</span></div>"`;

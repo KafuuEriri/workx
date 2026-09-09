@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`composer IME input > keeps the draft on failure and prevents duplicate sends while initialization is pending > pending message 1`] = `"<textarea rows="1" placeholder="Do anything" class="max-h-[240px] w-full resize-none bg-transparent px-4 pt-3.5 text-[16px] leading-[1.5] outline-none placeholder:text-fg-tertiary disabled:opacity-60" style="height: 0px;" readonly="">保留草稿</textarea>"`;

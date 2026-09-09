@@ -54,7 +54,7 @@ interface ComposerProps {
   running: boolean;
   disabled: boolean;
   disabledPlaceholder?: string;
-  onSubmit: (text: string, bindings: ComposerMenuBinding[]) => void;
+  onSubmit: (text: string, bindings: ComposerMenuBinding[]) => void | Promise<void>;
   onCommand: (id: string, args: string) => void;
   onInterrupt: () => void;
 }
@@ -148,6 +148,8 @@ export function Composer({
 }: ComposerProps) {
   const { t } = useI18n();
   const [value, setValue] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [modelOpen, setModelOpen] = useState(false);
   const [providerOpen, setProviderOpen] = useState(false);
   const [permissionOpen, setPermissionOpen] = useState(false);
@@ -362,6 +364,9 @@ export function Composer({
   };
 
   const applyItem = (item: ComposerMenuItem) => {
+    if (submittingRef.current) {
+      return;
+    }
     if (item.commandId) {
       const command = COMPOSER_COMMANDS.find((candidate) => candidate.id === item.commandId);
       setMenu(null);
@@ -425,9 +430,9 @@ export function Composer({
     setActiveId(flatItems[next]?.id ?? null);
   };
 
-  const submit = () => {
+  const submit = async () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled || composingRef.current) {
+    if (!trimmed || disabled || composingRef.current || submittingRef.current) {
       return;
     }
     if (trimmed.startsWith('/')) {
@@ -445,10 +450,19 @@ export function Composer({
     const bindings = [...bindingsRef.current.entries()]
       .filter(([token]) => trimmed.includes(token))
       .map(([, binding]) => binding);
-    bindingsRef.current.clear();
-    setValue('');
-    setMenu(null);
-    onSubmit(trimmed, bindings);
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await onSubmit(trimmed, bindings);
+      bindingsRef.current.clear();
+      setValue('');
+      setMenu(null);
+    } catch {
+      // The controller displays the error; keep the draft available for retry.
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -456,7 +470,7 @@ export function Composer({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          submit();
+          void submit();
         }}
         className="relative mx-auto w-full max-w-[42rem] rounded-3xl border border-line bg-composer shadow-[var(--elevation-composer)] transition-colors focus-within:border-line-strong"
       >
@@ -475,8 +489,10 @@ export function Composer({
         <textarea
           ref={textareaRef}
           rows={1}
+          autoFocus
           value={value}
           disabled={disabled}
+          readOnly={submitting}
           onCompositionStart={() => {
             composingRef.current = true;
           }}
@@ -492,7 +508,10 @@ export function Composer({
           onKeyDown={(event) => {
             // IME confirmation/navigation belongs to the input method, including
             // browsers that end composition before dispatching the Enter key.
-            if (composingRef.current || event.nativeEvent.isComposing || event.keyCode === 229) {
+            if (
+              submittingRef.current || composingRef.current ||
+              event.nativeEvent.isComposing || event.keyCode === 229
+            ) {
               return;
             }
             if (menu && flatItems.length > 0) {
@@ -651,7 +670,7 @@ export function Composer({
               <button
                 type="submit"
                 aria-label={t('composer.send')}
-                disabled={value.trim().length === 0 || disabled}
+                disabled={value.trim().length === 0 || disabled || submitting}
                 className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
               >
                 <ArrowUp className="size-4" strokeWidth={2} />

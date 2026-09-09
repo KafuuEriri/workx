@@ -31,6 +31,7 @@ import { cn } from '../lib/cn';
 import { useI18n } from '../lib/i18n';
 import { IconButton } from './IconButton';
 import { ProjectHoverCard } from './ProjectHoverCard';
+import { DraftThreadRow } from './DraftThreadRow';
 
 const NAV_ICONS: Record<NavKey, ComponentType<SVGProps<SVGSVGElement>>> = {
   'new-chat': SquarePen,
@@ -53,6 +54,7 @@ interface SidebarProps {
   projects: ProjectView[];
   recents: Thread[];
   activeThreadId: string | null;
+  draft: { projectId: string | null } | null;
   onSelectThread: (id: string) => void;
   onSelectProject: (projectId: string) => void;
   onNewChatInProject: (projectId: string) => void;
@@ -88,6 +90,7 @@ export function Sidebar({
   projects,
   recents,
   activeThreadId,
+  draft,
   onSelectThread,
   onSelectProject,
   onNewChatInProject,
@@ -123,16 +126,13 @@ export function Sidebar({
   }, [searchRequest]);
 
   useEffect(() => {
-    if (!activeThreadId) {
-      return;
-    }
-    const project = projects.find((candidate) =>
+    const projectId = draft?.projectId ?? projects.find((candidate) =>
       candidate.threads.some((thread) => thread.id === activeThreadId),
-    );
-    if (project) {
-      setExpandedProjects(new Set([project.id]));
+    )?.id;
+    if (projectId) {
+      setExpandedProjects(new Set([projectId]));
     }
-  }, [activeThreadId, projects]);
+  }, [activeThreadId, draft, projects]);
 
   const closeSearch = () => {
     setSearchOpen(false);
@@ -287,8 +287,9 @@ export function Sidebar({
                   onAdd={onNewChat}
                   onMore={() => setProjectsMenuOpen((value) => !value)}
                 >
+                  {draft ? <DraftThreadRow /> : null}
                   {flatThreads.map((thread) => renderThread(thread))}
-                  {flatThreads.length === 0 ? (
+                  {flatThreads.length === 0 && !draft ? (
                     <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">
                       {t('sidebar.noChats')}
                     </p>
@@ -301,7 +302,7 @@ export function Sidebar({
                   onMore={() => setProjectsMenuOpen((value) => !value)}
                 >
                   {visibleProjects.map((project) => {
-                    const expanded = expandedProjects.has(project.id);
+                    const expanded = expandedProjects.has(project.id) || draft?.projectId === project.id;
                     return (
                       <div key={project.id}>
                         <ProjectRow
@@ -314,6 +315,7 @@ export function Sidebar({
                           onRemove={() => onRemoveProject(project)}
                         />
 
+                        {draft?.projectId === project.id ? <DraftThreadRow indent /> : null}
                         {expanded
                           ? project.threads
                               .slice(0, PROJECT_THREAD_LIMIT)
@@ -389,8 +391,9 @@ export function Sidebar({
 
             {organize === 'project' ? (
               <SidebarSection label={t('sidebar.recents')} onAdd={onNewChat}>
+                {draft?.projectId === null ? <DraftThreadRow /> : null}
                 {recents.map((thread) => renderThread(thread))}
-                {recents.length === 0 ? (
+                {recents.length === 0 && draft?.projectId !== null ? (
                   <p className="px-2.5 py-1 text-[13px] text-fg-tertiary">
                     {t('sidebar.noChats')}
                   </p>

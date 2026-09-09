@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PERMISSION_MODES } from '../data/workspace';
@@ -26,7 +26,7 @@ function setup() {
 }
 
 describe('composer IME input', () => {
-  it('keeps the confirmed Chinese text until a subsequent Enter sends it', () => {
+  it('keeps the confirmed Chinese text until a subsequent Enter sends it', async () => {
     const { input, onSubmit } = setup();
     fireEvent.compositionStart(input);
     fireEvent.change(input, { target: { value: '你好' } });
@@ -34,7 +34,7 @@ describe('composer IME input', () => {
     expect(onSubmit).not.toHaveBeenCalled();
     expect(input.value).toBe('你好');
     fireEvent.compositionEnd(input);
-    fireEvent.keyDown(input, { key: 'Enter' });
+    await act(async () => { fireEvent.keyDown(input, { key: 'Enter' }); });
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith('你好', []);
     expect(input.value).toBe('');
   });
@@ -65,7 +65,7 @@ describe('composer IME input', () => {
     expect(onCommand).toHaveBeenCalledExactlyOnceWith('new', '');
   });
 
-  it('preserves Shift+Enter and allows the send button after composition', () => {
+  it('preserves Shift+Enter and allows the send button after composition', async () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: '中文\n下一行' } });
     expect(fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })).toBe(true);
@@ -73,7 +73,24 @@ describe('composer IME input', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(onSubmit).not.toHaveBeenCalled();
     fireEvent.compositionEnd(input);
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })); });
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith('中文\n下一行', []);
+  });
+
+  it('keeps the draft on failure and prevents duplicate sends while initialization is pending', async () => {
+    const { input, onSubmit } = setup();
+    const pending = Promise.withResolvers<void>();
+    onSubmit.mockReturnValueOnce(pending.promise);
+    fireEvent.change(input, { target: { value: '保留草稿' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(input.outerHTML).toMatchSnapshot('pending message');
+    await act(async () => { pending.reject(new Error('Initialization failed')); });
+    expect(input.value).toBe('保留草稿');
+    expect(input.readOnly).toBe(false);
+    await act(async () => { fireEvent.keyDown(input, { key: 'Enter' }); });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+    expect(input.value).toBe('');
   });
 });

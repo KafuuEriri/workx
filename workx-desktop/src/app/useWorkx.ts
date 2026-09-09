@@ -93,6 +93,8 @@ export interface WorkxController {
   projects: ProjectView[];
   recents: Thread[];
   activeThread: Thread | null;
+  composerKey: number;
+  draft: { projectId: string | null } | null;
   transcript: TranscriptEntry[];
   running: boolean;
   approvals: ApprovalRequest[];
@@ -147,6 +149,8 @@ interface State {
   projects: Project[];
   threads: Thread[];
   activeThread: Thread | null;
+  composerKey: number;
+  draft: { projectId: string | null } | null;
   writerConflict: string | null;
   turns: TurnView[];
   running: boolean;
@@ -173,7 +177,14 @@ type Action =
   | { type: 'projects'; projects: Project[] }
   | { type: 'threads'; threads: Thread[] }
   | { type: 'threadUpsert'; thread: Thread }
-  | { type: 'thread'; thread: Thread; turns: TurnView[]; writerConflict?: string | null }
+  | { type: 'draft'; composerKey: number; projectId: string | null }
+  | {
+      type: 'thread';
+      thread: Thread;
+      turns: TurnView[];
+      writerConflict?: string | null;
+      composerKey?: number;
+    }
   | { type: 'item'; turnId: string; item: ThreadItem }
   | { type: 'delta'; turnId: string; itemId: string; delta: string }
   | { type: 'turnStarted'; turnId: string; startedAtMs: number | null }
@@ -204,6 +215,8 @@ const initialState: State = {
   projects: [],
   threads: [],
   activeThread: null,
+  composerKey: 0,
+  draft: null,
   writerConflict: null,
   turns: [],
   running: false,
@@ -275,10 +288,26 @@ function reducer(state: State, action: Action): State {
           : [action.thread, ...state.threads],
       };
     }
+    case 'draft':
+      return {
+        ...state,
+        activeThread: null,
+        composerKey: action.composerKey,
+        draft: { projectId: action.projectId },
+        turns: [],
+        writerConflict: null,
+        running: false,
+        activeTurnId: null,
+        error: null,
+        warnings: [],
+        approvals: [],
+      };
     case 'thread':
       return {
         ...state,
         activeThread: action.thread,
+        composerKey: action.composerKey ?? state.composerKey,
+        draft: null,
         turns: action.turns,
         writerConflict: action.writerConflict ?? null,
         running: action.writerConflict
@@ -436,6 +465,8 @@ export function useWorkx(): WorkxController {
   const [cwd, setCwd] = useState('');
 
   const threadIdRef = useRef<string | null>(null);
+  const selectionRef = useRef(0);
+  const startingThreadRef = useRef<Promise<string> | null>(null);
   const turnIdRef = useRef<string | null>(null);
   const modelRef = useRef<string | null>(null);
   const effortRef = useRef<string | null>(null);
@@ -563,41 +594,70 @@ export function useWorkx(): WorkxController {
   );
 
   const startThread = useCallback(
-    async (projectId?: string, cwd?: string): Promise<string> => {
-      const response = await request<ThreadStartResponse>('thread/start', {
-        cwd: cwd ?? (cwdRef.current || undefined),
-        projectId: projectId ?? undefined,
-        runtimeWorkspaceRoots: projectWorkspaceRoots(projectsRef.current, projectId ?? null),
+    (): Promise<string> => {
+      if (startingThreadRef.current) {
+        return startingThreadRef.current;
+      }
+      const selection = selectionRef.current;
+      const startup = request<ThreadStartResponse>('thread/start', {
+        cwd: cwdRef.current || undefined,
+        projectId: activeProjectIdRef.current ?? undefined,
+        runtimeWorkspaceRoots: projectWorkspaceRoots(
+          projectsRef.current, activeProjectIdRef.current,
+        ),
         model: modelRef.current ?? undefined,
         approvalPolicy: permissionRef.current.approvalPolicy,
         sandbox: permissionRef.current.sandbox,
+      }).then((response) => {
+        pendingThreadsRef.current.set(response.thread.id, response.thread);
+        dispatch({ type: 'threadUpsert', thread: response.thread });
+        // A slow initialization must not navigate away from a newer selection.
+        if (selection === selectionRef.current) {
+          threadIdRef.current = response.thread.id;
+          activeProjectIdRef.current = response.thread.projectId;
+          turnIdRef.current = null;
+          cwdRef.current = response.thread.cwd;
+          setCwd(response.thread.cwd);
+          dispatch({ type: 'thread', thread: response.thread, turns: [] });
+        }
+        return response.thread.id;
+      }).finally(() => {
+        if (startingThreadRef.current === startup) {
+          startingThreadRef.current = null;
+        }
       });
-      threadIdRef.current = response.thread.id;
-      activeProjectIdRef.current = response.thread.projectId;
-      turnIdRef.current = null;
-      if (response.thread.cwd && response.thread.cwd !== cwdRef.current) {
-        cwdRef.current = response.thread.cwd;
-        setCwd(response.thread.cwd);
-      }
-      pendingThreadsRef.current.set(response.thread.id, response.thread);
-      dispatch({ type: 'threadUpsert', thread: response.thread });
-      dispatch({ type: 'thread', thread: response.thread, turns: [] });
-      return response.thread.id;
+      startingThreadRef.current = startup;
+      return startup;
     },
     [request],
   );
 
-  const newThread = useCallback(async () => {
-    await startThread();
+  const beginThread = useCallback(async (projectId: string | null) => {
+    const selection = ++selectionRef.current;
+    threadIdRef.current = null;
+    turnIdRef.current = null;
+    startingThreadRef.current = null;
+    activeProjectIdRef.current = projectId;
+    const roots = projectWorkspaceRoots(projectsRef.current, projectId);
+    if (roots?.[0]) {
+      cwdRef.current = roots[0];
+      setCwd(roots[0]);
+    }
+    dispatch({ type: 'draft', composerKey: selection, projectId });
+    try {
+      await startThread();
+    } catch (error) {
+      if (selection === selectionRef.current) {
+        dispatch({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      }
+    }
   }, [startThread]);
 
+  const newThread = useCallback(() => beginThread(null), [beginThread]);
+
   const newThreadInProject = useCallback(
-    async (projectId: string) => {
-      const project = projectsRef.current.find((candidate) => candidate.id === projectId);
-      const primaryRoot = project?.roots[0]?.path ?? undefined;
-      await startThread(projectId, primaryRoot);
-    },
-    [startThread],
+    (projectId: string) => beginThread(projectId),
+    [beginThread],
   );
 
   const createProject = useCallback(
@@ -636,6 +696,8 @@ export function useWorkx(): WorkxController {
 
   const openThread = useCallback(
     async (id: string) => {
+      const selection = ++selectionRef.current;
+      startingThreadRef.current = null;
       let thread: Thread | null = null;
       let writerConflict = false;
       try {
@@ -646,6 +708,9 @@ export function useWorkx(): WorkxController {
         });
         thread = response.thread;
       } catch (error) {
+        if (selection !== selectionRef.current) {
+          return;
+        }
         const message = error instanceof Error ? error.message : String(error);
         if (!message.includes('already has an active writer')) {
           dispatch({ type: 'error', message });
@@ -659,6 +724,9 @@ export function useWorkx(): WorkxController {
           });
           thread = response.thread;
         } catch (readError) {
+          if (selection !== selectionRef.current) {
+            return;
+          }
           dispatch({
             type: 'error',
             message: readError instanceof Error ? readError.message : String(readError),
@@ -666,7 +734,7 @@ export function useWorkx(): WorkxController {
           return;
         }
       }
-      if (!thread) {
+      if (!thread || selection !== selectionRef.current) {
         return;
       }
       threadIdRef.current = thread.id;
@@ -681,6 +749,7 @@ export function useWorkx(): WorkxController {
         thread,
         turns: thread.turns.map(turnView),
         writerConflict: writerConflict ? id : null,
+        composerKey: selection,
       });
     },
     [request],
@@ -715,27 +784,43 @@ export function useWorkx(): WorkxController {
       if (state.writerConflict) {
         return;
       }
-      const threadId = threadIdRef.current ?? (await startThread());
-      const input: UserInput[] = [{ type: 'text', text, text_elements: [] }];
-      for (const binding of bindings) {
-        input.push(
-          binding.type === 'skill'
-            ? { type: 'skill', name: binding.name, path: binding.path }
-            : { type: 'mention', name: binding.name, path: binding.path },
-        );
+      const selection = selectionRef.current;
+      try {
+        const threadId = threadIdRef.current ?? (await startThread());
+        if (selection !== selectionRef.current) {
+          return;
+        }
+        const input: UserInput[] = [{ type: 'text', text, text_elements: [] }];
+        for (const binding of bindings) {
+          input.push(
+            binding.type === 'skill'
+              ? { type: 'skill', name: binding.name, path: binding.path }
+              : { type: 'mention', name: binding.name, path: binding.path },
+          );
+        }
+        const response = await request<TurnStartResponse>('turn/start', {
+          threadId,
+          input,
+          runtimeWorkspaceRoots: projectWorkspaceRoots(
+            projectsRef.current, activeProjectIdRef.current,
+          ),
+          effort: effortRef.current ?? undefined,
+        });
+        if (selection !== selectionRef.current) {
+          return;
+        }
+        turnIdRef.current = response.turn.id;
+        dispatch({
+          type: 'turnStarted',
+          turnId: response.turn.id,
+          startedAtMs: Date.now(),
+        });
+      } catch (error) {
+        if (selection === selectionRef.current) {
+          dispatch({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+        }
+        throw error;
       }
-      const response = await request<TurnStartResponse>('turn/start', {
-        threadId,
-        input,
-        runtimeWorkspaceRoots: projectWorkspaceRoots(projectsRef.current, activeProjectIdRef.current),
-        effort: effortRef.current ?? undefined,
-      });
-      turnIdRef.current = response.turn.id;
-      dispatch({
-        type: 'turnStarted',
-        turnId: response.turn.id,
-        startedAtMs: Date.now(),
-      });
     },
     [request, startThread, state.writerConflict],
   );
@@ -777,7 +862,11 @@ export function useWorkx(): WorkxController {
   }, [request]);
 
   const reviewChanges = useCallback(async () => {
+    const selection = selectionRef.current;
     const threadId = threadIdRef.current ?? (await startThread());
+    if (selection !== selectionRef.current) {
+      return;
+    }
     await request('review/start', {
       threadId,
       target: { type: 'uncommittedChanges' },
@@ -910,6 +999,14 @@ export function useWorkx(): WorkxController {
 
   const handleNotification = useCallback(
     (notification: { method: string; params: unknown }) => {
+      const threadId = (notification.params as { threadId?: string } | null)?.threadId;
+      if (
+        threadId && threadId !== threadIdRef.current &&
+        (notification.method.startsWith('turn/') || notification.method.startsWith('item/') ||
+          notification.method === 'error' || notification.method === 'warning')
+      ) {
+        return;
+      }
       switch (notification.method) {
         case 'turn/started': {
           const params = notification.params as TurnStartedNotification;
@@ -1205,6 +1302,8 @@ export function useWorkx(): WorkxController {
     projects,
     recents,
     activeThread: state.activeThread,
+    composerKey: state.composerKey,
+    draft: state.draft,
     transcript,
     running: state.running,
     approvals: state.approvals,

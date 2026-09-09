@@ -24,7 +24,7 @@ export function thread(id: string, projectId: string | null = project.id): Threa
 }
 
 export async function setupWorkx() {
-  const request = vi.fn(async (method: string, params?: unknown): Promise<unknown> => {
+  const defaultRequest = async (method: string, params?: unknown): Promise<unknown> => {
     switch (method) {
       case 'project/list': return { data: [project] };
       case 'thread/list': return { data: [thread('saved')] };
@@ -36,7 +36,8 @@ export async function setupWorkx() {
       case 'fuzzyFileSearch': return { files: [] };
       default: return { data: [] };
     }
-  });
+  };
+  const request = vi.fn(defaultRequest);
   let notify: (notification: { method: string; params: unknown }) => void = () => undefined;
   window.workx = {
     getCwd: async () => '/home/user',
@@ -54,7 +55,7 @@ export async function setupWorkx() {
     expect(result.current.status).toBe('ready');
   });
   return {
-    result, request,
+    result, request, defaultRequest,
     notify: (method: string, params: unknown) => act(() => notify({ method, params })),
   };
 }
