@@ -9,6 +9,7 @@ import { GoalBanner } from '../components/GoalBanner';
 import { GoalDialog } from '../components/GoalDialog';
 import { MessageList } from '../components/MessageList';
 import { ProviderManagerDialog } from '../components/ProviderManagerDialog';
+import { ResizeHandle } from '../components/ResizeHandle';
 import { ReviewPanel } from '../components/ReviewPanel';
 import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar, threadTitle } from '../components/Sidebar';
@@ -29,6 +30,12 @@ import { useWorkx, type ProjectView } from './useWorkx';
 
 const AUTO_FOLLOW_THRESHOLD_PX = 48;
 
+function readStoredWidth(key: string, fallback: number): number {
+  const raw = window.localStorage.getItem(key);
+  const parsed = raw === null ? Number.NaN : Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 const PANEL_TITLES: Partial<Record<NavKey, MessageKey>> = {
   plugins: 'app.panelPlugins',
   skills: 'app.panelSkills',
@@ -45,6 +52,13 @@ export function App() {
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewFocus, setReviewFocus] = useState<FileUpdateChange | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(() =>
+    readStoredWidth('workx.sidebarWidth', 275),
+  );
+  const [reviewWidth, setReviewWidth] = useState(() => readStoredWidth('workx.reviewWidth', 460));
+  const [explorerWidth, setExplorerWidth] = useState(() =>
+    readStoredWidth('workx.explorerWidth', 280),
+  );
   const [searchRequest, setSearchRequest] = useState(0);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [projectDialog, setProjectDialog] = useState<{
@@ -64,6 +78,18 @@ export function App() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     void window.workx?.setTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem('workx.sidebarWidth', String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    window.localStorage.setItem('workx.reviewWidth', String(reviewWidth));
+  }, [reviewWidth]);
+
+  useEffect(() => {
+    window.localStorage.setItem('workx.explorerWidth', String(explorerWidth));
+  }, [explorerWidth]);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -333,6 +359,7 @@ export function App() {
   return (
     <div className="flex h-full w-full overflow-hidden bg-app text-fg">
       <Sidebar
+        width={sidebarWidth}
         activeNav={activeNav}
         onSelectNav={setActiveNav}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -374,6 +401,15 @@ export function App() {
         onRenameThread={(id, name) => void workx.renameThread(id, name)}
         onArchiveThread={(id) => void workx.archiveThread(id)}
         onDeleteThread={(id) => void workx.deleteThread(id)}
+      />
+
+      <ResizeHandle
+        side="left"
+        width={sidebarWidth}
+        min={200}
+        max={440}
+        onResize={setSidebarWidth}
+        label={t('layout.resizeSidebar')}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">
@@ -506,23 +542,45 @@ export function App() {
       </main>
 
       {reviewOpen ? (
-        <ReviewPanel
-          cwd={activeCwd}
-          focusChange={reviewFocus}
-          onClose={() => {
-            setReviewOpen(false);
-            setReviewFocus(null);
-          }}
-          onChanged={() => undefined}
-        />
+        <>
+          <ResizeHandle
+            side="right"
+            width={reviewWidth}
+            min={320}
+            max={780}
+            onResize={setReviewWidth}
+            label={t('layout.resizeReview')}
+          />
+          <ReviewPanel
+            cwd={activeCwd}
+            width={reviewWidth}
+            focusChange={reviewFocus}
+            onClose={() => {
+              setReviewOpen(false);
+              setReviewFocus(null);
+            }}
+            onChanged={() => undefined}
+          />
+        </>
       ) : null}
 
       {explorerOpen ? (
-        <FileExplorerPanel
-          roots={explorerRoots}
-          onOpenPath={(path) => void window.workx.openPath(path)}
-          onClose={() => setExplorerOpen(false)}
-        />
+        <>
+          <ResizeHandle
+            side="right"
+            width={explorerWidth}
+            min={220}
+            max={620}
+            onResize={setExplorerWidth}
+            label={t('layout.resizeExplorer')}
+          />
+          <FileExplorerPanel
+            roots={explorerRoots}
+            width={explorerWidth}
+            onOpenPath={(path) => void window.workx.openPath(path)}
+            onClose={() => setExplorerOpen(false)}
+          />
+        </>
       ) : null}
 
       <SettingsDialog

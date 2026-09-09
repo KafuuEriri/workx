@@ -46,6 +46,7 @@ type ProjectOrganize = 'project' | 'list';
 type ProjectSort = 'manual' | 'updated';
 
 interface SidebarProps {
+  width: number;
   activeNav: NavKey | null;
   onSelectNav: (key: NavKey) => void;
   onOpenSettings: () => void;
@@ -82,6 +83,7 @@ export function threadTitle(thread: Thread, fallback = 'New chat'): string {
 }
 
 export function Sidebar({
+  width,
   activeNav,
   onSelectNav,
   onOpenSettings,
@@ -186,7 +188,10 @@ export function Sidebar({
   );
 
   return (
-    <aside className="drag flex h-full w-[275px] shrink-0 flex-col border-r border-line-subtle bg-sidebar">
+    <aside
+      style={{ width }}
+      className="drag flex h-full shrink-0 flex-col border-r border-line-subtle bg-sidebar"
+    >
       <div className="h-11 shrink-0" />
 
       <div className="flex h-9 shrink-0 items-center gap-1 px-2">

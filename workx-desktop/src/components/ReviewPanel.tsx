@@ -14,6 +14,7 @@ interface ReviewPanelProps {
   onClose: () => void;
   onChanged: () => void;
   focusChange?: FileUpdateChange | null;
+  width: number;
 }
 
 function statusLetter(file: GitFileStatus): string {
@@ -42,7 +43,7 @@ function DiffRow({ line }: { line: DiffLine }) {
   );
 }
 
-export function ReviewPanel({ cwd, onClose, onChanged, focusChange }: ReviewPanelProps) {
+export function ReviewPanel({ cwd, onClose, onChanged, focusChange, width }: ReviewPanelProps) {
   const { t } = useI18n();
   const [scope, setScope] = useState<Scope>('unstaged');
   const [status, setStatus] = useState<GitStatusResult | null>(null);
@@ -153,7 +154,10 @@ export function ReviewPanel({ cwd, onClose, onChanged, focusChange }: ReviewPane
   }, [cwd, t]);
 
   return (
-    <aside className="flex h-full w-[460px] shrink-0 flex-col border-l border-line bg-app">
+    <aside
+      style={{ width }}
+      className="flex h-full shrink-0 flex-col border-l border-line bg-app"
+    >
       <div className="flex h-[52px] shrink-0 items-center gap-2 px-4">
         <span className="text-[14px] font-medium">{t('review.title')}</span>
         {status?.branch ? (

@@ -15,6 +15,7 @@ import { useI18n } from '../lib/i18n';
 
 interface FileExplorerPanelProps {
   roots: string[];
+  width: number;
   onOpenPath: (path: string) => void;
   onClose: () => void;
 }
@@ -24,7 +25,7 @@ function basename(target: string): string {
   return parts[parts.length - 1] ?? target;
 }
 
-export function FileExplorerPanel({ roots, onOpenPath, onClose }: FileExplorerPanelProps) {
+export function FileExplorerPanel({ roots, onOpenPath, onClose, width }: FileExplorerPanelProps) {
   const { t } = useI18n();
   const rootsKey = roots.join('\n');
   const [cache, setCache] = useState<Record<string, DirectoryEntry[]>>({});
@@ -161,7 +162,10 @@ export function FileExplorerPanel({ roots, onOpenPath, onClose }: FileExplorerPa
   const title = roots.length === 1 ? basename(roots[0]) : t('explorer.title');
 
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col border-l border-line bg-app">
+    <aside
+      style={{ width }}
+      className="flex shrink-0 flex-col border-l border-line bg-app"
+    >
       <div className="flex h-[52px] shrink-0 items-center gap-1 border-b border-line px-3">
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium" title={roots[0]}>
           {title}
