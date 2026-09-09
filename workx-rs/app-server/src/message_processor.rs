@@ -1453,6 +1453,9 @@ impl MessageProcessor {
             ClientRequest::CollaborationModeList { params, .. } => {
                 self.catalog_processor.collaboration_mode_list(params).await
             }
+            ClientRequest::SlashCommandsList { params, .. } => {
+                self.catalog_processor.slash_commands_list(params).await
+            }
             ClientRequest::MockExperimentalMethod { params, .. } => {
                 self.catalog_processor
                     .mock_experimental_method(params)
