@@ -70,7 +70,7 @@ describe('composer IME input', () => {
     fireEvent.change(input, { target: { value: '中文\n下一行' } });
     expect(fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })).toBe(true);
     fireEvent.compositionStart(input);
-    fireEvent.submit(input.form!);
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(onSubmit).not.toHaveBeenCalled();
     fireEvent.compositionEnd(input);
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));

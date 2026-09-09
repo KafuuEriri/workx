@@ -49,6 +49,7 @@ import {
   type ThreadSearchResponse,
 } from './protocolExtensions';
 import { buildTranscript, type TranscriptEntry, type TurnView } from './transcript';
+import { projectWorkspaceRoots } from './projectWorkspace';
 
 const BUILTIN_MODEL_PROVIDER_IDS = [
   'openai',
@@ -445,6 +446,7 @@ export function useWorkx(): WorkxController {
   const bootedRef = useRef(false);
   const threadsRef = useRef<Thread[]>([]);
   const projectsRef = useRef<Project[]>([]);
+  const activeProjectIdRef = useRef<string | null>(null);
   const pendingThreadsRef = useRef<Map<string, Thread>>(new Map());
 
   const permission = useMemo(
@@ -565,11 +567,13 @@ export function useWorkx(): WorkxController {
       const response = await request<ThreadStartResponse>('thread/start', {
         cwd: cwd ?? (cwdRef.current || undefined),
         projectId: projectId ?? undefined,
+        runtimeWorkspaceRoots: projectWorkspaceRoots(projectsRef.current, projectId ?? null),
         model: modelRef.current ?? undefined,
         approvalPolicy: permissionRef.current.approvalPolicy,
         sandbox: permissionRef.current.sandbox,
       });
       threadIdRef.current = response.thread.id;
+      activeProjectIdRef.current = response.thread.projectId;
       turnIdRef.current = null;
       if (response.thread.cwd && response.thread.cwd !== cwdRef.current) {
         cwdRef.current = response.thread.cwd;
@@ -635,7 +639,11 @@ export function useWorkx(): WorkxController {
       let thread: Thread | null = null;
       let writerConflict = false;
       try {
-        const response = await request<ThreadResumeResponse>('thread/resume', { threadId: id });
+        const projectId = threadsRef.current.find((candidate) => candidate.id === id)?.projectId;
+        const response = await request<ThreadResumeResponse>('thread/resume', {
+          threadId: id,
+          runtimeWorkspaceRoots: projectWorkspaceRoots(projectsRef.current, projectId ?? null),
+        });
         thread = response.thread;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -662,6 +670,7 @@ export function useWorkx(): WorkxController {
         return;
       }
       threadIdRef.current = thread.id;
+      activeProjectIdRef.current = thread.projectId;
       turnIdRef.current = null;
       if (thread.cwd && thread.cwd !== cwdRef.current) {
         cwdRef.current = thread.cwd;
@@ -718,6 +727,7 @@ export function useWorkx(): WorkxController {
       const response = await request<TurnStartResponse>('turn/start', {
         threadId,
         input,
+        runtimeWorkspaceRoots: projectWorkspaceRoots(projectsRef.current, activeProjectIdRef.current),
         effort: effortRef.current ?? undefined,
       });
       turnIdRef.current = response.turn.id;
@@ -732,13 +742,14 @@ export function useWorkx(): WorkxController {
 
   const searchMentionFiles = useCallback(
     async (query: string) => {
-      const root = cwdRef.current;
-      if (!root) {
+      const roots = projectWorkspaceRoots(projectsRef.current, activeProjectIdRef.current)
+        ?? (cwdRef.current ? [cwdRef.current] : []);
+      if (roots.length === 0) {
         return [];
       }
       const response = await request<FuzzyFileSearchResponse>('fuzzyFileSearch', {
         query,
-        roots: [root],
+        roots,
         cancellationToken: null,
       });
       return response.files.slice(0, 12);
@@ -952,6 +963,9 @@ export function useWorkx(): WorkxController {
         }
         case 'thread/project/updated': {
           const params = notification.params as ThreadProjectUpdatedNotification;
+          if (params.threadId === threadIdRef.current) {
+            activeProjectIdRef.current = params.projectId;
+          }
           const thread = threadsRef.current.find((candidate) => candidate.id === params.threadId);
           if (thread) {
             dispatch({
