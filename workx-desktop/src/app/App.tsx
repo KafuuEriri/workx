@@ -20,6 +20,8 @@ import {
 import { useI18n, type MessageKey } from '../lib/i18n';
 import { useWorkx, type ProjectView } from './useWorkx';
 
+const AUTO_FOLLOW_THRESHOLD_PX = 48;
+
 const PANEL_TITLES: Partial<Record<NavKey, MessageKey>> = {
   plugins: 'app.panelPlugins',
   skills: 'app.panelSkills',
@@ -42,6 +44,7 @@ export function App() {
   const [archiveTarget, setArchiveTarget] = useState<ProjectView | null>(null);
   const [exportError, setExportError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const autoFollowRef = useRef(true);
 
   useEffect(() => {
     applyTheme(theme);
@@ -90,16 +93,29 @@ export function App() {
       return;
     }
     const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
+    autoFollowRef.current = distance <= AUTO_FOLLOW_THRESHOLD_PX;
     setShowScrollDown(distance > 160);
   }, []);
 
+  const scrollToBottom = useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) {
+      return;
+    }
+    autoFollowRef.current = true;
+    element.scrollTop = element.scrollHeight;
+  }, []);
+
   useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) {
+      return;
+    }
+    if (autoFollowRef.current) {
+      element.scrollTop = element.scrollHeight;
+    }
     updateScrollState();
   }, [workx.transcript, updateScrollState]);
-
-  const scrollToBottom = useCallback(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, []);
 
   useEffect(() => {
     if (workx.activeThread) {
