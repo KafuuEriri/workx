@@ -47,8 +47,19 @@ schema at `../workx-rs/app-server-protocol/schema/typescript` (aliased as
 
 Set `WORKX_BIN` to point at a different Workx binary, and `WORKX_CWD` to change
 the directory used for new threads (defaults to the user's home directory).
-Custom model IDs (`custom_models`) require a Workx CLI of 0.0.4 or newer; older
-CLIs ignore the field, and the provider dialog reports that when it happens.
+Custom models (`custom_models`) require a Workx CLI of 0.0.4 or newer; older
+CLIs ignore the field, and the provider dialog reports that when it happens. Each
+entry can be a bare model ID or a table with per-model metadata:
+
+```toml
+custom_models = [
+  "deepseek-chat",
+  { id = "deepseek-reasoner", context_window = 128000, max_context_window = 128000, input_modalities = ["text"] },
+]
+```
+
+`input_modalities` defaults to `["text", "image"]` and accepts `text`, `image`,
+and `audio`.
 
 ## Wiring
 

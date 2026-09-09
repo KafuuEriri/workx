@@ -20,6 +20,12 @@ export type AppServerStatus =
   | { status: 'stopped'; exit?: unknown }
   | { status: 'error'; message: string };
 
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+}
+
 export interface AppServerApi {
   start: () => Promise<{ ok: boolean; info?: InitializeResponse; message?: string }>;
   request: <T = unknown>(method: string, params?: unknown) => Promise<T>;
@@ -75,6 +81,14 @@ const api = {
   openPath: (target: string): Promise<string> => ipcRenderer.invoke('workx:open-path', target),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke('workx:pick-folder'),
   getTheme: (): Promise<ThemeSource> => ipcRenderer.invoke('workx:get-theme'),
+  savePastedImage: (data: Uint8Array, extension: string): Promise<string | null> =>
+    ipcRenderer.invoke('workx:save-pasted-image', data, extension),
+  readImage: (target: string): Promise<string | null> =>
+    ipcRenderer.invoke('workx:read-image', target),
+  listDirectory: (target: string): Promise<DirectoryEntry[]> =>
+    ipcRenderer.invoke('workx:list-directory', target),
+  searchDirectory: (roots: string[], query: string): Promise<DirectoryEntry[]> =>
+    ipcRenderer.invoke('workx:search-directory', roots, query),
   setTheme: (theme: ThemeSource): Promise<ThemeSource> =>
     ipcRenderer.invoke('workx:set-theme', theme),
   saveMarkdown: (content: string, suggestedName: string): Promise<{ path: string } | null> =>

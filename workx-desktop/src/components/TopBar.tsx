@@ -13,6 +13,8 @@ interface TopBarProps {
   subtitle?: string | null;
   status: ConnectionStatus;
   exportDisabled?: boolean;
+  explorerOpen: boolean;
+  onToggleExplorer: () => void;
   onExportPdf: () => void;
   onExportMarkdown: () => void;
 }
@@ -29,6 +31,8 @@ export function TopBar({
   subtitle,
   status,
   exportDisabled = false,
+  explorerOpen,
+  onToggleExplorer,
   onExportPdf,
   onExportMarkdown,
 }: TopBarProps) {
@@ -92,7 +96,12 @@ export function TopBar({
         <IconButton size="sm" aria-label={t('topbar.toggleSplit')}>
           <Columns2 className="size-4" strokeWidth={1.75} />
         </IconButton>
-        <IconButton size="sm" aria-label={t('topbar.toggleSidePanel')}>
+        <IconButton
+          size="sm"
+          aria-label={t('topbar.toggleSidePanel')}
+          active={explorerOpen}
+          onClick={onToggleExplorer}
+        >
           <PanelRight className="size-4" strokeWidth={1.75} />
         </IconButton>
       </div>

@@ -25,7 +25,7 @@ export interface Activity {
 }
 
 export type TranscriptEntry =
-  | { kind: 'user'; id: string; text: string }
+  | { kind: 'user'; id: string; text: string; images: string[] }
   | {
       kind: 'assistant';
       id: string;
@@ -50,6 +50,18 @@ export function textFromUserInput(content: UserInput[]): string {
     .filter((part): part is Extract<UserInput, { type: 'text' }> => part.type === 'text')
     .map((part) => part.text)
     .join('\n');
+}
+
+export function imagesFromUserInput(content: UserInput[]): string[] {
+  return content.flatMap((part) => {
+    if (part.type === 'localImage') {
+      return [part.path];
+    }
+    if (part.type === 'image') {
+      return [part.url];
+    }
+    return [];
+  });
 }
 
 export function activityFromItem(item: ThreadItem, t: Translate): Activity | null {
@@ -135,7 +147,12 @@ export function buildTranscript(turns: TurnView[], t: Translate): TranscriptEntr
 
     for (const item of turn.items) {
       if (item.type === 'userMessage') {
-        entries.push({ kind: 'user', id: item.id, text: textFromUserInput(item.content) });
+        entries.push({
+          kind: 'user',
+          id: item.id,
+          text: textFromUserInput(item.content),
+          images: imagesFromUserInput(item.content),
+        });
         continue;
       }
       if (item.type === 'agentMessage') {

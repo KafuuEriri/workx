@@ -48,7 +48,7 @@ import {
   type ProjectUpdateResponse,
   type ThreadSearchResponse,
 } from './protocolExtensions';
-import { buildTranscript, type TranscriptEntry, type TurnView } from './transcript';
+import { buildTranscript, textFromUserInput, type TranscriptEntry, type TurnView } from './transcript';
 
 function projectWorkspaceRoots(
   projects: Project[],
@@ -71,6 +71,17 @@ export const BUILTIN_MODEL_PROVIDER_IDS = [
 
 export type ProviderWireApi = 'responses' | 'chat' | 'auto';
 
+export type InputModality = 'text' | 'image' | 'audio';
+
+export const DEFAULT_CUSTOM_MODEL_MODALITIES: InputModality[] = ['text', 'image'];
+
+export interface CustomModelConfig {
+  id: string;
+  contextWindow: number | null;
+  maxContextWindow: number | null;
+  inputModalities: InputModality[];
+}
+
 export interface ProviderConfig {
   name: string;
   baseUrl: string;
@@ -78,7 +89,7 @@ export interface ProviderConfig {
   envKey: string;
   wireApi: ProviderWireApi;
   modelsEndpoint: string;
-  customModels: string[];
+  customModels: CustomModelConfig[];
 }
 
 /// Provider keys the manager owns. When a field is cleared we must explicitly
@@ -90,6 +101,54 @@ const OPTIONAL_PROVIDER_CONFIG_KEYS = [
   'models_endpoint',
   'custom_models',
 ];
+
+function asPositiveInteger(raw: unknown): number | null {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+    return null;
+  }
+  const value = Math.trunc(raw);
+  return value > 0 ? value : null;
+}
+
+function normalizeInputModalities(raw: unknown): InputModality[] | null {
+  if (!Array.isArray(raw)) {
+    return null;
+  }
+  const modalities = raw.filter(
+    (modality): modality is InputModality =>
+      modality === 'text' || modality === 'image' || modality === 'audio',
+  );
+  return modalities.length > 0 ? [...new Set(modalities)] : null;
+}
+
+function normalizeCustomModel(raw: unknown): CustomModelConfig | null {
+  if (typeof raw === 'string') {
+    const id = raw.trim();
+    return id
+      ? {
+          id,
+          contextWindow: null,
+          maxContextWindow: null,
+          inputModalities: [...DEFAULT_CUSTOM_MODEL_MODALITIES],
+        }
+      : null;
+  }
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const value = raw as Record<string, unknown>;
+  const id = typeof value.id === 'string' ? value.id.trim() : '';
+  if (!id) {
+    return null;
+  }
+  return {
+    id,
+    contextWindow: asPositiveInteger(value.context_window),
+    maxContextWindow: asPositiveInteger(value.max_context_window),
+    inputModalities:
+      normalizeInputModalities(value.input_modalities) ?? [...DEFAULT_CUSTOM_MODEL_MODALITIES],
+  };
+}
 
 export function normalizeProviderConfig(raw: unknown): ProviderConfig {
   const value = (raw ?? {}) as Record<string, unknown>;
@@ -106,7 +165,9 @@ export function normalizeProviderConfig(raw: unknown): ProviderConfig {
     modelsEndpoint:
       typeof value.models_endpoint === 'string' ? value.models_endpoint : '',
     customModels: Array.isArray(value.custom_models)
-      ? value.custom_models.filter((model): model is string => typeof model === 'string')
+      ? value.custom_models
+          .map(normalizeCustomModel)
+          .filter((model): model is CustomModelConfig => model !== null)
       : [],
   };
 }
@@ -126,9 +187,34 @@ function providerConfigToToml(config: ProviderConfig): Record<string, unknown> {
   if (config.modelsEndpoint.trim()) {
     value.models_endpoint = config.modelsEndpoint.trim();
   }
-  const customModels = config.customModels.map((model) => model.trim()).filter(Boolean);
+  const customModels = config.customModels
+    .map((model) => ({ ...model, id: model.id.trim() }))
+    .filter((model) => model.id.length > 0);
   if (customModels.length > 0) {
-    value.custom_models = customModels;
+    value.custom_models = customModels.map((model) => {
+      const modalities = model.inputModalities.filter(
+        (modality) => modality === 'text' || modality === 'image' || modality === 'audio',
+      );
+      const usesDefaultModalities =
+        modalities.length === DEFAULT_CUSTOM_MODEL_MODALITIES.length &&
+        DEFAULT_CUSTOM_MODEL_MODALITIES.every((modality) => modalities.includes(modality));
+      if (
+        model.contextWindow === null &&
+        model.maxContextWindow === null &&
+        usesDefaultModalities
+      ) {
+        return model.id;
+      }
+      const entry: Record<string, unknown> = { id: model.id };
+      if (model.contextWindow !== null) {
+        entry.context_window = model.contextWindow;
+      }
+      if (model.maxContextWindow !== null) {
+        entry.max_context_window = model.maxContextWindow;
+      }
+      entry.input_modalities = modalities.length > 0 ? modalities : [...DEFAULT_CUSTOM_MODEL_MODALITIES];
+      return entry;
+    });
   }
   return value;
 }
@@ -148,6 +234,12 @@ export interface ProjectView {
   primaryRoot: string | null;
   recencyAt: number | null;
   threads: Thread[];
+}
+
+export interface PendingSteer {
+  id: string;
+  text: string;
+  images: string[];
 }
 
 export interface WorkxController {
@@ -172,6 +264,7 @@ export interface WorkxController {
   activeThread: Thread | null;
   draft: { projectId: string | null } | null;
   transcript: TranscriptEntry[];
+  pendingSteers: PendingSteer[];
   running: boolean;
   approvals: ApprovalRequest[];
   warnings: string[];
@@ -195,7 +288,11 @@ export interface WorkxController {
   forkThread: (lastTurnId: string) => Promise<void>;
   retryActiveThread: () => Promise<void>;
   writerConflict: boolean;
-  sendMessage: (text: string, bindings?: ComposerMenuBinding[]) => Promise<void>;
+  sendMessage: (
+    text: string,
+    bindings?: ComposerMenuBinding[],
+    images?: string[],
+  ) => Promise<void>;
   searchMentionFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
   searchMentionChats: (query: string) => Promise<Thread[]>;
   compactThread: () => Promise<void>;
@@ -228,6 +325,7 @@ interface State {
   draft: { projectId: string | null } | null;
   writerConflict: string | null;
   turns: TurnView[];
+  pendingSteers: PendingSteer[];
   running: boolean;
   activeTurnId: string | null;
   approvals: ApprovalRequest[];
@@ -258,6 +356,8 @@ type Action =
   | { type: 'delta'; turnId: string; itemId: string; delta: string }
   | { type: 'turnStarted'; turnId: string; startedAtMs: number | null }
   | { type: 'turnCompleted'; turnId: string; durationMs: number | null; status: TurnView['status'] }
+  | { type: 'steerPending'; steer: PendingSteer }
+  | { type: 'steerSettled'; text: string }
   | { type: 'warning'; message: string }
   | { type: 'error'; message: string | null }
   | { type: 'approvalAdd'; approval: ApprovalRequest }
@@ -287,6 +387,7 @@ const initialState: State = {
   draft: null,
   writerConflict: null,
   turns: [],
+  pendingSteers: [],
   running: false,
   activeTurnId: null,
   approvals: [],
@@ -362,6 +463,7 @@ function reducer(state: State, action: Action): State {
         activeThread: null,
         draft: { projectId: action.projectId },
         turns: [],
+        pendingSteers: [],
         writerConflict: null,
         running: false,
         activeTurnId: null,
@@ -375,6 +477,7 @@ function reducer(state: State, action: Action): State {
         activeThread: action.thread,
         draft: null,
         turns: action.turns,
+        pendingSteers: [],
         writerConflict: action.writerConflict ?? null,
         running: action.writerConflict
           ? false
@@ -438,11 +541,19 @@ function reducer(state: State, action: Action): State {
         running: false,
         activeTurnId: null,
         approvals: [],
+        pendingSteers: [],
         turns: state.turns.map((entry) =>
           entry.id === action.turnId
             ? { ...entry, status: action.status, durationMs: action.durationMs }
             : entry,
         ),
+      };
+    case 'steerPending':
+      return { ...state, pendingSteers: [...state.pendingSteers, action.steer] };
+    case 'steerSettled':
+      return {
+        ...state,
+        pendingSteers: state.pendingSteers.filter((steer) => steer.text !== action.text),
       };
     case 'warning':
       return { ...state, warnings: [...state.warnings.slice(-4), action.message] };
@@ -694,10 +805,14 @@ export function useWorkx(): WorkxController {
       // would look successful while the model never appears.
       const saved = normalizeProviderConfig(raw[id]);
       const missing = config.customModels.filter(
-        (model) => !saved.customModels.includes(model),
+        (model) => !saved.customModels.some((candidate) => candidate.id === model.id),
       );
       if (missing.length > 0) {
-        throw new Error(t('provider.customModelsUnsupported', { models: missing.join(', ') }));
+        throw new Error(
+          t('provider.customModelsUnsupported', {
+            models: missing.map((model) => model.id).join(', '),
+          }),
+        );
       }
       if (id === providerId) {
         try {
@@ -940,7 +1055,7 @@ export function useWorkx(): WorkxController {
   );
 
   const sendMessage = useCallback(
-    async (text: string, bindings: ComposerMenuBinding[] = []) => {
+    async (text: string, bindings: ComposerMenuBinding[] = [], images: string[] = []) => {
       if (state.writerConflict) {
         return;
       }
@@ -952,7 +1067,13 @@ export function useWorkx(): WorkxController {
       if (selection !== selectionRef.current) {
         return;
       }
-      const input: UserInput[] = [{ type: 'text', text, text_elements: [] }];
+      const input: UserInput[] = [];
+      if (text.length > 0) {
+        input.push({ type: 'text', text, text_elements: [] });
+      }
+      for (const imagePath of images) {
+        input.push({ type: 'localImage', path: imagePath });
+      }
       for (const binding of bindings) {
         input.push(
           binding.type === 'skill'
@@ -960,6 +1081,45 @@ export function useWorkx(): WorkxController {
             : { type: 'mention', name: binding.name, path: binding.path },
         );
       }
+
+      // While a turn is active the server accepts additional input as a steer.
+      // Fall back to starting a new turn when the active turn already finished.
+      const activeTurnId = turnIdRef.current;
+      if (activeTurnId) {
+        let expectedTurnId = activeTurnId;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            await request('turn/steer', { threadId, input, expectedTurnId });
+            dispatch({
+              type: 'steerPending',
+              steer: {
+                id: `steer-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                text,
+                images: [...images],
+              },
+            });
+            return;
+          } catch (steerError) {
+            const message =
+              steerError instanceof Error ? steerError.message : String(steerError);
+            if (message.includes('no active turn to steer')) {
+              turnIdRef.current = null;
+              break;
+            }
+            const mismatch = /expected active turn id `[^`]+` but found `([^`]+)`/.exec(
+              message,
+            );
+            if (attempt === 0 && mismatch) {
+              expectedTurnId = mismatch[1];
+              turnIdRef.current = expectedTurnId;
+              continue;
+            }
+            dispatch({ type: 'error', message });
+            return;
+          }
+        }
+      }
+
       const response = await request<TurnStartResponse>('turn/start', {
         threadId,
         input,
@@ -1181,11 +1341,23 @@ export function useWorkx(): WorkxController {
         case 'item/started': {
           const params = notification.params as ItemStartedNotification;
           dispatch({ type: 'item', turnId: params.turnId, item: params.item });
+          if (params.item.type === 'userMessage') {
+            dispatch({
+              type: 'steerSettled',
+              text: textFromUserInput(params.item.content).trim(),
+            });
+          }
           break;
         }
         case 'item/completed': {
           const params = notification.params as ItemCompletedNotification;
           dispatch({ type: 'item', turnId: params.turnId, item: params.item });
+          if (params.item.type === 'userMessage') {
+            dispatch({
+              type: 'steerSettled',
+              text: textFromUserInput(params.item.content).trim(),
+            });
+          }
           break;
         }
         case 'item/agentMessage/delta': {
@@ -1398,7 +1570,18 @@ export function useWorkx(): WorkxController {
     return () => window.clearTimeout(handle);
   }, [state.searchTerm, request]);
 
-  const transcript = useMemo(() => buildTranscript(state.turns, t), [state.turns, t]);
+  const transcript = useMemo(() => {
+    const entries = buildTranscript(state.turns, t);
+    for (const steer of state.pendingSteers) {
+      entries.push({
+        kind: 'user',
+        id: steer.id,
+        text: steer.text,
+        images: steer.images,
+      });
+    }
+    return entries;
+  }, [state.turns, state.pendingSteers, t]);
 
   const projects = useMemo<ProjectView[]>(() => {
     const byProject = new Map<string, Thread[]>();
@@ -1464,6 +1647,7 @@ export function useWorkx(): WorkxController {
     activeThread: state.activeThread,
     draft: state.draft,
     transcript,
+    pendingSteers: state.pendingSteers,
     running: state.running,
     approvals: state.approvals,
     warnings: state.warnings,

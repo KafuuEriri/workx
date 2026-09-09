@@ -3,6 +3,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import {
   BUILTIN_MODEL_PROVIDER_IDS,
+  type CustomModelConfig,
+  type InputModality,
   type ProviderConfig,
   type ProviderWireApi,
 } from '../app/useWorkx';
@@ -17,6 +19,13 @@ interface ProviderManagerDialogProps {
   onDelete: (id: string) => Promise<void>;
 }
 
+interface CustomModelDraft {
+  id: string;
+  contextWindow: string;
+  maxContextWindow: string;
+  inputModalities: InputModality[];
+}
+
 interface ProviderDraft {
   id: string;
   name: string;
@@ -25,7 +34,7 @@ interface ProviderDraft {
   envKey: string;
   wireApi: ProviderWireApi;
   modelsEndpoint: string;
-  customModels: string;
+  customModels: CustomModelDraft[];
 }
 
 const EMPTY_DRAFT: ProviderDraft = {
@@ -36,11 +45,24 @@ const EMPTY_DRAFT: ProviderDraft = {
   envKey: '',
   wireApi: 'responses',
   modelsEndpoint: '',
-  customModels: '',
+  customModels: [],
 };
 
 const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 const WIRE_API_OPTIONS: ProviderWireApi[] = ['responses', 'chat', 'auto'];
+const MODALITY_OPTIONS: InputModality[] = ['text', 'image', 'audio'];
+
+function parsePositiveIntegerInput(raw: string): number | null | 'invalid' {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^\d+$/.test(trimmed)) {
+    return 'invalid';
+  }
+  const value = Number(trimmed);
+  return value > 0 ? value : 'invalid';
+}
 
 function draftFromConfig(id: string, config: ProviderConfig): ProviderDraft {
   return {
@@ -51,7 +73,13 @@ function draftFromConfig(id: string, config: ProviderConfig): ProviderDraft {
     envKey: config.envKey,
     wireApi: config.wireApi,
     modelsEndpoint: config.modelsEndpoint,
-    customModels: config.customModels.join('\n'),
+    customModels: config.customModels.map((model) => ({
+      id: model.id,
+      contextWindow: model.contextWindow === null ? '' : String(model.contextWindow),
+      maxContextWindow:
+        model.maxContextWindow === null ? '' : String(model.maxContextWindow),
+      inputModalities: [...model.inputModalities],
+    })),
   };
 }
 
@@ -145,6 +173,38 @@ export function ProviderManagerDialog({
       setError(t('provider.baseUrlRequired'));
       return;
     }
+    const customModels: CustomModelConfig[] = [];
+    const seenIds = new Set<string>();
+    for (const model of draft.customModels) {
+      const modelId = model.id.trim();
+      if (!modelId) {
+        setError(t('provider.customModelIdRequired'));
+        return;
+      }
+      if (seenIds.has(modelId)) {
+        setError(t('provider.customModelDuplicate', { id: modelId }));
+        return;
+      }
+      seenIds.add(modelId);
+      const contextWindow = parsePositiveIntegerInput(model.contextWindow);
+      const maxContextWindow = parsePositiveIntegerInput(model.maxContextWindow);
+      if (contextWindow === 'invalid' || maxContextWindow === 'invalid') {
+        setError(t('provider.customModelWindowInvalid', { id: modelId }));
+        return;
+      }
+      if (
+        contextWindow !== null &&
+        maxContextWindow !== null &&
+        maxContextWindow < contextWindow
+      ) {
+        setError(t('provider.customModelWindowOrder', { id: modelId }));
+        return;
+      }
+      const inputModalities = model.inputModalities.includes('text')
+        ? [...model.inputModalities]
+        : (['text', ...model.inputModalities] as InputModality[]);
+      customModels.push({ id: modelId, contextWindow, maxContextWindow, inputModalities });
+    }
     const targetId = selectedId ?? id;
     const config: ProviderConfig = {
       name: draft.name.trim() || targetId,
@@ -153,10 +213,7 @@ export function ProviderManagerDialog({
       envKey: draft.envKey.trim(),
       wireApi: draft.wireApi,
       modelsEndpoint: draft.modelsEndpoint.trim(),
-      customModels: draft.customModels
-        .split(/[\n,]+/)
-        .map((model) => model.trim())
-        .filter(Boolean),
+      customModels,
     };
     setBusy(true);
     try {
@@ -338,17 +395,171 @@ export function ProviderManagerDialog({
                 />
               </Field>
 
-              <Field label={t('provider.customModels')} hint={t('provider.customModelsHint')}>
-                <textarea
-                  value={draft.customModels}
-                  onChange={(event) =>
-                    setDraft({ ...draft, customModels: event.target.value })
-                  }
-                  rows={3}
-                  placeholder="deepseek-chat&#10;deepseek-reasoner"
-                  className="w-full resize-none rounded-lg border border-line bg-app px-2.5 py-2 text-[14px] outline-none focus:border-line-strong"
-                />
-              </Field>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[13px] text-fg-secondary">
+                    {t('provider.customModels')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDraft((current) => ({
+                        ...current,
+                        customModels: [
+                          ...current.customModels,
+                          {
+                            id: '',
+                            contextWindow: '',
+                            maxContextWindow: '',
+                            inputModalities: ['text', 'image'],
+                          },
+                        ],
+                      }))
+                    }
+                    className="flex h-7 items-center gap-1 rounded-full border border-line px-2.5 text-[12px] hover:bg-hover"
+                  >
+                    <Plus className="size-3.5" strokeWidth={1.75} />
+                    {t('provider.customModelAdd')}
+                  </button>
+                </div>
+                <span className="text-[11px] text-fg-tertiary">
+                  {t('provider.customModelsHint')}
+                </span>
+                {draft.customModels.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-line px-3 py-3 text-[12px] text-fg-tertiary">
+                    {t('provider.customModelsEmpty')}
+                  </p>
+                ) : null}
+                {draft.customModels.map((model, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col gap-2 rounded-xl border border-line bg-app p-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={model.id}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            customModels: current.customModels.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, id: event.target.value } : entry,
+                            ),
+                          }))
+                        }
+                        placeholder="deepseek-chat"
+                        className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-elevated px-2.5 font-mono text-[13px] outline-none focus:border-line-strong"
+                      />
+                      <button
+                        type="button"
+                        aria-label={t('common.delete')}
+                        onClick={() =>
+                          setDraft((current) => ({
+                            ...current,
+                            customModels: current.customModels.filter(
+                              (_, entryIndex) => entryIndex !== index,
+                            ),
+                          }))
+                        }
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-fg-tertiary hover:bg-hover hover:text-danger"
+                      >
+                        <Trash2 className="size-3.5" strokeWidth={1.75} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[11px] text-fg-tertiary">
+                          {t('provider.contextWindow')}
+                        </span>
+                        <input
+                          value={model.contextWindow}
+                          inputMode="numeric"
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              customModels: current.customModels.map((entry, entryIndex) =>
+                                entryIndex === index
+                                  ? { ...entry, contextWindow: event.target.value }
+                                  : entry,
+                              ),
+                            }))
+                          }
+                          placeholder="128000"
+                          className="h-8 w-full rounded-lg border border-line bg-elevated px-2.5 text-[13px] outline-none focus:border-line-strong"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[11px] text-fg-tertiary">
+                          {t('provider.maxContextWindow')}
+                        </span>
+                        <input
+                          value={model.maxContextWindow}
+                          inputMode="numeric"
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              customModels: current.customModels.map((entry, entryIndex) =>
+                                entryIndex === index
+                                  ? { ...entry, maxContextWindow: event.target.value }
+                                  : entry,
+                              ),
+                            }))
+                          }
+                          placeholder="128000"
+                          className="h-8 w-full rounded-lg border border-line bg-elevated px-2.5 text-[13px] outline-none focus:border-line-strong"
+                        />
+                      </label>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[11px] text-fg-tertiary">
+                        {t('provider.inputModalities')}
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {MODALITY_OPTIONS.map((modality) => {
+                          const locked = modality === 'text';
+                          const active = locked || model.inputModalities.includes(modality);
+                          return (
+                            <button
+                              key={modality}
+                              type="button"
+                              disabled={locked}
+                              onClick={() =>
+                                setDraft((current) => ({
+                                  ...current,
+                                  customModels: current.customModels.map((entry, entryIndex) => {
+                                    if (entryIndex !== index) {
+                                      return entry;
+                                    }
+                                    const next = entry.inputModalities.includes(modality)
+                                      ? entry.inputModalities.filter(
+                                          (candidate) => candidate !== modality,
+                                        )
+                                      : [...entry.inputModalities, modality];
+                                    return {
+                                      ...entry,
+                                      inputModalities: next.includes('text')
+                                        ? next
+                                        : (['text', ...next] as InputModality[]),
+                                    };
+                                  }),
+                                }))
+                              }
+                              className={cn(
+                                'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                                active
+                                  ? 'border-line-strong bg-active text-fg'
+                                  : 'border-line text-fg-tertiary hover:bg-hover',
+                                locked && 'cursor-default opacity-80',
+                              )}
+                            >
+                              {t(`provider.modality.${modality}`)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -53,7 +53,10 @@ export function buildMarkdown(
 
   for (const entry of entries) {
     if (entry.kind === 'user') {
-      lines.push(`## ${translate(language, 'export.user')}`, '', entry.text.trim(), '');
+      const body =
+        entry.text.trim() ||
+        (entry.images.length > 0 ? translate(language, 'activity.image') : '');
+      lines.push(`## ${translate(language, 'export.user')}`, '', body, '');
       continue;
     }
 
@@ -143,12 +146,13 @@ export function buildExportHtml(
 
   for (const entry of entries) {
     if (entry.kind === 'user') {
-      if (!entry.text.trim()) {
+      const body =
+        entry.text.trim() ||
+        (entry.images.length > 0 ? translate(language, 'activity.image') : '');
+      if (!body) {
         continue;
       }
-      sections.push(
-        `<section><h2>${escapeHtml(userLabel)}</h2>${textToHtml(entry.text)}</section>`,
-      );
+      sections.push(`<section><h2>${escapeHtml(userLabel)}</h2>${textToHtml(body)}</section>`);
       continue;
     }
 

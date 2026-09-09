@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Composer } from '../components/Composer';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CreateProjectDialog } from '../components/CreateProjectDialog';
+import { FileExplorerPanel } from '../components/FileExplorerPanel';
 import { MessageList } from '../components/MessageList';
 import { ProviderManagerDialog } from '../components/ProviderManagerDialog';
 import { SettingsDialog } from '../components/SettingsDialog';
@@ -36,6 +37,7 @@ export function App() {
   const [activeNav, setActiveNav] = useState<NavKey | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [providersOpen, setProvidersOpen] = useState(false);
+  const [explorerOpen, setExplorerOpen] = useState(false);
   const [searchRequest, setSearchRequest] = useState(0);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [projectDialog, setProjectDialog] = useState<{
@@ -127,6 +129,9 @@ export function App() {
 
   const activeThread = workx.activeThread;
   const activeCwd = activeThread?.cwd ?? workx.cwd;
+  const activeProjectId = activeThread?.projectId ?? workx.draft?.projectId ?? null;
+  const activeProject = workx.projects.find((project) => project.id === activeProjectId) ?? null;
+  const explorerRoots = activeProject?.roots ?? (activeCwd ? [activeCwd] : []);
   const disabled = workx.status !== 'ready';
   const panel = PANEL_TITLES[activeNav ?? 'new-chat'] ? activeNav : null;
   const title =
@@ -269,6 +274,8 @@ export function App() {
           subtitle={panel ? null : activeCwd}
           status={workx.status}
           exportDisabled={workx.transcript.length === 0}
+          explorerOpen={explorerOpen}
+          onToggleExplorer={() => setExplorerOpen((open) => !open)}
           onExportPdf={() => void exportChat('pdf')}
           onExportMarkdown={() => void exportChat('markdown')}
         />
@@ -361,8 +368,8 @@ export function App() {
               disabledPlaceholder={
                 workx.writerConflict ? t('composer.openElsewhere') : undefined
               }
-              onSubmit={(text, bindings) => {
-                void workx.sendMessage(text, bindings);
+              onSubmit={(text, bindings, images) => {
+                void workx.sendMessage(text, bindings, images);
                 window.requestAnimationFrame(scrollToBottom);
               }}
               onCommand={runCommand}
@@ -371,6 +378,14 @@ export function App() {
           </>
         )}
       </main>
+
+      {explorerOpen ? (
+        <FileExplorerPanel
+          roots={explorerRoots}
+          onOpenPath={(path) => void window.workx.openPath(path)}
+          onClose={() => setExplorerOpen(false)}
+        />
+      ) : null}
 
       <SettingsDialog
         open={settingsOpen}

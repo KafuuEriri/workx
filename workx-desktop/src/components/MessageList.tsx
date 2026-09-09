@@ -14,7 +14,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
+import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
 
 import type { ApprovalRequest } from '../app/useWorkx';
 import type { Activity, ActivityIcon, TranscriptEntry } from '../app/transcript';
@@ -43,6 +43,48 @@ const ACTIVITY_VERB_KEYS: Record<ActivityIcon, MessageKey> = {
   image: 'activity.image',
   output: 'activity.output',
 };
+
+const imageSourceCache = new Map<string, Promise<string | null>>();
+
+function loadImageSource(target: string): Promise<string | null> {
+  if (/^(https?:|data:)/.test(target)) {
+    return Promise.resolve(target);
+  }
+  const cached = imageSourceCache.get(target);
+  if (cached) {
+    return cached;
+  }
+  const pending = window.workx.readImage(target).catch(() => null);
+  imageSourceCache.set(target, pending);
+  return pending;
+}
+
+function UserImage({ source }: { source: string }) {
+  const [resolved, setResolved] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void loadImageSource(source).then((value) => {
+      if (active) {
+        setResolved(value);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [source]);
+
+  if (!resolved) {
+    return null;
+  }
+  return (
+    <img
+      src={resolved}
+      alt=""
+      className="max-h-64 max-w-full rounded-xl border border-line object-contain"
+    />
+  );
+}
 
 interface MessageListProps {
   entries: TranscriptEntry[];
@@ -80,8 +122,19 @@ export function MessageList({
       {entries.map((entry) =>
         entry.kind === 'user' ? (
           <div key={entry.id} className="flex justify-end">
-            <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-bubble px-4 py-2.5 text-[16px] leading-[1.5]">
-              {entry.text}
+            <div className="flex max-w-[85%] flex-col items-end gap-2">
+              {entry.images.length > 0 ? (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {entry.images.map((source) => (
+                    <UserImage key={source} source={source} />
+                  ))}
+                </div>
+              ) : null}
+              {entry.text ? (
+                <div className="whitespace-pre-wrap rounded-2xl bg-bubble px-4 py-2.5 text-[16px] leading-[1.5]">
+                  {entry.text}
+                </div>
+              ) : null}
             </div>
           </div>
         ) : (

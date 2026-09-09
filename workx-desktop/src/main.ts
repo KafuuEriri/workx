@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
-import { rm, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
@@ -88,6 +89,151 @@ ipcMain.handle('workx:pick-folder', async () => {
 });
 
 ipcMain.handle('workx:get-theme', () => nativeTheme.themeSource);
+
+const IMAGE_MIME_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+};
+
+ipcMain.handle(
+  'workx:save-pasted-image',
+  async (_event, data: Uint8Array, extension: string): Promise<string | null> => {
+    if (!(data instanceof Uint8Array) || data.byteLength === 0) {
+      return null;
+    }
+    const ext = extension.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
+    const directory = path.join(app.getPath('temp'), 'workx-desktop-images');
+    await mkdir(directory, { recursive: true });
+    const filePath = path.join(directory, `pasted-${Date.now()}-${randomUUID()}.${ext}`);
+    await writeFile(filePath, data);
+    return filePath;
+  },
+);
+
+interface DirectoryEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+}
+
+const DIRECTORY_ENTRY_LIMIT = 500;
+
+ipcMain.handle(
+  'workx:list-directory',
+  async (_event, target: string): Promise<DirectoryEntry[]> => {
+    if (typeof target !== 'string' || target.length === 0) {
+      return [];
+    }
+    try {
+      const dirents = await readdir(target, { withFileTypes: true });
+      const entries = dirents
+        .filter((entry) => entry.name !== '.DS_Store')
+        .map((entry) => ({
+          name: entry.name,
+          path: path.join(target, entry.name),
+          isDirectory: entry.isDirectory(),
+        }))
+        .sort((left, right) => {
+          if (left.isDirectory !== right.isDirectory) {
+            return left.isDirectory ? -1 : 1;
+          }
+          return left.name.localeCompare(right.name, undefined, { numeric: true });
+        });
+      return entries.slice(0, DIRECTORY_ENTRY_LIMIT);
+    } catch {
+      return [];
+    }
+  },
+);
+
+const SEARCH_SKIP_DIRECTORIES = new Set([
+  '.git',
+  '.hg',
+  '.svn',
+  'node_modules',
+  'target',
+  'dist',
+  'build',
+  '.venv',
+  '__pycache__',
+]);
+
+const SEARCH_RESULT_LIMIT = 200;
+const SEARCH_DEPTH_LIMIT = 12;
+
+async function searchDirectory(
+  root: string,
+  query: string,
+  results: DirectoryEntry[],
+  depth: number,
+): Promise<void> {
+  if (depth > SEARCH_DEPTH_LIMIT || results.length >= SEARCH_RESULT_LIMIT) {
+    return;
+  }
+  let dirents;
+  try {
+    dirents = await readdir(root, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const dirent of dirents) {
+    if (results.length >= SEARCH_RESULT_LIMIT) {
+      return;
+    }
+    if (dirent.name === '.DS_Store') {
+      continue;
+    }
+    const entryPath = path.join(root, dirent.name);
+    const isDirectory = dirent.isDirectory();
+    if (dirent.name.toLowerCase().includes(query)) {
+      results.push({ name: dirent.name, path: entryPath, isDirectory });
+    }
+    if (isDirectory && !SEARCH_SKIP_DIRECTORIES.has(dirent.name)) {
+      await searchDirectory(entryPath, query, results, depth + 1);
+    }
+  }
+}
+
+ipcMain.handle(
+  'workx:search-directory',
+  async (_event, roots: string[], query: string): Promise<DirectoryEntry[]> => {
+    if (!Array.isArray(roots) || typeof query !== 'string') {
+      return [];
+    }
+    const needle = query.trim().toLowerCase();
+    if (!needle) {
+      return [];
+    }
+    const results: DirectoryEntry[] = [];
+    for (const root of roots) {
+      if (typeof root !== 'string' || root.length === 0) {
+        continue;
+      }
+      await searchDirectory(root, needle, results, 0);
+    }
+    return results;
+  },
+);
+
+ipcMain.handle('workx:read-image', async (_event, target: string): Promise<string | null> => {
+  if (typeof target !== 'string' || target.length === 0) {
+    return null;
+  }
+  const mimeType = IMAGE_MIME_TYPES[path.extname(target).toLowerCase()];
+  if (!mimeType) {
+    return null;
+  }
+  try {
+    const data = await readFile(target);
+    return `data:${mimeType};base64,${data.toString('base64')}`;
+  } catch {
+    return null;
+  }
+});
 
 ipcMain.handle(
   'workx:save-markdown',

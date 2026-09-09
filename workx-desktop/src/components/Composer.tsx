@@ -11,6 +11,7 @@ import {
   Settings2,
   Sparkles,
   Square,
+  X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -56,7 +57,7 @@ interface ComposerProps {
   running: boolean;
   disabled: boolean;
   disabledPlaceholder?: string;
-  onSubmit: (text: string, bindings: ComposerMenuBinding[]) => void;
+  onSubmit: (text: string, bindings: ComposerMenuBinding[], images: string[]) => void;
   onCommand: (id: string, args: string) => void;
   onInterrupt: () => void;
 }
@@ -118,6 +119,27 @@ function pluginMentionName(pluginName: string, displayName: string): string {
     .join('');
 }
 
+interface ComposerImage {
+  id: string;
+  path: string;
+  previewUrl: string;
+  name: string;
+}
+
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/bmp': 'bmp',
+};
+
+let nextImageId = 0;
+
+function extensionFromMimeType(mimeType: string): string {
+  return IMAGE_EXTENSIONS[mimeType] ?? 'png';
+}
+
 function matches(terms: Array<string | null | undefined>, query: string): boolean {
   if (!query) {
     return true;
@@ -160,9 +182,12 @@ export function Composer({
   const [fileResults, setFileResults] = useState<FuzzyFileSearchResult[]>([]);
   const [chatResults, setChatResults] = useState<Thread[]>([]);
   const [searching, setSearching] = useState(false);
+  const [images, setImages] = useState<ComposerImage[]>([]);
+  const [imageNotice, setImageNotice] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const composingRef = useRef(false);
   const bindingsRef = useRef(new Map<string, ComposerMenuBinding>());
+  const imagesRef = useRef<ComposerImage[]>([]);
 
   useEffect(() => {
     const element = textareaRef.current;
@@ -174,6 +199,66 @@ export function Composer({
   }, [value]);
 
   const selectedModel = models.find((model) => model.id === selectedModelId) ?? null;
+  const imageInputSupported =
+    selectedModel === null || selectedModel.inputModalities.includes('image');
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  useEffect(
+    () => () => {
+      imagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!imageNotice) {
+      return;
+    }
+    const timer = window.setTimeout(() => setImageNotice(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [imageNotice]);
+
+  const addPastedImages = async (files: File[]) => {
+    for (const file of files) {
+      try {
+        const buffer = new Uint8Array(await file.arrayBuffer());
+        const filePath = await window.workx.savePastedImage(
+          buffer,
+          extensionFromMimeType(file.type),
+        );
+        if (!filePath) {
+          continue;
+        }
+        const previewUrl = URL.createObjectURL(file);
+        nextImageId += 1;
+        setImages((current) => [
+          ...current,
+          {
+            id: `image-${nextImageId}`,
+            path: filePath,
+            previewUrl,
+            name: file.name || 'image',
+          },
+        ]);
+        setImageNotice(null);
+      } catch {
+        setImageNotice(t('composer.imageUnsupported'));
+      }
+    }
+  };
+
+  const removeImage = (id: string) => {
+    setImages((current) => {
+      const removed = current.find((image) => image.id === id);
+      if (removed) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+      return current.filter((image) => image.id !== id);
+    });
+  };
 
   useEffect(() => {
     if (!menu || menu.mode !== 'mention') {
@@ -430,10 +515,11 @@ export function Composer({
 
   const submit = () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) {
+    const imagePaths = images.map((image) => image.path);
+    if ((!trimmed && imagePaths.length === 0) || disabled) {
       return;
     }
-    if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('/') && imagePaths.length === 0) {
       const [name, ...rest] = trimmed.slice(1).split(/\s+/);
       const command = COMPOSER_COMMANDS.find(
         (candidate) => candidate.id === name.toLowerCase(),
@@ -449,9 +535,11 @@ export function Composer({
       .filter(([token]) => trimmed.includes(token))
       .map(([, binding]) => binding);
     bindingsRef.current.clear();
+    images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    setImages([]);
     setValue('');
     setMenu(null);
-    onSubmit(trimmed, bindings);
+    onSubmit(trimmed, bindings, imagePaths);
   };
 
   return (
@@ -475,11 +563,53 @@ export function Composer({
           />
         ) : null}
 
+        {images.length > 0 || imageNotice ? (
+          <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
+            {images.map((image) => (
+              <div key={image.id} className="relative">
+                <img
+                  src={image.previewUrl}
+                  alt={image.name}
+                  className="size-16 rounded-lg border border-line object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label={t('composer.removeImage')}
+                  onClick={() => removeImage(image.id)}
+                  className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border border-line bg-elevated text-fg-secondary hover:text-danger"
+                >
+                  <X className="size-3" strokeWidth={2} />
+                </button>
+              </div>
+            ))}
+            {imageNotice ? (
+              <span className="text-[12px] text-warning">{imageNotice}</span>
+            ) : null}
+          </div>
+        ) : null}
+
         <textarea
           ref={textareaRef}
           rows={1}
           value={value}
           disabled={disabled}
+          onPaste={(event) => {
+            if (disabled) {
+              return;
+            }
+            const files = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+              file.type.startsWith('image/'),
+            );
+            if (files.length === 0) {
+              return;
+            }
+            event.preventDefault();
+            if (!imageInputSupported) {
+              setImageNotice(t('composer.imageUnsupported'));
+              return;
+            }
+            void addPastedImages(files);
+          }}
           onChange={(event) =>
             handleValueChange(event.target.value, event.target.selectionStart ?? 0)
           }
@@ -653,14 +783,26 @@ export function Composer({
             </IconButton>
 
             {running ? (
-              <button
-                type="button"
-                onClick={onInterrupt}
-                aria-label={t('composer.stop')}
-                className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg"
-              >
-                <Square className="size-3.5" strokeWidth={2} />
-              </button>
+              <>
+                {value.trim().length > 0 || images.length > 0 ? (
+                  <button
+                    type="submit"
+                    disabled={disabled}
+                    aria-label={t('composer.send')}
+                    className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
+                  >
+                    <ArrowUp className="size-4" strokeWidth={2} />
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={onInterrupt}
+                  aria-label={t('composer.stop')}
+                  className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg"
+                >
+                  <Square className="size-3.5" strokeWidth={2} />
+                </button>
+              </>
             ) : (
               <button
                 type="submit"
