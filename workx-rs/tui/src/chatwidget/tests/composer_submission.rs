@@ -53,6 +53,44 @@ async fn user_submission_does_not_commit_recap_loading_to_history() {
 }
 
 #[tokio::test]
+async fn queued_follow_up_recovers_when_settings_flow_never_settles() {
+    let (mut chat, _rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    chat.thread_id = Some(ThreadId::new());
+    handle_turn_started(&mut chat, "turn-1");
+
+    // A `/model`-style settings flow leaves autosend suppressed while a turn runs.
+    chat.set_queue_autosend_suppressed(/*suppressed*/ true);
+
+    // A follow-up typed during the suppressed settings flow is queued, not submitted.
+    chat.bottom_pane
+        .set_composer_text("hi".to_string(), Vec::new(), Vec::new());
+    chat.handle_key_event(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(chat.queued_user_message_texts(), vec!["hi".to_string()]);
+
+    // The turn ends, but the SettingsSelectionSettled event was never delivered, so
+    // autosend stays suppressed and the queued message is stuck.
+    handle_turn_completed(&mut chat, "turn-1", /*duration_ms*/ None);
+    assert!(chat.input_queue.suppress_queue_autosend);
+    assert_eq!(chat.queued_user_message_texts(), vec!["hi".to_string()]);
+    assert!(matches!(op_rx.try_recv(), Err(TryRecvError::Empty)));
+
+    // The idle pre-draw tick recovers the queue and submits the follow-up.
+    chat.pre_draw_tick();
+
+    match next_submit_op(&mut op_rx) {
+        Op::UserTurn { items, .. } => assert_eq!(
+            items,
+            vec![UserInput::Text {
+                text: "hi".to_string(),
+                text_elements: Vec::new(),
+            }]
+        ),
+        other => panic!("expected queued follow-up to submit after idle recovery, got {other:?}"),
+    }
+    assert!(chat.queued_user_message_texts().is_empty());
+}
+
+#[tokio::test]
 async fn hidden_shell_paste_submits_literal_prompt() {
     let (mut chat, _rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.thread_id = Some(ThreadId::new());

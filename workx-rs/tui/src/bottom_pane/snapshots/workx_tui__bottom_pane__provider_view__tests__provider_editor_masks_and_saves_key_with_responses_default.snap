@@ -14,6 +14,6 @@ Model providers
                                                                                           
   Protocol (responses / chat): responses                                                  
                                                                                           
-  Default model (blank: first available):                                                 
+  Default model / custom models (comma-separated, blank: first available):                
                                                                                           
 Tab switch · Ctrl-U clear · Enter next/save · Esc back

@@ -13,6 +13,7 @@ base_url = "http://localhost:11434/v1"
         "#;
     let expected_provider = ModelProviderInfo {
         models_endpoint: None,
+        custom_models: Vec::new(),
         name: "Ollama".into(),
         base_url: Some("http://localhost:11434/v1".into()),
         env_key: None,
@@ -47,6 +48,7 @@ query_params = { api-version = "2025-04-01-preview" }
         "#;
     let expected_provider = ModelProviderInfo {
         models_endpoint: None,
+        custom_models: Vec::new(),
         name: "Azure".into(),
         base_url: Some("https://xxxxx.openai.azure.com/openai".into()),
         env_key: Some("AZURE_OPENAI_API_KEY".into()),
@@ -85,6 +87,7 @@ supports_standalone_web_search = true
         "#;
     let expected_provider = ModelProviderInfo {
         models_endpoint: None,
+        custom_models: Vec::new(),
         name: "Example".into(),
         base_url: Some("https://example.com".into()),
         env_key: Some("API_KEY".into()),
@@ -264,6 +267,7 @@ fn test_create_amazon_bedrock_provider() {
             env_key: None,
             env_key_instructions: None,
             models_endpoint: None,
+            custom_models: Vec::new(),
             experimental_bearer_token: None,
             auth: None,
             aws: Some(ModelProviderAwsAuthInfo {

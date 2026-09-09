@@ -236,6 +236,32 @@ impl ChatWidget {
             || (self.bottom_pane.is_task_running() && self.mcp_startup_status.is_none())
     }
 
+    /// Release queued follow-ups that would otherwise sit forever.
+    ///
+    /// A settings/popup flow (for example `/model`) sets
+    /// `suppress_queue_autosend` and expects the later `SettingsSelectionSettled`
+    /// event to clear it and drain the queue. If that settled event is never
+    /// delivered (for example a multi-level popup chain leaves a stale
+    /// suppression, or a gated permissions check prevents the clear), the widget
+    /// stays idle-looking while queued messages are stuck. This tick-time check
+    /// clears the stale suppression and drains exactly one queued input whenever
+    /// the widget is genuinely idle, without disturbing in-flight turns or the
+    /// reconnect recovery path.
+    pub(crate) fn maybe_recover_idle_queued_input(&mut self) {
+        if !self.is_session_configured()
+            || !self.input_queue.has_queued_follow_up_messages()
+            || self.is_user_turn_pending_or_running()
+            || !self.bottom_pane.no_modal_or_popup_active()
+            || self.input_queue.recovered_queue
+        {
+            return;
+        }
+        if self.input_queue.suppress_queue_autosend {
+            self.input_queue.suppress_queue_autosend = false;
+        }
+        self.maybe_send_next_queued_input();
+    }
+
     pub(super) fn only_user_shell_commands_running(&self) -> bool {
         self.turn_lifecycle.agent_turn_running
             && !self.running_commands.is_empty()

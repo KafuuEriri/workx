@@ -237,7 +237,7 @@ impl Renderable for ProviderView {
                 "API key (saved locally)",
                 "Models endpoint",
                 "Protocol (responses / chat)",
-                "Default model (blank: first available)",
+                "Default model / custom models (comma-separated, blank: first available)",
             ]
             .iter()
             .enumerate()

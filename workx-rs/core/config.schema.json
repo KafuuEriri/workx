@@ -2215,6 +2215,13 @@
           "description": "Base URL for the provider's OpenAI-compatible API.",
           "type": "string"
         },
+        "custom_models": {
+          "description": "Additional model IDs to register for this provider even when its models endpoint does not list them (for example internal or beta models). Each entry appears in the model picker without needing to be present in `/v1/models`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "env_http_headers": {
           "additionalProperties": {
             "type": "string"
