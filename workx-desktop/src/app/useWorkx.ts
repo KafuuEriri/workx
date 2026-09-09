@@ -48,6 +48,7 @@ import {
   type ComposerMenuBinding,
   type SlashCommandInfo,
 } from '../data/composerMenu';
+import { FALLBACK_SLASH_COMMANDS } from '../data/slashCommandFallback';
 import { PERMISSION_MODES, type PermissionMode } from '../data/workspace';
 import { useI18n } from '../lib/i18n';
 import {
@@ -751,8 +752,15 @@ export function useWorkx(): WorkxController {
   }, [request]);
 
   const refreshSlashCommands = useCallback(async () => {
-    const response = await request<{ data: SlashCommandInfo[] }>('slashCommands/list', {});
-    dispatch({ type: 'slashCommands', commands: response.data });
+    try {
+      const response = await request<{ data: SlashCommandInfo[] }>('slashCommands/list', {});
+      dispatch({ type: 'slashCommands', commands: response.data });
+    } catch {
+      // App-servers older than `slashCommands/list` still support the goal and
+      // thread APIs, so keep the composer usable with a built-in subset rather
+      // than failing the whole boot.
+      dispatch({ type: 'slashCommands', commands: FALLBACK_SLASH_COMMANDS });
+    }
   }, [request]);
 
   const loadGoal = useCallback(
