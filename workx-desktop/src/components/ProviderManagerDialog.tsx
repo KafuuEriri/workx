@@ -67,7 +67,6 @@ export function ProviderManagerDialog({
   const [draft, setDraft] = useState<ProviderDraft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const configuredIds = Object.keys(providerConfigs).sort();
@@ -86,18 +85,9 @@ export function ProviderManagerDialog({
     }
     setError(null);
     setBusy(false);
-    setSaved(false);
     setConfirmDelete(false);
     // Reset only when the dialog opens; edits must survive parent re-renders.
   }, [open]);
-
-  useEffect(() => {
-    if (!saved) {
-      return;
-    }
-    const timer = setTimeout(() => setSaved(false), 2000);
-    return () => clearTimeout(timer);
-  }, [saved]);
 
   useEffect(() => {
     if (!open) {
@@ -125,7 +115,6 @@ export function ProviderManagerDialog({
     setSelectedId(id);
     setDraft(draftFromConfig(id, providerConfigs[id]));
     setError(null);
-    setSaved(false);
     setConfirmDelete(false);
   };
 
@@ -133,7 +122,6 @@ export function ProviderManagerDialog({
     setSelectedId(null);
     setDraft(EMPTY_DRAFT);
     setError(null);
-    setSaved(false);
     setConfirmDelete(false);
   };
 
@@ -171,12 +159,9 @@ export function ProviderManagerDialog({
         .filter(Boolean),
     };
     setBusy(true);
-    setSaved(false);
     try {
       await onSave(targetId, config);
-      setSelectedId(targetId);
-      setError(null);
-      setSaved(true);
+      onClose();
     } catch (saveError) {
       setError(
         t('provider.saveFailed', {
@@ -425,11 +410,7 @@ export function ProviderManagerDialog({
                 onClick={() => void handleSave()}
                 className="h-8 rounded-full bg-send px-4 text-[13px] text-send-fg disabled:opacity-60"
               >
-                {busy
-                  ? t('provider.saving')
-                  : saved
-                    ? t('provider.saved')
-                    : t('common.save')}
+                {busy ? t('provider.saving') : t('common.save')}
               </button>
             </div>
           </div>
