@@ -59,6 +59,8 @@ The client negotiates the experimental app-server API and uses these methods:
 - `thread/search` — sidebar search
 - `turn/start`, `turn/interrupt` — sending prompts and stopping a run
 - `model/list` — model and reasoning-effort pickers
+- `config/read`, `config/batchWrite` — model/provider selection and the provider
+  manager (add, edit, and delete custom providers)
 - `plugin/list`, `skills/list`, `mcpServerStatus/list` — Plugins / Skills / MCP
   panels
 - `item/commandExecution/requestApproval`,

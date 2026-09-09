@@ -5,6 +5,7 @@ import { Composer } from '../components/Composer';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CreateProjectDialog } from '../components/CreateProjectDialog';
 import { MessageList } from '../components/MessageList';
+import { ProviderManagerDialog } from '../components/ProviderManagerDialog';
 import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar, threadTitle } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
@@ -34,6 +35,7 @@ export function App() {
   const [theme, setTheme] = useState<ThemePreference>(readStoredTheme);
   const [activeNav, setActiveNav] = useState<NavKey | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [providersOpen, setProvidersOpen] = useState(false);
   const [searchRequest, setSearchRequest] = useState(0);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [projectDialog, setProjectDialog] = useState<{
@@ -346,6 +348,7 @@ export function App() {
               providerId={workx.providerId}
               providerBusy={workx.providerBusy}
               onProviderChange={(id) => void workx.selectProvider(id)}
+              onManageProviders={() => setProvidersOpen(true)}
               permission={workx.permission}
               onPermissionChange={workx.setPermission}
               skills={workx.skills}
@@ -379,6 +382,14 @@ export function App() {
         onEffortChange={workx.setEffort}
         theme={theme}
         onThemeChange={setTheme}
+      />
+
+      <ProviderManagerDialog
+        open={providersOpen}
+        onClose={() => setProvidersOpen(false)}
+        providerConfigs={workx.providerConfigs}
+        onSave={workx.saveProvider}
+        onDelete={workx.deleteProvider}
       />
 
       <CreateProjectDialog

@@ -61,13 +61,77 @@ function projectWorkspaceRoots(
   return [...new Set(project.roots.map((root) => root.path))];
 }
 
-const BUILTIN_MODEL_PROVIDER_IDS = [
+export const BUILTIN_MODEL_PROVIDER_IDS = [
   'openai',
   'amazon-bedrock',
   'amazon-bedrock-runtime',
   'ollama',
   'lmstudio',
 ];
+
+export type ProviderWireApi = 'responses' | 'chat' | 'auto';
+
+export interface ProviderConfig {
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  envKey: string;
+  wireApi: ProviderWireApi;
+  modelsEndpoint: string;
+  customModels: string[];
+}
+
+/// Provider keys the manager owns. When a field is cleared we must explicitly
+/// remove it, because saving uses an upsert merge that preserves unknown keys
+/// such as the `experimental_bearer_token` written by the CLI onboarding flow.
+const OPTIONAL_PROVIDER_CONFIG_KEYS = [
+  'experimental_bearer_token',
+  'env_key',
+  'models_endpoint',
+  'custom_models',
+];
+
+export function normalizeProviderConfig(raw: unknown): ProviderConfig {
+  const value = (raw ?? {}) as Record<string, unknown>;
+  const wireApi = value.wire_api;
+  return {
+    name: typeof value.name === 'string' ? value.name : '',
+    baseUrl: typeof value.base_url === 'string' ? value.base_url : '',
+    apiKey:
+      typeof value.experimental_bearer_token === 'string'
+        ? value.experimental_bearer_token
+        : '',
+    envKey: typeof value.env_key === 'string' ? value.env_key : '',
+    wireApi: wireApi === 'chat' ? 'chat' : wireApi === 'auto' ? 'auto' : 'responses',
+    modelsEndpoint:
+      typeof value.models_endpoint === 'string' ? value.models_endpoint : '',
+    customModels: Array.isArray(value.custom_models)
+      ? value.custom_models.filter((model): model is string => typeof model === 'string')
+      : [],
+  };
+}
+
+function providerConfigToToml(config: ProviderConfig): Record<string, unknown> {
+  const value: Record<string, unknown> = {
+    name: config.name.trim(),
+    base_url: config.baseUrl.trim(),
+    wire_api: config.wireApi,
+  };
+  if (config.apiKey.trim()) {
+    value.experimental_bearer_token = config.apiKey.trim();
+  }
+  if (config.envKey.trim()) {
+    value.env_key = config.envKey.trim();
+  }
+  if (config.modelsEndpoint.trim()) {
+    value.models_endpoint = config.modelsEndpoint.trim();
+  }
+  const customModels = config.customModels.map((model) => model.trim()).filter(Boolean);
+  if (customModels.length > 0) {
+    value.custom_models = customModels;
+  }
+  return value;
+}
 
 export interface ApprovalRequest {
   id: string | number;
@@ -94,8 +158,11 @@ export interface WorkxController {
   selectModel: (id: string) => void;
   providerId: string | null;
   providers: string[];
+  providerConfigs: Record<string, ProviderConfig>;
   providerBusy: boolean;
   selectProvider: (id: string) => Promise<void>;
+  saveProvider: (id: string, config: ProviderConfig) => Promise<void>;
+  deleteProvider: (id: string) => Promise<void>;
   selectedEffort: string | null;
   setEffort: (effort: string) => void;
   permission: PermissionMode;
@@ -458,6 +525,7 @@ export function useWorkx(): WorkxController {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [providerId, setProviderId] = useState<string | null>(null);
   const [providers, setProviders] = useState<string[]>([]);
+  const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderConfig>>({});
   const [providerBusy, setProviderBusy] = useState(false);
   const [effortId, setEffortId] = useState<string | null>(null);
   const [permissionId, setPermissionId] = useState('full-access');
@@ -539,12 +607,31 @@ export function useWorkx(): WorkxController {
 
   const refreshProviders = useCallback(async () => {
     const response = await request<ConfigReadResponse>('config/read', { includeLayers: true });
-    const configured = Object.keys(
-      (response.config.model_providers as Record<string, unknown> | undefined) ?? {},
+    const raw =
+      (response.config.model_providers as Record<string, unknown> | undefined) ?? {};
+    const configured = Object.keys(raw);
+    setProviderConfigs(
+      Object.fromEntries(
+        Object.entries(raw).map(([id, value]) => [id, normalizeProviderConfig(value)]),
+      ),
     );
     const ids = Array.from(new Set([...configured, ...BUILTIN_MODEL_PROVIDER_IDS])).sort();
     setProviders(ids);
     setProviderId(response.config.model_provider ?? null);
+  }, [request]);
+
+  const loadModelsForActiveProvider = useCallback(async () => {
+    const listed = await request<ModelListResponse>('model/list', {});
+    const preferred = listed.data.find((model) => model.isDefault) ?? listed.data[0] ?? null;
+    await request('config/batchWrite', {
+      edits: [{ keyPath: 'model', value: preferred?.id ?? null, mergeStrategy: 'replace' }],
+      reloadUserConfig: true,
+    });
+    dispatch({ type: 'models', models: listed.data });
+    modelRef.current = preferred?.id ?? null;
+    setSelectedModelId(preferred?.id ?? null);
+    effortRef.current = preferred?.defaultReasoningEffort ?? null;
+    setEffortId(preferred?.defaultReasoningEffort ?? null);
   }, [request]);
 
   const selectProvider = useCallback(
@@ -562,24 +649,8 @@ export function useWorkx(): WorkxController {
           ],
           reloadUserConfig: true,
         });
-        const listed = await request<ModelListResponse>('model/list', {});
-        const preferred = listed.data.find((model) => model.isDefault) ?? listed.data[0] ?? null;
-        await request('config/batchWrite', {
-          edits: [
-            {
-              keyPath: 'model',
-              value: preferred?.id ?? null,
-              mergeStrategy: 'replace',
-            },
-          ],
-          reloadUserConfig: true,
-        });
         await refreshProviders();
-        dispatch({ type: 'models', models: listed.data });
-        modelRef.current = preferred?.id ?? null;
-        setSelectedModelId(preferred?.id ?? null);
-        effortRef.current = preferred?.defaultReasoningEffort ?? null;
-        setEffortId(preferred?.defaultReasoningEffort ?? null);
+        await loadModelsForActiveProvider();
       } catch (error) {
         dispatch({
           type: 'error',
@@ -589,7 +660,80 @@ export function useWorkx(): WorkxController {
         setProviderBusy(false);
       }
     },
-    [providerBusy, providerId, refreshProviders, request],
+    [loadModelsForActiveProvider, providerBusy, providerId, refreshProviders, request],
+  );
+
+  const saveProvider = useCallback(
+    async (id: string, config: ProviderConfig) => {
+      const value = providerConfigToToml(config);
+      const edits: { keyPath: string; value: unknown; mergeStrategy: 'replace' | 'upsert' }[] = [
+        { keyPath: `model_providers.${id}`, value, mergeStrategy: 'upsert' },
+      ];
+      for (const key of OPTIONAL_PROVIDER_CONFIG_KEYS) {
+        if (!(key in value)) {
+          edits.push({
+            keyPath: `model_providers.${id}.${key}`,
+            value: null,
+            mergeStrategy: 'replace',
+          });
+        }
+      }
+      await request('config/batchWrite', { edits, reloadUserConfig: true });
+      await refreshProviders();
+      if (id === providerId) {
+        try {
+          await loadModelsForActiveProvider();
+        } catch (error) {
+          dispatch({
+            type: 'error',
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    },
+    [loadModelsForActiveProvider, providerId, refreshProviders, request],
+  );
+
+  const deleteProvider = useCallback(
+    async (id: string) => {
+      const wasActive = id === providerId;
+      const remaining = providers.filter((candidate) => candidate !== id);
+      const custom = remaining.filter(
+        (candidate) => !BUILTIN_MODEL_PROVIDER_IDS.includes(candidate),
+      );
+      const fallback = custom[0] ?? (remaining.includes('openai') ? 'openai' : remaining[0]);
+      const edits: { keyPath: string; value: unknown; mergeStrategy: 'replace' }[] = [
+        { keyPath: `model_providers.${id}`, value: null, mergeStrategy: 'replace' },
+      ];
+      // Clear the selection in the same write so the config never references a
+      // provider that no longer exists.
+      if (wasActive && fallback) {
+        edits.push(
+          { keyPath: 'model_provider', value: fallback, mergeStrategy: 'replace' },
+          { keyPath: 'model_reasoning_effort', value: null, mergeStrategy: 'replace' },
+          { keyPath: 'service_tier', value: null, mergeStrategy: 'replace' },
+        );
+      }
+      await request('config/batchWrite', { edits, reloadUserConfig: true });
+      await refreshProviders();
+      if (wasActive && fallback) {
+        try {
+          await loadModelsForActiveProvider();
+        } catch (error) {
+          dispatch({
+            type: 'error',
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    },
+    [
+      loadModelsForActiveProvider,
+      providerId,
+      providers,
+      refreshProviders,
+      request,
+    ],
   );
 
   const startThread = useCallback(
@@ -1286,8 +1430,11 @@ export function useWorkx(): WorkxController {
     },
     providerId,
     providers,
+    providerConfigs,
     providerBusy,
     selectProvider,
+    saveProvider,
+    deleteProvider,
     permission,
     setPermission: (mode) => {
       permissionRef.current = mode;

@@ -8,6 +8,7 @@ import {
   Plug,
   Plus,
   Puzzle,
+  Settings2,
   Sparkles,
   Square,
 } from 'lucide-react';
@@ -44,6 +45,7 @@ interface ComposerProps {
   providerId: string | null;
   providerBusy: boolean;
   onProviderChange: (id: string) => void;
+  onManageProviders: () => void;
   permission: PermissionMode;
   onPermissionChange: (mode: PermissionMode) => void;
   skills: SkillMetadata[];
@@ -132,6 +134,7 @@ export function Composer({
   providerId,
   providerBusy,
   onProviderChange,
+  onManageProviders,
   permission,
   onPermissionChange,
   skills,
@@ -605,6 +608,16 @@ export function Composer({
                     }}
                   />
                 ))}
+                <div className="my-1 h-px bg-line" />
+                <MenuItem
+                  title={t('provider.manage')}
+                  description={t('provider.manageDescription')}
+                  icon={<Settings2 className="size-3.5" strokeWidth={1.75} />}
+                  onClick={() => {
+                    setProviderOpen(false);
+                    onManageProviders();
+                  }}
+                />
               </Menu>
             </div>
 
