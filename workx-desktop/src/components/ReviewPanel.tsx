@@ -2,7 +2,8 @@ import { ArrowUp, GitBranch, RotateCcw, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { GitFileStatus, GitStatusResult } from '../preload';
-import { gitDiffLines, type DiffLine } from '../lib/diff';
+import type { FileUpdateChange } from '@protocol/v2/FileUpdateChange';
+import { diffLines, gitDiffLines, type DiffLine } from '../lib/diff';
 import { cn } from '../lib/cn';
 import { useI18n } from '../lib/i18n';
 
@@ -12,6 +13,7 @@ interface ReviewPanelProps {
   cwd: string;
   onClose: () => void;
   onChanged: () => void;
+  focusChange?: FileUpdateChange | null;
 }
 
 function statusLetter(file: GitFileStatus): string {
@@ -40,12 +42,13 @@ function DiffRow({ line }: { line: DiffLine }) {
   );
 }
 
-export function ReviewPanel({ cwd, onClose, onChanged }: ReviewPanelProps) {
+export function ReviewPanel({ cwd, onClose, onChanged, focusChange }: ReviewPanelProps) {
   const { t } = useI18n();
   const [scope, setScope] = useState<Scope>('unstaged');
   const [status, setStatus] = useState<GitStatusResult | null>(null);
   const [stats, setStats] = useState<Record<string, { additions: number; deletions: number }>>({});
   const [selected, setSelected] = useState<string | null>(null);
+  const [focused, setFocused] = useState<FileUpdateChange | null>(null);
   const [diff, setDiff] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -80,12 +83,21 @@ export function ReviewPanel({ cwd, onClose, onChanged }: ReviewPanelProps) {
 
   const openFile = useCallback(
     async (path: string) => {
+      setFocused(null);
       setSelected(path);
       const result = await window.workx.gitDiff(cwd, scope, path);
       setDiff(result.diff);
     },
     [cwd, scope],
   );
+
+  useEffect(() => {
+    if (!focusChange) {
+      return;
+    }
+    setFocused(focusChange);
+    setSelected(focusChange.path);
+  }, [focusChange]);
 
   const runAction = useCallback(
     async (action: () => Promise<{ ok: boolean; stderr: string }>) => {
@@ -254,7 +266,11 @@ export function ReviewPanel({ cwd, onClose, onChanged }: ReviewPanelProps) {
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto py-1">
-            {selected ? (
+            {focused ? (
+              diffLines(focused).map((line, index) => (
+                <DiffRow key={`${index}-${line.text}`} line={line} />
+              ))
+            ) : selected ? (
               diff ? (
                 gitDiffLines(diff).map((line, index) => (
                   <DiffRow key={`${index}-${line.text}`} line={line} />

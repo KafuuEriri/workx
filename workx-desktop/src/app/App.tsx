@@ -44,6 +44,7 @@ export function App() {
   const [providersOpen, setProvidersOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewFocus, setReviewFocus] = useState<FileUpdateChange | null>(null);
   const [searchRequest, setSearchRequest] = useState(0);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [projectDialog, setProjectDialog] = useState<{
@@ -118,16 +119,9 @@ export function App() {
     element.scrollTop = element.scrollHeight;
   }, []);
 
-  const scrollFileCardToTop = useCallback((target: HTMLElement) => {
-    const container = scrollRef.current;
-    if (!container) {
-      return;
-    }
-    autoFollowRef.current = false;
-    const offset =
-      target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
-    container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
-    setShowScrollDown(true);
+  const openReviewFor = useCallback((change: FileUpdateChange) => {
+    setReviewFocus(change);
+    setReviewOpen(true);
   }, []);
 
   useEffect(() => {
@@ -449,7 +443,7 @@ export function App() {
                   onRetryWriter={() => void workx.retryActiveThread()}
                   onBranch={(turnId) => void workx.forkThread(turnId)}
                   onUndoFileChange={undoFileChange}
-                  onExpandFileCard={scrollFileCardToTop}
+                  onReviewFileChange={openReviewFor}
                 />
               </div>
 
@@ -514,7 +508,11 @@ export function App() {
       {reviewOpen ? (
         <ReviewPanel
           cwd={activeCwd}
-          onClose={() => setReviewOpen(false)}
+          focusChange={reviewFocus}
+          onClose={() => {
+            setReviewOpen(false);
+            setReviewFocus(null);
+          }}
           onChanged={() => undefined}
         />
       ) : null}

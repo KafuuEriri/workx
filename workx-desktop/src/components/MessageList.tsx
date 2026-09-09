@@ -102,7 +102,7 @@ interface MessageListProps {
   onRetryWriter: () => void;
   onBranch: (turnId: string) => void;
   onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
-  onExpandFileCard: (element: HTMLElement) => void;
+  onReviewFileChange: (change: FileUpdateChange) => void;
 }
 
 export function MessageList({
@@ -118,7 +118,7 @@ export function MessageList({
   onRetryWriter,
   onBranch,
   onUndoFileChange,
-  onExpandFileCard,
+  onReviewFileChange,
 }: MessageListProps) {
   const { t } = useI18n();
   return (
@@ -158,7 +158,7 @@ export function MessageList({
             cwd={cwd}
             onBranch={onBranch}
             onUndoFileChange={onUndoFileChange}
-            onExpandFileCard={onExpandFileCard}
+            onReviewFileChange={onReviewFileChange}
           />
         ),
       )}
@@ -212,13 +212,13 @@ function AssistantTurn({
   cwd,
   onBranch,
   onUndoFileChange,
-  onExpandFileCard,
+  onReviewFileChange,
 }: {
   entry: Extract<TranscriptEntry, { kind: 'assistant' }>;
   cwd: string;
   onBranch: (turnId: string) => void;
   onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
-  onExpandFileCard: (element: HTMLElement) => void;
+  onReviewFileChange: (change: FileUpdateChange) => void;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -274,7 +274,7 @@ function AssistantTurn({
                 activity={activity}
                 cwd={cwd}
                 onUndoFileChange={onUndoFileChange}
-                onExpandFileCard={onExpandFileCard}
+                onReviewFileChange={onReviewFileChange}
               />
             ))}
           </div>
@@ -299,7 +299,7 @@ function AssistantTurn({
               activity={activity}
               cwd={cwd}
               onUndoFileChange={onUndoFileChange}
-              onExpandFileCard={onExpandFileCard}
+              onReviewFileChange={onReviewFileChange}
             />
           ))}
         </div>
@@ -347,12 +347,12 @@ function ActivityRow({
   activity,
   cwd,
   onUndoFileChange,
-  onExpandFileCard,
+  onReviewFileChange,
 }: {
   activity: Activity;
   cwd: string;
   onUndoFileChange: (change: FileUpdateChange) => Promise<void> | void;
-  onExpandFileCard: (element: HTMLElement) => void;
+  onReviewFileChange: (change: FileUpdateChange) => void;
 }) {
   const Icon = ACTIVITY_ICONS[activity.icon];
   if (activity.changes && activity.changes.length > 0) {
@@ -364,7 +364,7 @@ function ActivityRow({
             change={change}
             cwd={cwd}
             onUndo={onUndoFileChange}
-            onExpand={onExpandFileCard}
+            onReview={onReviewFileChange}
           />
         ))}
       </div>
