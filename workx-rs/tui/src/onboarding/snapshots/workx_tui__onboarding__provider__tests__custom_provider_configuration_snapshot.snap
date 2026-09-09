@@ -9,7 +9,7 @@ expression: "render(&ProviderSetup::Configure\n{\n    protocol: WireApi::ChatCom
   Base URL or complete endpoint URL
   https://gateway.example/v1
 
-  Model ID (optional; otherwise use the fetched list)
+  Model ID / custom models (comma-separated; blank: first available)
   my-model
 
   API key (optional, saved locally)

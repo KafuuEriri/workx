@@ -40,6 +40,14 @@ pub trait ModelsEndpointClient: fmt::Debug + Send + Sync {
         false
     }
 
+    /// Additional user-defined model IDs to register beyond those returned by
+    /// [`Self::list_models`]. These are merged into the picker catalog even when
+    /// the provider's models endpoint does not list them (for example internal
+    /// or beta models).
+    fn custom_models(&self) -> Vec<String> {
+        Vec::new()
+    }
+
     /// Returns whether this provider can authenticate command-scoped requests.
     fn has_command_auth(&self) -> bool;
 
@@ -139,18 +147,8 @@ pub trait ModelsManager: fmt::Debug + Send + Sync {
     fn auth_manager(&self) -> Option<&AuthManager>;
 
     /// Build picker-ready presets from the active catalog snapshot.
-    fn build_available_models(&self, mut remote_models: Vec<ModelInfo>) -> Vec<ModelPreset> {
-        remote_models.sort_by_key(|model| model.priority);
-
-        let mut presets: Vec<ModelPreset> = remote_models.into_iter().map(Into::into).collect();
-        let uses_workx_backend = self
-            .auth_manager()
-            .is_some_and(AuthManager::current_auth_uses_workx_backend);
-        presets = ModelPreset::filter_by_auth(presets, uses_workx_backend);
-
-        ModelPreset::mark_default_by_picker_visibility(&mut presets);
-
-        presets
+    fn build_available_models(&self, remote_models: Vec<ModelInfo>) -> Vec<ModelPreset> {
+        build_presets_from_models(self.auth_manager(), remote_models)
     }
 
     /// List collaboration mode presets.
@@ -346,6 +344,12 @@ impl ModelsManager for OpenAiModelsManager {
 
     fn auth_manager(&self) -> Option<&AuthManager> {
         self.auth_manager.as_deref()
+    }
+
+    fn build_available_models(&self, remote_models: Vec<ModelInfo>) -> Vec<ModelPreset> {
+        let mut models = remote_models;
+        append_custom_models(&mut models, &self.endpoint_client.custom_models());
+        build_presets_from_models(self.auth_manager(), models)
     }
 
     fn list_collaboration_modes(&self) -> Vec<CollaborationModeMask> {
@@ -623,6 +627,38 @@ impl ModelsManager for StaticModelsManager {
 
 fn load_remote_models_from_file() -> Result<Vec<ModelInfo>, std::io::Error> {
     Ok(crate::bundled_models_response()?.models)
+}
+
+fn build_presets_from_models(
+    auth_manager: Option<&AuthManager>,
+    mut remote_models: Vec<ModelInfo>,
+) -> Vec<ModelPreset> {
+    remote_models.sort_by_key(|model| model.priority);
+
+    let mut presets: Vec<ModelPreset> = remote_models.into_iter().map(Into::into).collect();
+    let uses_workx_backend = auth_manager.is_some_and(AuthManager::current_auth_uses_workx_backend);
+    presets = ModelPreset::filter_by_auth(presets, uses_workx_backend);
+
+    ModelPreset::mark_default_by_picker_visibility(&mut presets);
+
+    presets
+}
+
+fn append_custom_models(models: &mut Vec<ModelInfo>, custom_models: &[String]) {
+    for slug in custom_models {
+        if slug.trim().is_empty() {
+            continue;
+        }
+        if models.iter().any(|model| model.slug == *slug) {
+            continue;
+        }
+        let mut model = model_info::model_info_from_slug(slug.trim());
+        model.visibility = ModelVisibility::List;
+        model.supports_reasoning_summary_parameter = false;
+        model.context_window = None;
+        model.max_context_window = None;
+        models.push(model);
+    }
 }
 
 fn default_model_from_available(available: Vec<ModelPreset>) -> String {

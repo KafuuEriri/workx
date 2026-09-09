@@ -77,7 +77,7 @@ impl ProviderSetup {
                 lines.push("".into());
                 for (index, label) in [
                     "Base URL or complete endpoint URL",
-                    "Model ID (optional; otherwise use the fetched list)",
+                    "Model ID / custom models (comma-separated; blank: first available)",
                     "API key (optional, saved locally)",
                     "Models endpoint (default /v1/models)",
                 ]
@@ -238,6 +238,14 @@ impl AuthModeWidget {
                         let mut provider = json!({"name": "Custom endpoint", "base_url": uri, "wire_api": protocol, "requires_openai_auth": false, "models_endpoint": models_endpoint});
                         if !api_key.is_empty() {
                             provider["experimental_bearer_token"] = json!(api_key);
+                        }
+                        let custom_models: Vec<&str> = model
+                            .split(',')
+                            .map(str::trim)
+                            .filter(|token| !token.is_empty())
+                            .collect();
+                        if !custom_models.is_empty() {
+                            provider["custom_models"] = json!(custom_models);
                         }
                         let edits = vec![
                             replace_config_value("model_provider", json!("custom")),

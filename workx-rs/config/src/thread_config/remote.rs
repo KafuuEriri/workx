@@ -172,6 +172,7 @@ fn model_provider_from_proto(
     };
     let info = ModelProviderInfo {
         models_endpoint: None,
+        custom_models: Vec::new(),
         name: provider.name,
         base_url: provider.base_url,
         env_key: provider.env_key,
@@ -208,6 +209,7 @@ fn model_provider_to_proto(
         env_key,
         env_key_instructions,
         experimental_bearer_token,
+        models_endpoint: _,
         auth,
         aws: _,
         wire_api,
@@ -221,6 +223,7 @@ fn model_provider_to_proto(
         requires_openai_auth,
         supports_websockets,
         supports_standalone_web_search,
+        custom_models: _,
     } = provider;
 
     proto::ModelProvider {
@@ -540,6 +543,8 @@ mod tests {
 
     fn expected_provider() -> ModelProviderInfo {
         ModelProviderInfo {
+            custom_models: Vec::new(),
+            models_endpoint: None,
             name: "Local".to_string(),
             base_url: Some("http://127.0.0.1:8061/api/codex".to_string()),
             env_key: None,

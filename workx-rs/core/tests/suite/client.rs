@@ -1506,6 +1506,7 @@ async fn amazon_bedrock_proxy_uses_command_auth_and_custom_headers() {
 /// reaches `Completed` without surfacing an auth or transport error to the client.
 async fn send_provider_auth_request(server: &MockServer, auth: ModelProviderAuthInfo) {
     let provider = ModelProviderInfo {
+        custom_models: Vec::new(),
         models_endpoint: None,
         name: "corp".into(),
         base_url: Some(format!("{}/v1", server.uri())),
@@ -3004,6 +3005,7 @@ async fn azure_responses_request_does_not_store_and_preserves_prefixed_item_ids(
     let resp_mock = mount_sse_once(&server, sse_body.to_string()).await;
 
     let provider = ModelProviderInfo {
+        custom_models: Vec::new(),
         models_endpoint: None,
         name: "azure".into(),
         base_url: Some(format!("{}/openai", server.uri())),
@@ -3630,6 +3632,7 @@ async fn azure_overrides_assign_properties_used_for_responses_url() {
         .await;
 
     let provider = ModelProviderInfo {
+        custom_models: Vec::new(),
         models_endpoint: None,
         name: "custom".to_string(),
         base_url: Some(format!("{}/openai", server.uri())),
@@ -3715,6 +3718,7 @@ async fn env_var_overrides_loaded_auth() {
         .await;
 
     let provider = ModelProviderInfo {
+        custom_models: Vec::new(),
         models_endpoint: None,
         name: ModelProviderInfo::create_openai_provider(/*base_url*/ None).name,
         base_url: Some(format!("{}/openai", server.uri())),
