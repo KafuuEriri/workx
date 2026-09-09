@@ -419,7 +419,7 @@ export function App() {
                   goal={workx.goal}
                   onClear={() => void workx.clearGoal()}
                   onTogglePause={() =>
-                    void workx.setGoalStatus(workx.goal?.status === 'paused' ? 'active' : 'paused')
+                    void workx.setGoalStatus(workx.goal?.status === 'active' ? 'paused' : 'active')
                   }
                   onExpand={() => setGoalDialogOpen(true)}
                 />

@@ -58,7 +58,9 @@ export function GoalBanner({ goal, onClear, onTogglePause, onExpand }: GoalBanne
       ? baselineRef.current.seconds +
         Math.floor((now - baselineRef.current.at) / 1000)
       : goal.timeUsedSeconds;
-  const paused = goal.status === 'paused';
+  const running = goal.status === 'active';
+  const resumable =
+    goal.status === 'paused' || goal.status === 'blocked' || goal.status === 'usageLimited';
 
   return (
     <div className="mx-auto w-full max-w-[42rem] px-6">
@@ -75,16 +77,18 @@ export function GoalBanner({ goal, onClear, onTogglePause, onExpand }: GoalBanne
           <IconButton aria-label={t('goal.clear')} onClick={onClear}>
             <Trash2 className="size-4" strokeWidth={1.75} />
           </IconButton>
-          <IconButton
-            aria-label={paused ? t('goal.resume') : t('goal.pause')}
-            onClick={onTogglePause}
-          >
-            {paused ? (
-              <Play className="size-4" strokeWidth={1.75} />
-            ) : (
-              <Pause className="size-4" strokeWidth={1.75} />
-            )}
-          </IconButton>
+          {running || resumable ? (
+            <IconButton
+              aria-label={running ? t('goal.pause') : t('goal.resume')}
+              onClick={onTogglePause}
+            >
+              {running ? (
+                <Pause className="size-4" strokeWidth={1.75} />
+              ) : (
+                <Play className="size-4" strokeWidth={1.75} />
+              )}
+            </IconButton>
+          ) : null}
           <IconButton aria-label={t('goal.details')} onClick={onExpand}>
             <Maximize2 className="size-4" strokeWidth={1.75} />
           </IconButton>
