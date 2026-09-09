@@ -47,6 +47,8 @@ schema at `../workx-rs/app-server-protocol/schema/typescript` (aliased as
 
 Set `WORKX_BIN` to point at a different Workx binary, and `WORKX_CWD` to change
 the directory used for new threads (defaults to the user's home directory).
+Custom model IDs (`custom_models`) require a Workx CLI of 0.0.4 or newer; older
+CLIs ignore the field, and the provider dialog reports that when it happens.
 
 ## Wiring
 

@@ -605,24 +605,32 @@ export function useWorkx(): WorkxController {
     }
   }, [request]);
 
-  const refreshProviders = useCallback(async () => {
-    const response = await request<ConfigReadResponse>('config/read', { includeLayers: true });
+  const applyConfigRead = useCallback((response: ConfigReadResponse) => {
     const raw =
       (response.config.model_providers as Record<string, unknown> | undefined) ?? {};
-    const configured = Object.keys(raw);
     setProviderConfigs(
       Object.fromEntries(
         Object.entries(raw).map(([id, value]) => [id, normalizeProviderConfig(value)]),
       ),
     );
-    const ids = Array.from(new Set([...configured, ...BUILTIN_MODEL_PROVIDER_IDS])).sort();
+    const ids = Array.from(new Set([...Object.keys(raw), ...BUILTIN_MODEL_PROVIDER_IDS])).sort();
     setProviders(ids);
     setProviderId(response.config.model_provider ?? null);
-  }, [request]);
+    return raw;
+  }, []);
 
-  const loadModelsForActiveProvider = useCallback(async () => {
+  const refreshProviders = useCallback(async () => {
+    applyConfigRead(await request<ConfigReadResponse>('config/read', { includeLayers: true }));
+  }, [applyConfigRead, request]);
+
+  const loadModelsForActiveProvider = useCallback(async (options?: { preserveModel?: boolean }) => {
     const listed = await request<ModelListResponse>('model/list', {});
-    const preferred = listed.data.find((model) => model.isDefault) ?? listed.data[0] ?? null;
+    const current = options?.preserveModel ? modelRef.current : null;
+    const preferred =
+      (current ? listed.data.find((model) => model.id === current) : undefined) ??
+      listed.data.find((model) => model.isDefault) ??
+      listed.data[0] ??
+      null;
     await request('config/batchWrite', {
       edits: [{ keyPath: 'model', value: preferred?.id ?? null, mergeStrategy: 'replace' }],
       reloadUserConfig: true,
@@ -679,10 +687,21 @@ export function useWorkx(): WorkxController {
         }
       }
       await request('config/batchWrite', { edits, reloadUserConfig: true });
-      await refreshProviders();
+      const raw = applyConfigRead(
+        await request<ConfigReadResponse>('config/read', { includeLayers: true }),
+      );
+      // Older CLIs ignore `custom_models` instead of rejecting it, so a save
+      // would look successful while the model never appears.
+      const saved = normalizeProviderConfig(raw[id]);
+      const missing = config.customModels.filter(
+        (model) => !saved.customModels.includes(model),
+      );
+      if (missing.length > 0) {
+        throw new Error(t('provider.customModelsUnsupported', { models: missing.join(', ') }));
+      }
       if (id === providerId) {
         try {
-          await loadModelsForActiveProvider();
+          await loadModelsForActiveProvider({ preserveModel: true });
         } catch (error) {
           dispatch({
             type: 'error',
@@ -691,7 +710,7 @@ export function useWorkx(): WorkxController {
         }
       }
     },
-    [loadModelsForActiveProvider, providerId, refreshProviders, request],
+    [applyConfigRead, loadModelsForActiveProvider, providerId, request, t],
   );
 
   const deleteProvider = useCallback(

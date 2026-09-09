@@ -176,6 +176,9 @@ const en = {
   'provider.saveFailed': 'Could not save provider: {message}',
   'provider.deleteFailed': 'Could not delete provider: {message}',
   'provider.saving': 'Saving…',
+  'provider.saved': 'Saved',
+  'provider.customModelsUnsupported':
+    'the connected Workx CLI ignored custom model IDs ({models}). Update the workx CLI to 0.0.4 or newer.',
   'composer.dictate': 'Dictate',
   'composer.stop': 'Stop',
   'composer.send': 'Send',
@@ -442,6 +445,9 @@ const zh: Record<MessageKey, string> = {
   'provider.saveFailed': '保存提供方失败：{message}',
   'provider.deleteFailed': '删除提供方失败：{message}',
   'provider.saving': '保存中…',
+  'provider.saved': '已保存',
+  'provider.customModelsUnsupported':
+    '当前连接的 Workx CLI 忽略了自定义模型 ID（{models}），请将 workx CLI 升级到 0.0.4 或更高版本。',
   'composer.dictate': '语音输入',
   'composer.stop': '停止',
   'composer.send': '发送',
