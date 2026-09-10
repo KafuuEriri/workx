@@ -35,6 +35,7 @@ export type TranscriptEntry =
       text: string;
       activities: Activity[];
       durationMs: number | null;
+      startedAtMs: number | null;
       status: TurnStatus | null;
       active: boolean;
     };
@@ -150,7 +151,7 @@ export function buildTranscript(
 
   for (const turn of turns) {
     const activities: Activity[] = [];
-    let assistantEntry: Extract<TranscriptEntry, { kind: 'assistant' }> | null = null;
+    const turnEntries: Extract<TranscriptEntry, { kind: 'assistant' }>[] = [];
     let goalMarked = false;
 
     for (const item of turn.items) {
@@ -167,17 +168,19 @@ export function buildTranscript(
         continue;
       }
       if (item.type === 'agentMessage') {
-        assistantEntry = {
+        const assistantEntry = {
           kind: 'assistant',
           id: item.id,
           turnId: turn.id,
           text: item.text,
           activities: [...activities],
           durationMs: null,
+          startedAtMs: turn.startedAtMs,
           status: turn.status,
-          active: turn.status === 'inProgress',
-        };
+          active: false,
+        } satisfies Extract<TranscriptEntry, { kind: 'assistant' }>;
         entries.push(assistantEntry);
+        turnEntries.push(assistantEntry);
         activities.length = 0;
         continue;
       }
@@ -192,26 +195,34 @@ export function buildTranscript(
       }
     }
 
-    const target =
-      assistantEntry ??
-      ({
+    if (turnEntries.length === 0) {
+      const summaryEntry = {
         kind: 'assistant',
         id: `${turn.id}-summary`,
         turnId: turn.id,
         text: '',
         activities: [],
         durationMs: null,
+        startedAtMs: turn.startedAtMs,
         status: turn.status,
-        active: turn.status === 'inProgress',
-      } satisfies Extract<TranscriptEntry, { kind: 'assistant' }>);
-
-    if (!assistantEntry) {
-      entries.push(target);
+        active: false,
+      } satisfies Extract<TranscriptEntry, { kind: 'assistant' }>;
+      entries.push(summaryEntry);
+      turnEntries.push(summaryEntry);
     }
-    target.activities = [...target.activities, ...activities];
-    target.durationMs = turn.durationMs;
-    target.status = turn.status;
-    target.active = turn.status === 'inProgress' || turn.status === null;
+
+    const lastEntry = turnEntries[turnEntries.length - 1];
+    lastEntry.activities = [...lastEntry.activities, ...activities];
+
+    // Only the newest message of a turn can still be working. Earlier messages of the same turn
+    // already finished, and labelling them as in progress makes running and finished turns
+    // indistinguishable.
+    const turnInProgress = turn.status === 'inProgress' || turn.status === null;
+    for (const entry of turnEntries) {
+      entry.status = turn.status;
+      entry.active = turnInProgress && entry === lastEntry;
+    }
+    lastEntry.durationMs = turn.durationMs;
   }
 
   return entries;
