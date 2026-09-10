@@ -16,6 +16,13 @@ import {
   gitUnstage,
 } from './main/git';
 
+// The Windows app and CLI share a filename. A PATH entry or an older launcher
+// can accidentally invoke the desktop as the backend; exit before opening a UI.
+if (process.argv[1] === 'app-server') {
+  console.error('Workx Desktop cannot run as an app-server. Set WORKX_BIN to the Workx CLI executable.');
+  app.exit(1);
+}
+
 app.setName('Workx');
 app.setAboutPanelOptions({ applicationName: 'Workx', applicationVersion: app.getVersion() });
 

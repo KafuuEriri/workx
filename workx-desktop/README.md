@@ -110,11 +110,19 @@ Installers are built with Electron Forge:
 The app icon lives in `assets/` (`icon.icns`, `icon.ico`, `icon.png`) and is
 applied through `packagerConfig.icon`.
 
-Packaged apps resolve the Workx CLI from `WORKX_BIN`, a bundled
-`Resources/bin/workx`, the Homebrew locations (`/opt/homebrew/bin/workx`,
-`/usr/local/bin/workx`), then `PATH`. macOS GUI apps do not inherit the shell
-`PATH`, so the explicit Homebrew paths are required for
-`brew install --cask workx`.
+The desktop app requires the Workx CLI. Packaged apps resolve it from
+`WORKX_BIN`, a bundled `Resources/bin/workx`, platform-specific install
+locations, then explicit entries in `PATH`. On Windows, this includes the
+installer's default `%LOCALAPPDATA%\Programs\OpenAI\Workx\bin\workx.exe`
+and a custom `WORKX_INSTALL_DIR`. On macOS, `/opt/homebrew/bin/workx` and
+`/usr/local/bin/workx` are checked because GUI apps do not inherit the shell
+`PATH`.
+
+`WORKX_BIN` must identify the CLI executable, not the desktop's `Workx.exe`.
+If no CLI is found, the app reports a setup error instead of relying on
+Windows executable lookup, which can launch another desktop window. A desktop
+process invoked with `app-server` also exits before opening any windows.
+After installing the CLI or correcting `WORKX_BIN`, restart the desktop app.
 
 Code signing is optional. Set `APPLE_IDENTITY`, `APPLE_ID`,
 `APPLE_APP_PASSWORD`, and `APPLE_TEAM_ID` for macOS signing/notarization, or
