@@ -1,48 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import path from 'node:path';
 import { createInterface } from 'node:readline';
 
 import type { ClientInfo } from '@protocol/ClientInfo';
 import type { InitializeResponse } from '@protocol/InitializeResponse';
+import { resolveWorkxBinary } from './binary';
 
 export type JsonRpcId = string | number;
-
-/**
- * Resolve the `workx` CLI. Packaged macOS apps launched from Finder inherit a
- * minimal PATH, so a Homebrew-installed CLI is not discoverable via `workx`
- * alone. Prefer an explicit override, then a CLI bundled inside the app, then
- * the common Homebrew and per-user install locations.
- */
-export function resolveWorkxBinary(): string {
-  const override = process.env.WORKX_BIN?.trim();
-  if (override) {
-    return override;
-  }
-  const executable = process.platform === 'win32' ? 'workx.exe' : 'workx';
-  const candidates: string[] = [];
-  if (process.resourcesPath) {
-    candidates.push(path.join(process.resourcesPath, 'bin', executable));
-  }
-  if (process.platform === 'darwin') {
-    candidates.push(path.join('/opt/homebrew/bin', executable), path.join('/usr/local/bin', executable));
-  } else if (process.platform === 'win32') {
-    candidates.push(
-      path.join(homedir(), '.local', 'bin', executable),
-      path.join(process.env.LOCALAPPDATA ?? '', 'Workx', 'bin', executable),
-    );
-  } else {
-    candidates.push(path.join(homedir(), '.local', 'bin', executable));
-  }
-  for (const candidate of candidates) {
-    if (candidate && existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return 'workx';
-}
 
 export interface JsonRpcErrorShape {
   code: number;
@@ -106,13 +70,16 @@ export class AppServerClient extends EventEmitter<AppServerClientEvents> {
   private readonly stderrTail: string[] = [];
   private nextId = 1;
   private stopped = false;
+  private lastError: Error | null = null;
 
   start(options: { bin?: string; args?: string[]; cwd?: string } = {}): void {
     if (this.child) {
       return;
     }
     this.stopped = false;
-    const bin = options.bin ?? resolveWorkxBinary();
+    this.lastError = null;
+    this.stderrTail.length = 0;
+    const bin = resolveWorkxBinary(options.bin);
     const args = options.args ?? ['app-server', '--stdio'];
     const child = spawn(bin, args, {
       cwd: options.cwd,
@@ -121,13 +88,30 @@ export class AppServerClient extends EventEmitter<AppServerClientEvents> {
     });
     this.child = child;
 
-    child.on('error', (error) => {
-      this.emit('log', `failed to spawn ${bin}: ${error.message}`);
-    });
-
-    child.on('exit', (code, signal) => {
+    const fail = (error: Error) => {
+      if (this.child !== child) {
+        return;
+      }
       this.child = null;
-      this.rejectAll(new Error(`app-server exited (code=${code ?? 'null'})`));
+      this.lastError = new Error(`Failed to run Workx CLI at ${bin}: ${error.message}`);
+      this.rejectAll(this.lastError);
+      this.emit('log', this.lastError.message);
+      this.emit('exit', { code: null, signal: null });
+      child.kill();
+    };
+    child.once('error', fail);
+    child.stdin.on('error', fail);
+
+    child.once('exit', (code, signal) => {
+      if (this.child !== child) {
+        return;
+      }
+      this.child = null;
+      const detail = this.stderr();
+      this.lastError = new Error(
+        `app-server exited (code=${code ?? 'null'}) at ${bin}${detail ? `\n${detail}` : ''}`,
+      );
+      this.rejectAll(this.lastError);
       this.emit('exit', { code, signal });
     });
 
@@ -159,7 +143,7 @@ export class AppServerClient extends EventEmitter<AppServerClientEvents> {
   request<T>(method: string, params?: unknown, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
     const child = this.child;
     if (!child) {
-      return Promise.reject(new Error('app-server is not running'));
+      return Promise.reject(this.lastError ?? new Error('app-server is not running'));
     }
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {
