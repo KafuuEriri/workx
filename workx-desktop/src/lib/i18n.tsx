@@ -104,6 +104,7 @@ const en = {
   'sidebar.add': 'Add to {label}',
 
   'message.working': 'Working…',
+  'message.workingFor': 'Working for {duration}',
   'message.workedFor': 'Worked for {duration}',
   'message.worked': 'Worked',
   'message.copy': 'Copy',
@@ -414,6 +415,7 @@ const zh: Record<MessageKey, string> = {
   'sidebar.add': '添加到{label}',
 
   'message.working': '处理中…',
+  'message.workingFor': '处理中 {duration}',
   'message.workedFor': '耗时 {duration}',
   'message.worked': '已完成',
   'message.copy': '复制',

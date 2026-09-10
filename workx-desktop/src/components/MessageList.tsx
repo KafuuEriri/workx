@@ -223,6 +223,11 @@ function AssistantTurn({
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const elapsedMs = useElapsedMs(entry.active, entry.startedAtMs);
+  const workingLabel =
+    elapsedMs !== null && elapsedMs >= 1000
+      ? t('message.workingFor', { duration: formatDuration(elapsedMs) })
+      : t('message.working');
   const fileActivities = entry.activities.filter(
     (activity) => activity.changes && activity.changes.length > 0,
   );
@@ -230,6 +235,9 @@ function AssistantTurn({
     (activity) => !activity.changes || activity.changes.length === 0,
   );
   const hasActivities = otherActivities.length > 0;
+  const runningActivity =
+    otherActivities.findLast((activity) => activity.active) ??
+    otherActivities[otherActivities.length - 1];
 
   const copy = () => {
     void navigator.clipboard.writeText(entry.text).then(() => {
@@ -249,7 +257,7 @@ function AssistantTurn({
         >
           <span>
             {entry.active
-              ? t('message.working')
+              ? workingLabel
               : entry.durationMs !== null
                 ? t('message.workedFor', { duration: formatDuration(entry.durationMs) })
                 : t('message.worked')}
@@ -288,6 +296,17 @@ function AssistantTurn({
       ) : entry.active ? (
         <div className="mt-3">
           <Thinking />
+        </div>
+      ) : null}
+
+      {entry.active && !open && runningActivity ? (
+        <div className="mt-3">
+          <ActivityRow
+            activity={runningActivity}
+            cwd={cwd}
+            onUndoFileChange={onUndoFileChange}
+            onReviewFileChange={onReviewFileChange}
+          />
         </div>
       ) : null}
 
@@ -481,6 +500,25 @@ function Banner({
       ) : null}
     </div>
   );
+}
+
+/** Ticks once a second while a turn runs so its header shows elapsed time instead of a static
+ * "Working…", which reads the same whether or not the turn already finished. */
+function useElapsedMs(active: boolean, startedAtMs: number | null): number | null {
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!active || startedAtMs === null) {
+      setElapsedMs(null);
+      return;
+    }
+    const update = () => setElapsedMs(Date.now() - startedAtMs);
+    update();
+    const handle = window.setInterval(update, 1000);
+    return () => window.clearInterval(handle);
+  }, [active, startedAtMs]);
+
+  return elapsedMs;
 }
 
 function Thinking() {
