@@ -92,12 +92,13 @@ export function SettingsPage(props: SettingsPageProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex bg-app text-fg">
-      <aside className="flex w-[224px] shrink-0 flex-col border-r border-line bg-sidebar">
-        <div className="shrink-0 p-2">
+      <aside className="drag flex w-[224px] shrink-0 flex-col border-r border-line bg-sidebar">
+        <div className="h-11 shrink-0" />
+        <div className="shrink-0 px-2 pb-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-fg-secondary hover:bg-hover hover:text-fg"
+            className="no-drag flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-fg-secondary hover:bg-hover hover:text-fg"
           >
             <ArrowLeft className="size-4 shrink-0" strokeWidth={1.75} />
             <span className="truncate">{t('settings.backToApp')}</span>
@@ -113,7 +114,7 @@ export function SettingsPage(props: SettingsPageProps) {
                 type="button"
                 onClick={() => onSectionChange(item.key)}
                 className={cn(
-                  'mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px]',
+                  'no-drag mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px]',
                   selected ? 'bg-active text-fg' : 'text-fg-secondary hover:bg-hover hover:text-fg',
                 )}
               >
@@ -126,7 +127,7 @@ export function SettingsPage(props: SettingsPageProps) {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line px-5">
+        <header className="drag flex h-11 shrink-0 items-center gap-2 border-b border-line px-5">
           <h1 className="min-w-0 flex-1 truncate text-[14px] font-semibold">
             {t(active.labelKey)}
           </h1>
