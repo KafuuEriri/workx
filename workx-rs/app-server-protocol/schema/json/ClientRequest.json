@@ -2201,6 +2201,18 @@
       },
       "type": "object"
     },
+    "ModelProviderBalanceReadParams": {
+      "properties": {
+        "providerId": {
+          "description": "Provider to read; defaults to the active provider when omitted.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
     "ModelProviderCapabilitiesReadParams": {
       "type": "object"
     },
@@ -7293,6 +7305,30 @@
         "params"
       ],
       "title": "ModelProvider/capabilities/readRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "modelProvider/balance/read"
+          ],
+          "title": "ModelProvider/balance/readRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ModelProviderBalanceReadParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "ModelProvider/balance/readRequest",
       "type": "object"
     },
     {
