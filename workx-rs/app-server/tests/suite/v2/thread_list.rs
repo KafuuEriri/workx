@@ -497,6 +497,60 @@ async fn thread_list_respects_provider_filter() -> Result<()> {
 }
 
 #[tokio::test]
+async fn thread_list_without_provider_filter_includes_every_provider() -> Result<()> {
+    let workx_home = TempDir::new()?;
+    create_minimal_config(workx_home.path())?;
+
+    // Record threads under providers that differ from each other and from the
+    // active provider so a provider-scoped listing would drop both.
+    let mock_provider_id = create_fake_rollout(
+        workx_home.path(),
+        "2025-01-02T10-00-00",
+        "2025-01-02T10:00:00Z",
+        "mock provider thread",
+        Some("mock_provider"),
+        /*git_info*/ None,
+    )?;
+    let other_provider_id = create_fake_rollout(
+        workx_home.path(),
+        "2025-01-02T11-00-00",
+        "2025-01-02T11:00:00Z",
+        "other provider thread",
+        Some("other_provider"),
+        /*git_info*/ None,
+    )?;
+
+    let mut mcp = init_mcp(workx_home.path()).await?;
+
+    let ThreadListResponse {
+        data, next_cursor, ..
+    } = list_threads(
+        &mut mcp,
+        /*cursor*/ None,
+        Some(10),
+        /*providers*/ None,
+        /*source_kinds*/ None,
+        /*archived*/ None,
+    )
+    .await?;
+
+    assert_eq!(next_cursor, None);
+    let mut listed_providers = data
+        .iter()
+        .map(|thread| (thread.id.clone(), thread.model_provider.clone()))
+        .collect::<Vec<_>>();
+    listed_providers.sort();
+    let mut expected_providers = vec![
+        (mock_provider_id, "mock_provider".to_string()),
+        (other_provider_id, "other_provider".to_string()),
+    ];
+    expected_providers.sort();
+    assert_eq!(listed_providers, expected_providers);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn thread_list_respects_cwd_filters() -> Result<()> {
     let workx_home = TempDir::new()?;
     create_minimal_config(workx_home.path())?;
