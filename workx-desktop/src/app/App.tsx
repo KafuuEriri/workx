@@ -2,6 +2,7 @@ import { ArrowDown, TriangleAlert } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Composer } from '../components/Composer';
+import { SideChat } from '../components/SideChat';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CreateProjectDialog } from '../components/CreateProjectDialog';
 import { FileExplorerPanel } from '../components/FileExplorerPanel';
@@ -25,7 +26,7 @@ import {
   type ThemePreference,
 } from '../lib/theme';
 import { useI18n, type MessageKey } from '../lib/i18n';
-import { useWorkx, type ProjectView } from './useWorkx';
+import { useWorkx, type ProjectView, type SideChatBranch } from './useWorkx';
 
 const AUTO_FOLLOW_THRESHOLD_PX = 48;
 
@@ -44,6 +45,7 @@ const PANEL_TITLES: Partial<Record<NavKey, MessageKey>> = {
 export function App() {
   const { t, language } = useI18n();
   const workx = useWorkx();
+  const { openSideChat } = workx;
   const [theme, setTheme] = useState<ThemePreference>(readStoredTheme);
   const [activeNav, setActiveNav] = useState<NavKey | null>(null);
   const [settingsSection, setSettingsSection] = useState<SettingsSection | null>(null);
@@ -68,6 +70,7 @@ export function App() {
   const [exportError, setExportError] = useState(false);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sideChat, setSideChat] = useState<SideChatBranch | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoFollowRef = useRef(true);
 
@@ -105,11 +108,21 @@ export function App() {
       if (event.key === ',' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         setSettingsSection((current) => current ?? 'general');
+        return;
+      }
+      // ⌘+⌥+S / Ctrl+Alt+S 打开当前会话的侧边对话。Option 会改写 event.key，因此匹配物理按键。
+      if (event.code === 'KeyS' && event.altKey && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        void openSideChat().then((branch) => {
+          if (branch) {
+            setSideChat(branch);
+          }
+        });
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [openSideChat]);
 
   useEffect(() => {
     if (workx.status !== 'ready') {
@@ -526,7 +539,18 @@ export function App() {
               searchFiles={workx.searchMentionFiles}
               searchChats={workx.searchMentionChats}
               running={workx.running}
-              queuedCount={workx.queuedMessages.length}
+              queuedMessages={workx.queuedMessages}
+              queueing={workx.queueing}
+              queueBusy={workx.queueBusy}
+              onQueueingChange={workx.setQueueing}
+              onRemoveQueued={workx.removeQueued}
+              onEditQueued={workx.editQueued}
+              onEditingQueuedChange={workx.setEditingQueued}
+              onSendQueued={(id, destination) => {
+                void workx.sendQueued(id, destination).then((branch) => {
+                  if (branch) setSideChat(branch);
+                });
+              }}
               disabled={disabled || workx.writerConflict}
               disabledPlaceholder={
                 workx.writerConflict ? t('composer.openElsewhere') : undefined
@@ -545,6 +569,9 @@ export function App() {
           </>
         )}
       </main>
+      {sideChat ? <SideChat key={sideChat.threadId} threadId={sideChat.threadId} message={sideChat.message}
+        onClose={() => setSideChat(null)}
+        onUndoFileChange={undoFileChange} onReviewFileChange={openReviewFor} /> : null}
 
       {reviewOpen ? (
         <>

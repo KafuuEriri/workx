@@ -363,6 +363,12 @@ export interface QueuedMessage {
   asGoal: boolean;
 }
 
+/// 侧边对话分支。`message` 是需要在分支里投递的排队消息，快捷键打开的新分支不带消息。
+export interface SideChatBranch {
+  threadId: string;
+  message: QueuedMessage | null;
+}
+
 export interface WorkxController {
   status: 'connecting' | 'ready' | 'error' | 'stopped';
   statusMessage: string | null;
@@ -390,6 +396,16 @@ export interface WorkxController {
   transcript: TranscriptEntry[];
   pendingSteers: PendingSteer[];
   queuedMessages: QueuedMessage[];
+  queueing: boolean;
+  setQueueing: (enabled: boolean) => void;
+  queueBusy: boolean;
+  removeQueued: (id: string) => void;
+  editQueued: (id: string, text: string) => void;
+  setEditingQueued: (id: string | null) => void;
+  /// 投递排队消息。返回需要打开的侧边对话分支；插话到当前会话或失败时返回 null。
+  sendQueued: (id: string, destination: 'current' | 'side') => Promise<SideChatBranch | null>;
+  /// 为当前会话派生一个不含消息的侧边对话分支。没有打开会话时返回 null。
+  openSideChat: () => Promise<SideChatBranch | null>;
   running: boolean;
   approvals: ApprovalRequest[];
   warnings: string[];
@@ -422,6 +438,13 @@ export interface WorkxController {
     text: string,
     bindings?: ComposerMenuBinding[],
     images?: string[],
+    options?: { asGoal?: boolean; steer?: boolean },
+  ) => Promise<void>;
+  /// 发送已构造好的输入项。侧边对话投递排队消息时用它保留原始附件与提及。
+  sendInput: (
+    input: UserInput[],
+    text: string,
+    images: string[],
     options?: { asGoal?: boolean; steer?: boolean },
   ) => Promise<void>;
   searchMentionFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
@@ -497,6 +520,7 @@ type Action =
   | { type: 'steerSettled'; text: string }
   | { type: 'queueAdd'; message: QueuedMessage }
   | { type: 'queueRemove'; id: string }
+  | { type: 'queueEdit'; id: string; text: string }
   | { type: 'warning'; message: string }
   | { type: 'error'; message: string | null }
   | { type: 'approvalAdd'; approval: ApprovalRequest }
@@ -715,6 +739,16 @@ function reducer(state: State, action: Action): State {
         ...state,
         queuedMessages: state.queuedMessages.filter((message) => message.id !== action.id),
       };
+    case 'queueEdit':
+      return {
+        ...state,
+        queuedMessages: state.queuedMessages.map((message) => message.id === action.id
+          ? { ...message, text: action.text, input: [
+              { type: 'text', text: action.text, text_elements: [] },
+              ...message.input.filter((item) => item.type !== 'text'),
+            ] }
+          : message),
+      };
     case 'warning':
       return { ...state, warnings: [...state.warnings.slice(-4), action.message] };
     case 'error':
@@ -821,6 +855,10 @@ export function useWorkx(): WorkxController {
   const [effortId, setEffortId] = useState<string | null>(null);
   const [permissionId, setPermissionId] = useState('full-access');
   const [cwd, setCwd] = useState('');
+  const [queueing, setQueueing] = useState(() => window.localStorage.getItem('workx.queueing') !== 'false');
+  const [queueBusy, setQueueBusy] = useState(false);
+  const [editingQueued, setEditingQueued] = useState<string | null>(null);
+  const queueActionRef = useRef(false);
 
   const threadIdRef = useRef<string | null>(null);
   const turnIdRef = useRef<string | null>(null);
@@ -1480,11 +1518,12 @@ export function useWorkx(): WorkxController {
     [request, setGoal],
   );
 
-  const sendMessage = useCallback(
+  // 发送已构造好的输入项：补建会话、按需排队，插话失败后回退到新一轮。
+  const sendInput = useCallback(
     async (
+      input: UserInput[],
       text: string,
-      bindings: ComposerMenuBinding[] = [],
-      images: string[] = [],
+      images: string[],
       options?: { asGoal?: boolean; steer?: boolean },
     ) => {
       if (state.writerConflict) {
@@ -1498,24 +1537,9 @@ export function useWorkx(): WorkxController {
       if (selection !== selectionRef.current) {
         return;
       }
-      const input: UserInput[] = [];
-      if (text.length > 0) {
-        input.push({ type: 'text', text, text_elements: [] });
-      }
-      for (const imagePath of images) {
-        input.push({ type: 'localImage', path: imagePath });
-      }
-      for (const binding of bindings) {
-        input.push(
-          binding.type === 'skill'
-            ? { type: 'skill', name: binding.name, path: binding.path }
-            : { type: 'mention', name: binding.name, path: binding.path },
-        );
-      }
-
       const activeTurnId = turnIdRef.current;
       // A send during an active turn waits for that turn instead of steering it.
-      if (activeTurnId && !options?.steer) {
+      if (activeTurnId && queueing && !options?.steer) {
         dispatch({
           type: 'queueAdd',
           message: {
@@ -1571,8 +1595,110 @@ export function useWorkx(): WorkxController {
 
       await startTurn(input, options?.asGoal ? text : null);
     },
-    [request, setGoal, startThread, startTurn, state.writerConflict],
+    [queueing, request, setGoal, startThread, startTurn, state.writerConflict],
   );
+
+  const sendMessage = useCallback(
+    async (
+      text: string,
+      bindings: ComposerMenuBinding[] = [],
+      images: string[] = [],
+      options?: { asGoal?: boolean; steer?: boolean },
+    ) => {
+      const input: UserInput[] = [];
+      if (text.length > 0) {
+        input.push({ type: 'text', text, text_elements: [] });
+      }
+      for (const imagePath of images) {
+        input.push({ type: 'localImage', path: imagePath });
+      }
+      for (const binding of bindings) {
+        input.push(
+          binding.type === 'skill'
+            ? { type: 'skill', name: binding.name, path: binding.path }
+            : { type: 'mention', name: binding.name, path: binding.path },
+        );
+      }
+      await sendInput(input, text, images, options);
+    },
+    [sendInput],
+  );
+
+  // 派生当前会话的侧边对话分支，不切换当前会话，也不改动原线程。
+  const forkSideThread = useCallback(async (): Promise<string | null> => {
+    const threadId = threadIdRef.current;
+    if (!threadId) {
+      return null;
+    }
+    const response = await request<ThreadForkResponse>('thread/fork', {
+      threadId, model: modelRef.current, modelProvider: providerRef.current,
+    });
+    pendingThreadsRef.current.set(response.thread.id, response.thread);
+    dispatch({ type: 'threadUpsert', thread: response.thread });
+    return response.thread.id;
+  }, [request]);
+
+  const openSideChat = useCallback(async (): Promise<SideChatBranch | null> => {
+    try {
+      const threadId = await forkSideThread();
+      return threadId ? { threadId, message: null } : null;
+    } catch (error) {
+      dispatch({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      return null;
+    }
+  }, [forkSideThread]);
+
+  const sendQueued = useCallback(async (id: string, destination: 'current' | 'side') => {
+    const message = state.queuedMessages.find((candidate) => candidate.id === id);
+    const threadId = threadIdRef.current;
+    if (!message || !threadId || queueActionRef.current || queueSendRef.current || state.writerConflict) {
+      return null;
+    }
+    const selection = selectionRef.current;
+    queueActionRef.current = true;
+    setQueueBusy(true);
+    try {
+      let branch: SideChatBranch | null = null;
+      if (destination === 'side') {
+        // 消息由侧边对话面板在订阅完成后投递，避免开头的流式事件丢失。
+        const sideThreadId = await forkSideThread();
+        if (!sideThreadId) {
+          return null;
+        }
+        branch = { threadId: sideThreadId, message };
+      } else {
+        const activeTurnId = turnIdRef.current;
+        if (activeTurnId) {
+          try {
+            await request('turn/steer', { threadId, input: message.input, expectedTurnId: activeTurnId });
+          } catch (error) {
+            if (!(error instanceof Error) || !error.message.includes('no active turn to steer')) throw error;
+            if (selection !== selectionRef.current) throw error;
+            turnIdRef.current = null;
+            await startTurn(message.input, null);
+          }
+          if (message.asGoal) {
+            await setGoal(message.text);
+          }
+        } else {
+          await startTurn(message.input, message.asGoal ? message.text : null);
+        }
+        if (selection === selectionRef.current) {
+          dispatch({ type: 'steerPending', steer: { id, text: message.text, images: message.images } });
+        }
+      }
+      if (selection === selectionRef.current) {
+        dispatch({ type: 'queueRemove', id });
+      }
+      return branch;
+    } catch (error) {
+      dispatch({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      return null;
+    } finally {
+      queueActionRef.current = false;
+      setQueueBusy(false);
+    }
+  }, [forkSideThread, request, setGoal, startTurn, state.queuedMessages, state.writerConflict]);
 
   // Queued sends run one at a time, each after the previous turn finishes.
   // `queueSendRef` blocks a second drain while `turn/start` is still in flight, and
@@ -1582,8 +1708,10 @@ export function useWorkx(): WorkxController {
   useEffect(() => {
     if (
       queueSendRef.current ||
+      queueActionRef.current ||
       state.running ||
       state.writerConflict ||
+      state.queuedMessages.some((message) => message.id === editingQueued) ||
       state.queuedMessages.length === 0
     ) {
       return;
@@ -1606,7 +1734,7 @@ export function useWorkx(): WorkxController {
         queueSendRef.current = false;
         setDrainTick((tick) => tick + 1);
       });
-  }, [drainTick, startTurn, state.queuedMessages, state.running, state.writerConflict]);
+  }, [drainTick, editingQueued, queueBusy, startTurn, state.queuedMessages, state.running, state.writerConflict]);
 
   const searchMentionFiles = useCallback(
     async (query: string) => {
@@ -2085,17 +2213,8 @@ export function useWorkx(): WorkxController {
         images: steer.images,
       });
     }
-    for (const message of state.queuedMessages) {
-      entries.push({
-        kind: 'user',
-        id: message.id,
-        text: message.text,
-        images: message.images,
-        queued: true,
-      });
-    }
     return entries;
-  }, [state.goalTurnIds, state.turns, state.pendingSteers, state.queuedMessages, t]);
+  }, [state.goalTurnIds, state.turns, state.pendingSteers, t]);
 
   const projects = useMemo<ProjectView[]>(() => {
     const byProject = new Map<string, Thread[]>();
@@ -2169,6 +2288,17 @@ export function useWorkx(): WorkxController {
     transcript,
     pendingSteers: state.pendingSteers,
     queuedMessages: state.queuedMessages,
+    queueing,
+    setQueueing: (enabled) => {
+      window.localStorage.setItem('workx.queueing', String(enabled));
+      setQueueing(enabled);
+    },
+    queueBusy,
+    removeQueued: (id) => dispatch({ type: 'queueRemove', id }),
+    editQueued: (id, text) => dispatch({ type: 'queueEdit', id, text }),
+    setEditingQueued,
+    sendQueued,
+    openSideChat,
     running: state.running,
     approvals: state.approvals,
     warnings: state.warnings,
@@ -2201,6 +2331,7 @@ export function useWorkx(): WorkxController {
     retryActiveThread,
     writerConflict: state.writerConflict !== null,
     sendMessage,
+    sendInput,
     searchMentionFiles,
     searchMentionChats,
     compactThread,

@@ -5,7 +5,7 @@
 // must read the session settings. These tests pin that behavior through the real hook.
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Thread } from '@protocol/v2/Thread';
 import { I18nProvider, LANGUAGE_STORAGE_KEY, translate } from '../lib/i18n';
@@ -85,6 +85,12 @@ function createBridge(scenario: ResumeScenario): WorkxBridge {
       }
       case 'thread/unsubscribe':
         return {};
+      case 'turn/start':
+        return { turn: { id: 'active-turn' } };
+      case 'turn/steer':
+        return {};
+      case 'thread/fork':
+        return { thread: { ...threadSummary('alpha'), id: 'side-thread' } };
       case 'thread/goal/get':
         return { goal: null };
       case 'project/list':
@@ -121,9 +127,91 @@ let container: HTMLDivElement | null = null;
 let latest: WorkxController | null = null;
 
 beforeEach(() => {
+  window.localStorage.removeItem('workx.queueing');
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'en');
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   latest = null;
+});
+
+describe('queued message actions', () => {
+  it('keeps queued messages out of the transcript and preserves attachments when editing and steering', async () => {
+    const bridge = createBridge({ threadProvider: 'alpha', sessionProvider: 'alpha' });
+    const request = vi.spyOn(bridge.appServer, 'request');
+    await renderWorkx(bridge);
+    await act(async () => { await controller().openThread(THREAD_ID); await controller().sendMessage('start'); });
+    await act(async () => { await controller().sendMessage('queued', [{ type: 'skill', name: 'test', path: '/skills/test' }], ['/image.png']); });
+    const message = controller().queuedMessages[0];
+    expect(controller().transcript.some((entry) => entry.id === message.id)).toBe(false);
+    await act(async () => { controller().editQueued(message.id, 'edited'); });
+    const input = [
+      { type: 'text', text: 'edited', text_elements: [] },
+      { type: 'localImage', path: '/image.png' },
+      { type: 'skill', name: 'test', path: '/skills/test' },
+    ];
+    expect(controller().queuedMessages).toEqual([{ ...message, text: 'edited', input }]);
+    await act(async () => { await controller().sendQueued(message.id, 'current'); });
+    expect(request).toHaveBeenCalledWith('turn/steer', { threadId: THREAD_ID, input, expectedTurnId: 'active-turn' });
+    expect(controller().queuedMessages).toEqual([]);
+  });
+
+  it('retains a queued message when steering fails', async () => {
+    const bridge = createBridge({ threadProvider: 'alpha', sessionProvider: 'alpha' });
+    await renderWorkx(bridge);
+    await act(async () => { await controller().openThread(THREAD_ID); await controller().sendMessage('start'); });
+    await act(async () => { await controller().sendMessage('queued'); });
+    const messages = controller().queuedMessages;
+    vi.spyOn(bridge.appServer, 'request').mockRejectedValueOnce(new Error('steer failed'));
+    await act(async () => { await controller().sendQueued(messages[0].id, 'current'); });
+    expect(controller().queuedMessages).toEqual(messages);
+    expect(controller().error).toBe('steer failed');
+    expect(controller().queueBusy).toBe(false);
+  });
+
+  it('forks a side chat for a queued message without touching the active conversation', async () => {
+    const bridge = createBridge({ threadProvider: 'alpha', sessionProvider: 'alpha' });
+    const request = vi.spyOn(bridge.appServer, 'request');
+    await renderWorkx(bridge);
+    await act(async () => { await controller().openThread(THREAD_ID); await controller().sendMessage('start'); });
+    await act(async () => { await controller().sendMessage('side'); await controller().sendMessage('stay'); });
+    const [side, stay] = controller().queuedMessages;
+    await act(async () => {
+      expect(await controller().sendQueued(side.id, 'side')).toEqual({ threadId: 'side-thread', message: side });
+    });
+    // 分支由侧边对话面板订阅后投递，因此这里不能先起一轮。
+    expect(request).not.toHaveBeenCalledWith('turn/start', expect.objectContaining({ threadId: 'side-thread' }));
+    expect(controller().activeThread?.id).toBe(THREAD_ID);
+    expect(controller().queuedMessages).toEqual([stay]);
+    await act(async () => { controller().removeQueued(stay.id); });
+    expect(controller().queuedMessages).toEqual([]);
+  });
+
+  it('opens an empty side chat branch for the active thread', async () => {
+    const bridge = createBridge({ threadProvider: 'alpha', sessionProvider: 'alpha' });
+    const request = vi.spyOn(bridge.appServer, 'request');
+    await renderWorkx(bridge);
+    await act(async () => { await controller().openThread(THREAD_ID); });
+    await act(async () => {
+      expect(await controller().openSideChat()).toEqual({ threadId: 'side-thread', message: null });
+    });
+    expect(request).toHaveBeenCalledWith('thread/fork', {
+      threadId: THREAD_ID, model: 'alpha-session-model', modelProvider: 'alpha',
+    });
+    expect(controller().activeThread?.id).toBe(THREAD_ID);
+  });
+
+  it('steers new messages after disabling queueing and persists the preference', async () => {
+    const bridge = createBridge({ threadProvider: 'alpha', sessionProvider: 'alpha' });
+    const request = vi.spyOn(bridge.appServer, 'request');
+    await renderWorkx(bridge);
+    await act(async () => { await controller().openThread(THREAD_ID); await controller().sendMessage('start'); });
+    await act(async () => { controller().setQueueing(false); });
+    await act(async () => { await controller().sendMessage('direct'); });
+    expect(controller().queuedMessages).toEqual([]);
+    expect(request).toHaveBeenCalledWith('turn/steer', {
+      threadId: THREAD_ID, input: [{ type: 'text', text: 'direct', text_elements: [] }], expectedTurnId: 'active-turn',
+    });
+    expect(window.localStorage.getItem('workx.queueing')).toBe('false');
+  });
 });
 
 afterEach(async () => {

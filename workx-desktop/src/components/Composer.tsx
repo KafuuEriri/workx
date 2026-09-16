@@ -4,6 +4,7 @@ import {
   ChevronDown,
   FileText,
   MessageSquare,
+  ListEnd,
   Mic,
   Plug,
   Plus,
@@ -21,7 +22,7 @@ import type { Model } from '@protocol/v2/Model';
 import type { PluginSummary } from '@protocol/v2/PluginSummary';
 import type { SkillMetadata } from '@protocol/v2/SkillMetadata';
 import type { Thread } from '@protocol/v2/Thread';
-import type { ProviderOption } from '../app/useWorkx';
+import type { ProviderOption, QueuedMessage } from '../app/useWorkx';
 import {
   commandDescription,
   commandIcon,
@@ -39,6 +40,7 @@ import { IconButton } from './IconButton';
 import { ImageLightbox } from './ImageLightbox';
 import { Menu, MenuItem } from './Menu';
 import { threadTitle } from './Sidebar';
+import { QueuedMessages } from './QueuedMessages';
 
 type ComposerMenuState =
   | { mode: 'mention'; start: number | null; query: string }
@@ -65,8 +67,14 @@ interface ComposerProps {
   searchFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
   searchChats: (query: string) => Promise<Thread[]>;
   running: boolean;
-  /// Number of messages waiting for the running turn to finish.
-  queuedCount: number;
+  queuedMessages: QueuedMessage[];
+  queueing: boolean;
+  queueBusy: boolean;
+  onQueueingChange: (enabled: boolean) => void;
+  onRemoveQueued: (id: string) => void;
+  onEditQueued: (id: string, text: string) => void;
+  onEditingQueuedChange: (id: string | null) => void;
+  onSendQueued: (id: string, destination: 'current' | 'side') => void;
   disabled: boolean;
   disabledPlaceholder?: string;
   onSubmit: (text: string, bindings: ComposerMenuBinding[], images: string[]) => void;
@@ -182,7 +190,14 @@ export function Composer({
   searchFiles,
   searchChats,
   running,
-  queuedCount,
+  queuedMessages,
+  queueing,
+  queueBusy,
+  onQueueingChange,
+  onRemoveQueued,
+  onEditQueued,
+  onEditingQueuedChange,
+  onSendQueued,
   disabled,
   disabledPlaceholder,
   onSubmit,
@@ -575,6 +590,9 @@ export function Composer({
 
   return (
     <div className="shrink-0 px-6 pb-4">
+      <QueuedMessages messages={queuedMessages} disabled={disabled || queueBusy}
+        queueing={queueing} onQueueingChange={onQueueingChange} onRemove={onRemoveQueued}
+        onEdit={onEditQueued} onEditingChange={onEditingQueuedChange} onSend={onSendQueued} />
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -749,11 +767,8 @@ export function Composer({
           </div>
 
           <div className="ml-auto flex items-center gap-1">
-            {queuedCount > 0 ? (
-              <span className="mr-1 text-[12px] text-fg-tertiary">
-                {t('composer.queuedCount', { count: queuedCount })}
-              </span>
-            ) : null}
+            {!queueing ? <IconButton aria-label={t('queue.enable')} title={t('queue.enable')}
+              onClick={() => onQueueingChange(true)}><ListEnd className="size-4" /></IconButton> : null}
             <div className="relative">
               <button
                 type="button"
@@ -866,8 +881,8 @@ export function Composer({
                     <button
                       type="submit"
                       disabled={disabled}
-                      aria-label={t('composer.queue')}
-                      title={t('composer.queue')}
+                      aria-label={t(queueing ? 'composer.queue' : 'composer.steer')}
+                      title={t(queueing ? 'composer.queue' : 'composer.steer')}
                       className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
                     >
                       <ArrowUp className="size-4" strokeWidth={2} />
