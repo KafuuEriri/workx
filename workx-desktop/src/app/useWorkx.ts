@@ -354,6 +354,11 @@ export interface PendingSteer {
   images: string[];
 }
 
+/// 会话运行期间发送消息的默认行为。
+/// - `queue`：等待当前轮结束后再发送。
+/// - `steer`：并入当前轮。
+export type FollowUpBehavior = 'queue' | 'steer';
+
 /// User message waiting for the active turn to finish before it is sent.
 export interface QueuedMessage {
   id: string;
@@ -409,11 +414,14 @@ export interface WorkxController {
   transcript: TranscriptEntry[];
   pendingSteers: PendingSteer[];
   queuedMessages: QueuedMessage[];
-  queueing: boolean;
-  setQueueing: (enabled: boolean) => void;
+  /// 运行期间发送消息的默认行为。
+  followUpBehavior: FollowUpBehavior;
+  setFollowUpBehavior: (behavior: FollowUpBehavior) => void;
   queueBusy: boolean;
   removeQueued: (id: string) => void;
   editQueued: (id: string, text: string) => void;
+  /// 按给定 id 顺序重排排队消息，未出现在 `ids` 里的消息追加到最后。
+  reorderQueued: (ids: string[]) => void;
   setEditingQueued: (id: string | null) => void;
   /// 投递排队消息。返回需要打开的侧边对话分支；插话到当前会话或失败时返回 null。
   sendQueued: (id: string, destination: 'current' | 'side') => Promise<SideChatBranch | null>;
@@ -452,14 +460,14 @@ export interface WorkxController {
     text: string,
     bindings?: ComposerMenuBinding[],
     images?: string[],
-    options?: { asGoal?: boolean; steer?: boolean },
+    options?: { asGoal?: boolean; behavior?: FollowUpBehavior },
   ) => Promise<void>;
   /// 发送已构造好的输入项。侧边对话投递排队消息时用它保留原始附件与提及。
   sendInput: (
     input: UserInput[],
     text: string,
     images: string[],
-    options?: { asGoal?: boolean; steer?: boolean },
+    options?: { asGoal?: boolean; behavior?: FollowUpBehavior },
   ) => Promise<void>;
   searchMentionFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
   searchMentionChats: (query: string) => Promise<Thread[]>;
@@ -535,6 +543,7 @@ type Action =
   | { type: 'queueAdd'; message: QueuedMessage }
   | { type: 'queueRemove'; id: string }
   | { type: 'queueEdit'; id: string; text: string }
+  | { type: 'queueOrder'; ids: string[] }
   | { type: 'warning'; message: string }
   | { type: 'error'; message: string | null }
   | { type: 'approvalAdd'; approval: ApprovalRequest }
@@ -763,6 +772,14 @@ function reducer(state: State, action: Action): State {
             ] }
           : message),
       };
+    case 'queueOrder': {
+      const byId = new Map(state.queuedMessages.map((message) => [message.id, message]));
+      const ordered = action.ids
+        .map((id) => byId.get(id))
+        .filter((message): message is QueuedMessage => message !== undefined);
+      const missing = state.queuedMessages.filter((message) => !action.ids.includes(message.id));
+      return { ...state, queuedMessages: [...ordered, ...missing] };
+    }
     case 'warning':
       return { ...state, warnings: [...state.warnings.slice(-4), action.message] };
     case 'error':
@@ -869,7 +886,14 @@ export function useWorkx(): WorkxController {
   const [effortId, setEffortId] = useState<string | null>(null);
   const [permissionId, setPermissionId] = useState('full-access');
   const [cwd, setCwd] = useState('');
-  const [queueing, setQueueing] = useState(() => window.localStorage.getItem('workx.queueing') !== 'false');
+  const [followUpBehavior, setFollowUpBehavior] = useState<FollowUpBehavior>(() => {
+    const stored = window.localStorage.getItem('workx.followUpBehavior');
+    if (stored === 'queue' || stored === 'steer') {
+      return stored;
+    }
+    // 旧版本只持久化排队开关，读到旧键时按开关换算。
+    return window.localStorage.getItem('workx.queueing') === 'false' ? 'steer' : 'queue';
+  });
   const [queueBusy, setQueueBusy] = useState(false);
   const [editingQueued, setEditingQueued] = useState<string | null>(null);
   const queueActionRef = useRef(false);
@@ -1555,7 +1579,7 @@ export function useWorkx(): WorkxController {
       input: UserInput[],
       text: string,
       images: string[],
-      options?: { asGoal?: boolean; steer?: boolean },
+      options?: { asGoal?: boolean; behavior?: FollowUpBehavior },
     ) => {
       if (state.readOnly) {
         return;
@@ -1569,8 +1593,9 @@ export function useWorkx(): WorkxController {
         return;
       }
       const activeTurnId = turnIdRef.current;
-      // A send during an active turn waits for that turn instead of steering it.
-      if (activeTurnId && queueing && !options?.steer) {
+      // 运行期间默认按用户选择的跟进行为处理，调用方可以逐条覆盖。
+      const behavior = options?.behavior ?? followUpBehavior;
+      if (activeTurnId && behavior === 'queue') {
         dispatch({
           type: 'queueAdd',
           message: {
@@ -1626,7 +1651,7 @@ export function useWorkx(): WorkxController {
 
       await startTurn(input, options?.asGoal ? text : null);
     },
-    [queueing, request, setGoal, startThread, startTurn, state.readOnly],
+    [followUpBehavior, request, setGoal, startThread, startTurn, state.readOnly],
   );
 
   const sendMessage = useCallback(
@@ -1634,7 +1659,7 @@ export function useWorkx(): WorkxController {
       text: string,
       bindings: ComposerMenuBinding[] = [],
       images: string[] = [],
-      options?: { asGoal?: boolean; steer?: boolean },
+      options?: { asGoal?: boolean; behavior?: FollowUpBehavior },
     ) => {
       const input: UserInput[] = [];
       if (text.length > 0) {
@@ -2319,14 +2344,15 @@ export function useWorkx(): WorkxController {
     transcript,
     pendingSteers: state.pendingSteers,
     queuedMessages: state.queuedMessages,
-    queueing,
-    setQueueing: (enabled) => {
-      window.localStorage.setItem('workx.queueing', String(enabled));
-      setQueueing(enabled);
+    followUpBehavior,
+    setFollowUpBehavior: (behavior) => {
+      window.localStorage.setItem('workx.followUpBehavior', behavior);
+      setFollowUpBehavior(behavior);
     },
     queueBusy,
     removeQueued: (id) => dispatch({ type: 'queueRemove', id }),
     editQueued: (id, text) => dispatch({ type: 'queueEdit', id, text }),
+    reorderQueued: (ids) => dispatch({ type: 'queueOrder', ids }),
     setEditingQueued,
     sendQueued,
     openSideChat,

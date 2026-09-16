@@ -1,6 +1,7 @@
 import { CornerDownRight, ListEnd, ListX, MessageCirclePlus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { QueuedMessage } from '../app/useWorkx';
+import type { FollowUpBehavior, QueuedMessage } from '../app/useWorkx';
+import { cn } from '../lib/cn';
 import { useI18n } from '../lib/i18n';
 import { IconButton } from './IconButton';
 import { Menu, MenuItem } from './Menu';
@@ -8,25 +9,54 @@ import { Menu, MenuItem } from './Menu';
 interface QueuedMessagesProps {
   messages: QueuedMessage[];
   disabled: boolean;
-  queueing: boolean;
-  onQueueingChange: (enabled: boolean) => void;
+  followUpBehavior: FollowUpBehavior;
+  onFollowUpBehaviorChange: (behavior: FollowUpBehavior) => void;
   onRemove: (id: string) => void;
   onEdit: (id: string, text: string) => void;
+  /// 用新的 id 顺序替换当前排队顺序。
+  onReorder: (ids: string[]) => void;
   onEditingChange: (id: string | null) => void;
   onSend: (id: string, destination: 'current' | 'side') => void;
 }
 
-export function QueuedMessages({ messages, disabled, queueing, onQueueingChange, onRemove, onEdit, onEditingChange, onSend }: QueuedMessagesProps) {
+export function QueuedMessages({ messages, disabled, followUpBehavior, onFollowUpBehaviorChange, onRemove, onEdit, onReorder, onEditingChange, onSend }: QueuedMessagesProps) {
   const { t } = useI18n();
   const [menuId, setMenuId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const move = (id: string, targetId: string) => {
+    const from = messages.findIndex((message) => message.id === id);
+    const to = messages.findIndex((message) => message.id === targetId);
+    if (from === -1 || to === -1 || from === to) {
+      return;
+    }
+    const ids = messages.map((message) => message.id);
+    ids.splice(from, 1);
+    ids.splice(to, 0, id);
+    onReorder(ids);
+  };
   if (messages.length === 0) {
     return null;
   }
   return (
     <section aria-label={t('queue.title')} className="relative mx-auto w-[calc(100%-1.5rem)] max-w-[40.5rem] rounded-t-2xl border border-b-0 border-line bg-composer px-2 pb-2 pt-1 text-[13px]">
       {messages.map((message) => (
-        <div key={message.id} className="relative flex min-h-9 items-center gap-2 px-1">
+        <div key={message.id} draggable={editing?.id !== message.id}
+          onDragStart={() => setDragging(message.id)}
+          onDragEnd={() => setDragging(null)}
+          onDragOver={(event) => {
+            if (dragging && dragging !== message.id) {
+              event.preventDefault();
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            if (dragging && dragging !== message.id) {
+              move(dragging, message.id);
+            }
+            setDragging(null);
+          }}
+          className={cn('relative flex min-h-9 items-center gap-2 px-1', dragging === message.id && 'opacity-60')}>
           <ListEnd className="size-3.5 shrink-0 text-fg-tertiary" strokeWidth={1.5} />
           {editing?.id === message.id ? (
             <div className="flex min-w-0 flex-1 flex-col gap-2 py-2">
@@ -59,7 +89,7 @@ export function QueuedMessages({ messages, disabled, queueing, onQueueingChange,
                 <Menu open={menuId === message.id && !disabled} onClose={() => setMenuId(null)} align="right">
                   <MenuItem title={t('queue.edit')} icon={<Pencil className="size-3.5" />} onClick={() => { setEditing({ id: message.id, text: message.text }); onEditingChange(message.id); setMenuId(null); }} />
                   <MenuItem title={t('queue.sideChat')} icon={<MessageCirclePlus className="size-3.5" />} onClick={() => { onSend(message.id, 'side'); setMenuId(null); }} />
-                  <MenuItem title={t(queueing ? 'queue.disable' : 'queue.enable')} icon={<ListX className="size-3.5" />} onClick={() => { onQueueingChange(!queueing); setMenuId(null); }} />
+                  <MenuItem title={t(followUpBehavior === 'queue' ? 'queue.disable' : 'queue.enable')} icon={<ListX className="size-3.5" />} onClick={() => { onFollowUpBehaviorChange(followUpBehavior === 'queue' ? 'steer' : 'queue'); setMenuId(null); }} />
                 </Menu>
               </div>
             </>

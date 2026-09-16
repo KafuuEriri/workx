@@ -56,7 +56,7 @@ export function SideChat({ threadId, message, onClose, onUndoFileChange, onRevie
       <form className="m-4 rounded-2xl border border-line bg-composer p-3" onSubmit={(event) => {
         event.preventDefault();
         if (!text.trim() || !chat.activeThread || chat.readOnly !== null) return;
-        void chat.sendMessage(text.trim(), [], [], { steer: true });
+        void chat.sendMessage(text.trim(), [], [], { behavior: 'steer' });
         setText('');
       }}>
         <textarea aria-label={t('composer.placeholder')} placeholder={t('composer.placeholder')}

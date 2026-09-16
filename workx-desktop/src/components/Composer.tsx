@@ -22,7 +22,7 @@ import type { Model } from '@protocol/v2/Model';
 import type { PluginSummary } from '@protocol/v2/PluginSummary';
 import type { SkillMetadata } from '@protocol/v2/SkillMetadata';
 import type { Thread } from '@protocol/v2/Thread';
-import type { ProviderOption, QueuedMessage } from '../app/useWorkx';
+import type { FollowUpBehavior, ProviderOption, QueuedMessage } from '../app/useWorkx';
 import {
   commandDescription,
   commandIcon,
@@ -68,18 +68,23 @@ interface ComposerProps {
   searchChats: (query: string) => Promise<Thread[]>;
   running: boolean;
   queuedMessages: QueuedMessage[];
-  queueing: boolean;
+  followUpBehavior: FollowUpBehavior;
   queueBusy: boolean;
-  onQueueingChange: (enabled: boolean) => void;
+  onFollowUpBehaviorChange: (behavior: FollowUpBehavior) => void;
   onRemoveQueued: (id: string) => void;
   onEditQueued: (id: string, text: string) => void;
+  onReorderQueued: (ids: string[]) => void;
   onEditingQueuedChange: (id: string | null) => void;
   onSendQueued: (id: string, destination: 'current' | 'side') => void;
   disabled: boolean;
   disabledPlaceholder?: string;
-  onSubmit: (text: string, bindings: ComposerMenuBinding[], images: string[]) => void;
-  /// Sends the message into the running turn instead of queueing it.
-  onSteer: (text: string, bindings: ComposerMenuBinding[], images: string[]) => void;
+  /// 发送草稿。`behavior` 省略时使用用户的默认跟进行为，逐条覆盖时由调用方显式传入。
+  onSubmit: (
+    text: string,
+    bindings: ComposerMenuBinding[],
+    images: string[],
+    behavior?: FollowUpBehavior,
+  ) => void;
   onCommand: (id: string, args: string) => void;
   onInterrupt: () => void;
 }
@@ -191,17 +196,17 @@ export function Composer({
   searchChats,
   running,
   queuedMessages,
-  queueing,
+  followUpBehavior,
   queueBusy,
-  onQueueingChange,
+  onFollowUpBehaviorChange,
   onRemoveQueued,
   onEditQueued,
+  onReorderQueued,
   onEditingQueuedChange,
   onSendQueued,
   disabled,
   disabledPlaceholder,
   onSubmit,
-  onSteer,
   onCommand,
   onInterrupt,
 }: ComposerProps) {
@@ -556,8 +561,8 @@ export function Composer({
     setActiveId(flatItems[next]?.id ?? null);
   };
 
-  // `steer` sends the text into the running turn; otherwise the text is queued.
-  const submit = (steer: boolean) => {
+  // 省略 `behavior` 时按用户设置的默认跟进行为发送。
+  const submit = (behavior?: FollowUpBehavior) => {
     const trimmed = value.trim();
     const imagePaths = images.map((image) => image.path);
     if ((!trimmed && imagePaths.length === 0) || disabled) {
@@ -581,22 +586,19 @@ export function Composer({
     setImages([]);
     setValue('');
     setMenu(null);
-    if (steer) {
-      onSteer(trimmed, bindings, imagePaths);
-    } else {
-      onSubmit(trimmed, bindings, imagePaths);
-    }
+    onSubmit(trimmed, bindings, imagePaths, behavior);
   };
 
   return (
     <div className="shrink-0 px-6 pb-4">
       <QueuedMessages messages={queuedMessages} disabled={disabled || queueBusy}
-        queueing={queueing} onQueueingChange={onQueueingChange} onRemove={onRemoveQueued}
-        onEdit={onEditQueued} onEditingChange={onEditingQueuedChange} onSend={onSendQueued} />
+        followUpBehavior={followUpBehavior} onFollowUpBehaviorChange={onFollowUpBehaviorChange}
+        onRemove={onRemoveQueued} onEdit={onEditQueued} onReorder={onReorderQueued}
+        onEditingChange={onEditingQueuedChange} onSend={onSendQueued} />
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          submit(false);
+          submit();
         }}
         className="relative mx-auto w-full max-w-[42rem] rounded-3xl border border-line bg-composer shadow-[var(--elevation-composer)] transition-colors focus-within:border-line-strong"
       >
@@ -707,6 +709,12 @@ export function Composer({
                 return;
               }
             }
+            // Cmd/Ctrl+Shift+Enter 只对这条草稿使用另一种跟进行为。
+            if (event.key === 'Enter' && event.shiftKey && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              submit(followUpBehavior === 'queue' ? 'steer' : 'queue');
+              return;
+            }
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
@@ -767,8 +775,8 @@ export function Composer({
           </div>
 
           <div className="ml-auto flex items-center gap-1">
-            {!queueing ? <IconButton aria-label={t('queue.enable')} title={t('queue.enable')}
-              onClick={() => onQueueingChange(true)}><ListEnd className="size-4" /></IconButton> : null}
+            {followUpBehavior === 'steer' ? <IconButton aria-label={t('queue.enable')} title={t('queue.enable')}
+              onClick={() => onFollowUpBehaviorChange('queue')}><ListEnd className="size-4" /></IconButton> : null}
             <div className="relative">
               <button
                 type="button"
@@ -873,7 +881,7 @@ export function Composer({
                     <button
                       type="button"
                       disabled={disabled}
-                      onClick={() => submit(true)}
+                      onClick={() => submit('steer')}
                       className="flex h-8 items-center rounded-full border border-line px-3 text-[13px] text-fg-secondary transition-colors hover:border-line-strong hover:text-fg disabled:opacity-30"
                     >
                       {t('composer.steer')}
@@ -881,8 +889,8 @@ export function Composer({
                     <button
                       type="submit"
                       disabled={disabled}
-                      aria-label={t(queueing ? 'composer.queue' : 'composer.steer')}
-                      title={t(queueing ? 'composer.queue' : 'composer.steer')}
+                      aria-label={t(followUpBehavior === 'queue' ? 'composer.queue' : 'composer.steer')}
+                      title={t(followUpBehavior === 'queue' ? 'composer.queue' : 'composer.steer')}
                       className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
                     >
                       <ArrowUp className="size-4" strokeWidth={2} />

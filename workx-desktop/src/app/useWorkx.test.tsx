@@ -162,6 +162,7 @@ let container: HTMLDivElement | null = null;
 let latest: WorkxController | null = null;
 
 beforeEach(() => {
+  window.localStorage.removeItem('workx.followUpBehavior');
   window.localStorage.removeItem('workx.queueing');
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'en');
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -234,18 +235,31 @@ describe('queued message actions', () => {
     expect(controller().activeThread?.id).toBe(THREAD_ID);
   });
 
-  it('steers new messages after disabling queueing and persists the preference', async () => {
+  it('steers new messages after switching the follow-up behavior and persists the preference', async () => {
     const bridge = createBridge({ threadProvider: 'alpha', sessionProvider: 'alpha' });
     const request = vi.spyOn(bridge.appServer, 'request');
     await renderWorkx(bridge);
     await act(async () => { await controller().openThread(THREAD_ID); await controller().sendMessage('start'); });
-    await act(async () => { controller().setQueueing(false); });
+    await act(async () => { controller().setFollowUpBehavior('steer'); });
     await act(async () => { await controller().sendMessage('direct'); });
     expect(controller().queuedMessages).toEqual([]);
     expect(request).toHaveBeenCalledWith('turn/steer', {
       threadId: THREAD_ID, input: [{ type: 'text', text: 'direct', text_elements: [] }], expectedTurnId: 'active-turn',
     });
-    expect(window.localStorage.getItem('workx.queueing')).toBe('false');
+    expect(window.localStorage.getItem('workx.followUpBehavior')).toBe('steer');
+  });
+
+  it('reads the legacy queueing switch and reorders queued messages', async () => {
+    window.localStorage.setItem('workx.queueing', 'false');
+    const bridge = createBridge({ threadProvider: 'alpha', sessionProvider: 'alpha' });
+    await renderWorkx(bridge);
+    expect(controller().followUpBehavior).toBe('steer');
+    await act(async () => { await controller().openThread(THREAD_ID); await controller().sendMessage('start'); });
+    await act(async () => { controller().setFollowUpBehavior('queue'); });
+    await act(async () => { await controller().sendMessage('one'); await controller().sendMessage('two'); await controller().sendMessage('three'); });
+    const [one, two, three] = controller().queuedMessages;
+    await act(async () => { controller().reorderQueued([three.id, one.id, two.id]); });
+    expect(controller().queuedMessages).toEqual([three, one, two]);
   });
 });
 

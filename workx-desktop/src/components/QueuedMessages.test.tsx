@@ -17,8 +17,8 @@ beforeEach(() => {
   root = createRoot(host);
   props = {
     messages: [{ id: 'queued-one', text: 'hhh', images: [], input: [{ type: 'text', text: 'hhh', text_elements: [] }], asGoal: false }],
-    disabled: false, queueing: true, onQueueingChange: vi.fn(), onRemove: vi.fn(), onEdit: vi.fn(),
-    onSend: vi.fn(), onEditingChange: vi.fn(),
+    disabled: false, followUpBehavior: 'queue', onFollowUpBehaviorChange: vi.fn(), onRemove: vi.fn(),
+    onEdit: vi.fn(), onReorder: vi.fn(), onSend: vi.fn(), onEditingChange: vi.fn(),
   };
 });
 
@@ -77,13 +77,34 @@ it('holds an edited message until save and keeps its attachments', async () => {
   expect(props.onEditingChange).toHaveBeenLastCalledWith(null);
 });
 
-it('changes the queueing preference without sending or deleting queued messages', async () => {
+it('switches the follow-up behavior without sending or deleting queued messages', async () => {
   await renderQueue();
   await clickButton('More message options');
   await clickButton('Turn off queueing');
-  expect(props.onQueueingChange).toHaveBeenCalledWith(false);
+  expect(props.onFollowUpBehaviorChange).toHaveBeenCalledWith('steer');
   expect(props.onSend).not.toHaveBeenCalled();
   expect(props.onRemove).not.toHaveBeenCalled();
+});
+
+it('reorders queued messages by dragging a row onto another one', async () => {
+  props.messages = [
+    { id: 'one', text: 'one', images: [], input: [], asGoal: false },
+    { id: 'two', text: 'two', images: [], input: [], asGoal: false },
+    { id: 'three', text: 'three', images: [], input: [], asGoal: false },
+  ];
+  await renderQueue();
+  const rows = [...host.querySelectorAll('[draggable="true"]')];
+  if (rows.length !== 3) {
+    throw new Error(`expected three draggable rows, found ${rows.length}`);
+  }
+  await act(async () => {
+    rows[0].dispatchEvent(new Event('dragstart', { bubbles: true }));
+  });
+  await act(async () => {
+    rows[2].dispatchEvent(new Event('dragover', { bubbles: true, cancelable: true }));
+    rows[2].dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+  });
+  expect(props.onReorder).toHaveBeenCalledWith(['two', 'three', 'one']);
 });
 
 it('disables all row actions while a request is pending and hides an empty queue', async () => {

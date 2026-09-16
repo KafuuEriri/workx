@@ -14,6 +14,7 @@ import type { InitializeResponse } from '@protocol/InitializeResponse';
 import type { Model } from '@protocol/v2/Model';
 import type { AppInfo } from '../../preload';
 import type {
+  FollowUpBehavior,
   ProviderBalanceView,
   ProviderConfig,
   ProviderOption,
@@ -71,6 +72,8 @@ interface SettingsPageProps {
   onSaveProvider: (id: string, config: ProviderConfig) => Promise<void>;
   onDeleteProvider: (id: string) => Promise<void>;
   onReadProviderBalance: (id: string | null) => Promise<ProviderBalanceView>;
+  followUpBehavior: FollowUpBehavior;
+  onFollowUpBehaviorChange: (behavior: FollowUpBehavior) => void;
   appServerStatus: WorkxController['status'];
   serverInfo: InitializeResponse | null;
   cwd: string;
@@ -143,7 +146,12 @@ export function SettingsPage(props: SettingsPageProps) {
           />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {section === 'general' ? <GeneralSection /> : null}
+            {section === 'general' ? (
+              <GeneralSection
+                followUpBehavior={props.followUpBehavior}
+                onFollowUpBehaviorChange={props.onFollowUpBehaviorChange}
+              />
+            ) : null}
             {section === 'personalization' ? (
               <PersonalizationSection workxHome={props.serverInfo?.workxHome ?? null} />
             ) : null}
@@ -294,13 +302,32 @@ function Segmented<T extends string>({
   );
 }
 
-function GeneralSection() {
+function GeneralSection({
+  followUpBehavior,
+  onFollowUpBehaviorChange,
+}: {
+  followUpBehavior: FollowUpBehavior;
+  onFollowUpBehaviorChange: (behavior: FollowUpBehavior) => void;
+}) {
   const { t, language, setLanguage } = useI18n();
   return (
     <SectionShell title={t('settings.general')} description={t('settings.generalDescription')}>
       <Group>
         <Row label={t('settings.language')} description={t('settings.languageDescription')}>
           <Segmented value={language} options={LANGUAGE_OPTIONS} onChange={setLanguage} />
+        </Row>
+        <Row
+          label={t('settings.followUpBehavior')}
+          description={t('settings.followUpBehaviorDescription')}
+        >
+          <Segmented
+            value={followUpBehavior}
+            options={[
+              { value: 'queue', label: t('settings.followUpQueue') },
+              { value: 'steer', label: t('settings.followUpSteer') },
+            ]}
+            onChange={onFollowUpBehaviorChange}
+          />
         </Row>
       </Group>
     </SectionShell>

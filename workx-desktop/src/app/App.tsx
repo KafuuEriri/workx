@@ -546,11 +546,12 @@ export function App() {
               searchChats={workx.searchMentionChats}
               running={workx.running}
               queuedMessages={workx.queuedMessages}
-              queueing={workx.queueing}
+              followUpBehavior={workx.followUpBehavior}
               queueBusy={workx.queueBusy}
-              onQueueingChange={workx.setQueueing}
+              onFollowUpBehaviorChange={workx.setFollowUpBehavior}
               onRemoveQueued={workx.removeQueued}
               onEditQueued={workx.editQueued}
+              onReorderQueued={workx.reorderQueued}
               onEditingQueuedChange={workx.setEditingQueued}
               onSendQueued={(id, destination) => {
                 void workx.sendQueued(id, destination).then((branch) => {
@@ -559,12 +560,8 @@ export function App() {
               }}
               disabled={disabled || workx.readOnly !== null}
               disabledPlaceholder={readOnlyPlaceholder}
-              onSubmit={(text, bindings, images) => {
-                void workx.sendMessage(text, bindings, images);
-                window.requestAnimationFrame(scrollToBottom);
-              }}
-              onSteer={(text, bindings, images) => {
-                void workx.sendMessage(text, bindings, images, { steer: true });
+              onSubmit={(text, bindings, images, behavior) => {
+                void workx.sendMessage(text, bindings, images, { behavior });
                 window.requestAnimationFrame(scrollToBottom);
               }}
               onCommand={runCommand}
@@ -641,6 +638,8 @@ export function App() {
           onSaveProvider={workx.saveProvider}
           onDeleteProvider={workx.deleteProvider}
           onReadProviderBalance={workx.readProviderBalance}
+          followUpBehavior={workx.followUpBehavior}
+          onFollowUpBehaviorChange={workx.setFollowUpBehavior}
           appServerStatus={workx.status}
           serverInfo={workx.serverInfo}
           cwd={activeCwd}
