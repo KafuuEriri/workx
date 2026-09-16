@@ -48,6 +48,9 @@ interface ComposerProps {
   models: Model[];
   selectedModelId: string | null;
   onModelChange: (id: string) => void;
+  /// Reasoning effort for the selected model; null means the model default.
+  selectedEffort: string | null;
+  onEffortChange: (effort: string) => void;
   providers: ProviderOption[];
   providerId: string | null;
   providerBusy: boolean;
@@ -163,6 +166,8 @@ export function Composer({
   models,
   selectedModelId,
   onModelChange,
+  selectedEffort,
+  onEffortChange,
   providers,
   providerId,
   providerBusy,
@@ -188,6 +193,7 @@ export function Composer({
   const { t, language } = useI18n();
   const [value, setValue] = useState('');
   const [modelOpen, setModelOpen] = useState(false);
+  const [effortOpen, setEffortOpen] = useState(false);
   const [providerOpen, setProviderOpen] = useState(false);
   const [permissionOpen, setPermissionOpen] = useState(false);
   const [menu, setMenu] = useState<ComposerMenuState | null>(null);
@@ -216,6 +222,8 @@ export function Composer({
   const selectedModel = models.find((model) => model.id === selectedModelId) ?? null;
   const selectedProvider =
     providers.find((provider) => provider.id === providerId) ?? null;
+  const effortOptions = selectedModel?.supportedReasoningEfforts ?? [];
+  const currentEffort = selectedEffort ?? selectedModel?.defaultReasoningEffort ?? null;
   const imageInputSupported =
     selectedModel === null || selectedModel.inputModalities.includes('image');
 
@@ -810,6 +818,34 @@ export function Composer({
                 ))}
               </Menu>
             </div>
+
+            {effortOptions.length > 0 ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label={t('composer.reasoningEffort')}
+                  onClick={() => setEffortOpen((open) => !open)}
+                  className="flex h-7 items-center gap-1 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover"
+                >
+                  <span className="max-w-[120px] truncate">{currentEffort}</span>
+                  <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
+                </button>
+                <Menu open={effortOpen} onClose={() => setEffortOpen(false)} align="right">
+                  {effortOptions.map((option) => (
+                    <MenuItem
+                      key={option.reasoningEffort}
+                      title={option.reasoningEffort}
+                      description={option.description}
+                      selected={option.reasoningEffort === currentEffort}
+                      onClick={() => {
+                        onEffortChange(option.reasoningEffort);
+                        setEffortOpen(false);
+                      }}
+                    />
+                  ))}
+                </Menu>
+              </div>
+            ) : null}
 
             <IconButton aria-label={t('composer.dictate')}>
               <Mic className="size-4" strokeWidth={1.75} />
