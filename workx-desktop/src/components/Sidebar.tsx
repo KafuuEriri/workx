@@ -9,6 +9,7 @@ import {
   Folder,
   FolderOpen,
   Layers,
+  LoaderCircle,
   MessageSquarePlus,
   MoreHorizontal,
   Pencil,
@@ -80,6 +81,24 @@ export function threadTitle(thread: Thread, fallback = 'New chat'): string {
   }
   const preview = thread.preview?.trim();
   return preview ? preview : fallback;
+}
+
+// A thread counts as running only while app-server reports it as active.
+function threadRunning(thread: Thread): boolean {
+  return thread.status.type === 'active';
+}
+
+function RunningIndicator({ className }: { className?: string }) {
+  const { t } = useI18n();
+  return (
+    <span
+      role="status"
+      aria-label={t('sidebar.running')}
+      className={cn('pointer-events-none', className)}
+    >
+      <LoaderCircle className="size-3.5 animate-spin text-fg-tertiary" strokeWidth={2} />
+    </span>
+  );
 }
 
 export function Sidebar({
@@ -174,6 +193,7 @@ export function Sidebar({
       thread={thread}
       indent={indent}
       active={activeThreadId === thread.id}
+      running={threadRunning(thread)}
       renaming={renamingId === thread.id}
       onSelect={() => onSelectThread(thread.id)}
       onStartRename={() => setRenamingId(thread.id)}
@@ -332,6 +352,7 @@ export function Sidebar({
                       <div key={project.id}>
                         <ProjectRow
                           project={project}
+                          running={!expanded && project.threads.some(threadRunning)}
                           onToggle={() => toggleProject(project)}
                           onNewChat={() => onNewChatInProject(project.id)}
                           onArchiveChats={() => onArchiveProjectChats(project)}
@@ -466,6 +487,7 @@ function DraftThreadRow({ indent = false }: { indent?: boolean }) {
 
 function ProjectRow({
   project,
+  running,
   onToggle,
   onNewChat,
   onArchiveChats,
@@ -474,6 +496,7 @@ function ProjectRow({
   onRemove,
 }: {
   project: ProjectView;
+  running: boolean;
   onToggle: () => void;
   onNewChat: () => void;
   onArchiveChats: () => void;
@@ -580,6 +603,9 @@ function ProjectRow({
         <Folder className="size-[18px] shrink-0 text-fg-secondary" strokeWidth={1.75} />
         <span className="truncate">{project.name}</span>
       </button>
+      {running ? (
+        <RunningIndicator className="absolute right-2.5 top-1/2 -translate-y-1/2 transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0" />
+      ) : null}
       <div
         className={cn(
           'absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100',
@@ -678,6 +704,7 @@ function ThreadRow({
   thread,
   indent,
   active,
+  running,
   renaming,
   onSelect,
   onStartRename,
@@ -689,6 +716,7 @@ function ThreadRow({
   thread: Thread;
   indent: boolean;
   active: boolean;
+  running: boolean;
   renaming: boolean;
   onSelect: () => void;
   onStartRename: () => void;
@@ -735,6 +763,9 @@ function ThreadRow({
       >
         <span className="truncate">{threadTitle(thread, t('common.newChat'))}</span>
       </button>
+      {running ? (
+        <RunningIndicator className="absolute right-2.5 top-1/2 -translate-y-1/2 transition-opacity group-hover/row:opacity-0" />
+      ) : null}
       <div
         className={cn(
           'absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/row:opacity-100',

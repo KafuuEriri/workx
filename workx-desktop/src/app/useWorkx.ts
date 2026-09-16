@@ -36,6 +36,7 @@ import type { ThreadProjectUpdatedNotification } from '@protocol/v2/ThreadProjec
 import type { ThreadReadResponse } from '@protocol/v2/ThreadReadResponse';
 import type { ThreadResumeResponse } from '@protocol/v2/ThreadResumeResponse';
 import type { ThreadStartResponse } from '@protocol/v2/ThreadStartResponse';
+import type { ThreadStatusChangedNotification } from '@protocol/v2/ThreadStatusChangedNotification';
 import type { Turn } from '@protocol/v2/Turn';
 import type { TurnCompletedNotification } from '@protocol/v2/TurnCompletedNotification';
 import type { TurnStartedNotification } from '@protocol/v2/TurnStartedNotification';
@@ -1691,6 +1692,16 @@ export function useWorkx(): WorkxController {
           const params = notification.params as { threadId: string };
           if (params.threadId === threadIdRef.current) {
             dispatch({ type: 'goal', goal: null });
+          }
+          break;
+        }
+        case 'thread/status/changed': {
+          const params = notification.params as ThreadStatusChangedNotification;
+          const thread = threadsRef.current.find(
+            (candidate) => candidate.id === params.threadId,
+          );
+          if (thread) {
+            dispatch({ type: 'threadUpdated', thread: { ...thread, status: params.status } });
           }
           break;
         }
