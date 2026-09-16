@@ -764,7 +764,7 @@ function ThreadRow({
         <span className="truncate">{threadTitle(thread, t('common.newChat'))}</span>
       </button>
       {running ? (
-        <RunningIndicator className="absolute right-2.5 top-1/2 -translate-y-1/2 transition-opacity group-hover/row:opacity-0" />
+        <RunningIndicator className="absolute right-2.5 top-1/2 -translate-y-1/2 transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0" />
       ) : null}
       <div
         className={cn(
