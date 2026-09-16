@@ -27,7 +27,15 @@ export interface Activity {
 }
 
 export type TranscriptEntry =
-  | { kind: 'user'; id: string; text: string; images: string[]; goal?: boolean }
+  | {
+      kind: 'user';
+      id: string;
+      text: string;
+      images: string[];
+      goal?: boolean;
+      /// Set while the message waits for the running turn to finish before it is sent.
+      queued?: boolean;
+    }
   | {
       kind: 'assistant';
       id: string;

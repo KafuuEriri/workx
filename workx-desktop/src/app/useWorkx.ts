@@ -313,6 +313,15 @@ export interface PendingSteer {
   images: string[];
 }
 
+/// User message waiting for the active turn to finish before it is sent.
+export interface QueuedMessage {
+  id: string;
+  text: string;
+  images: string[];
+  input: UserInput[];
+  asGoal: boolean;
+}
+
 export interface WorkxController {
   status: 'connecting' | 'ready' | 'error' | 'stopped';
   statusMessage: string | null;
@@ -339,6 +348,7 @@ export interface WorkxController {
   draft: { projectId: string | null } | null;
   transcript: TranscriptEntry[];
   pendingSteers: PendingSteer[];
+  queuedMessages: QueuedMessage[];
   running: boolean;
   approvals: ApprovalRequest[];
   warnings: string[];
@@ -371,7 +381,7 @@ export interface WorkxController {
     text: string,
     bindings?: ComposerMenuBinding[],
     images?: string[],
-    options?: { asGoal?: boolean },
+    options?: { asGoal?: boolean; steer?: boolean },
   ) => Promise<void>;
   searchMentionFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
   searchMentionChats: (query: string) => Promise<Thread[]>;
@@ -407,6 +417,7 @@ interface State {
   writerConflict: string | null;
   turns: TurnView[];
   pendingSteers: PendingSteer[];
+  queuedMessages: QueuedMessage[];
   running: boolean;
   activeTurnId: string | null;
   approvals: ApprovalRequest[];
@@ -443,6 +454,8 @@ type Action =
   | { type: 'turnCompleted'; turnId: string; durationMs: number | null; status: TurnView['status'] }
   | { type: 'steerPending'; steer: PendingSteer }
   | { type: 'steerSettled'; text: string }
+  | { type: 'queueAdd'; message: QueuedMessage }
+  | { type: 'queueRemove'; id: string }
   | { type: 'warning'; message: string }
   | { type: 'error'; message: string | null }
   | { type: 'approvalAdd'; approval: ApprovalRequest }
@@ -477,6 +490,7 @@ const initialState: State = {
   writerConflict: null,
   turns: [],
   pendingSteers: [],
+  queuedMessages: [],
   running: false,
   activeTurnId: null,
   approvals: [],
@@ -558,6 +572,7 @@ function reducer(state: State, action: Action): State {
         draft: { projectId: action.projectId },
         turns: [],
         pendingSteers: [],
+        queuedMessages: [],
         writerConflict: null,
         running: false,
         activeTurnId: null,
@@ -572,6 +587,7 @@ function reducer(state: State, action: Action): State {
         draft: null,
         turns: action.turns,
         pendingSteers: [],
+        queuedMessages: [],
         writerConflict: action.writerConflict ?? null,
         running: action.writerConflict
           ? false
@@ -650,6 +666,13 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         pendingSteers: state.pendingSteers.filter((steer) => steer.text !== action.text),
+      };
+    case 'queueAdd':
+      return { ...state, queuedMessages: [...state.queuedMessages, action.message] };
+    case 'queueRemove':
+      return {
+        ...state,
+        queuedMessages: state.queuedMessages.filter((message) => message.id !== action.id),
       };
     case 'warning':
       return { ...state, warnings: [...state.warnings.slice(-4), action.message] };
@@ -1309,12 +1332,47 @@ export function useWorkx(): WorkxController {
     [request],
   );
 
+  // Starts a turn on the active thread. Direct sends and drained queue entries share it.
+  const startTurn = useCallback(
+    async (input: UserInput[], asGoalText: string | null) => {
+      const threadId = threadIdRef.current;
+      if (!threadId) {
+        return;
+      }
+      const selection = selectionRef.current;
+      const response = await request<TurnStartResponse>('turn/start', {
+        threadId,
+        input,
+        runtimeWorkspaceRoots: projectWorkspaceRoots(
+          projectsRef.current,
+          activeProjectIdRef.current,
+        ),
+        model: modelRef.current ?? undefined,
+        effort: effortRef.current ?? undefined,
+      });
+      if (selection !== selectionRef.current) {
+        return;
+      }
+      turnIdRef.current = response.turn.id;
+      dispatch({
+        type: 'turnStarted',
+        turnId: response.turn.id,
+        startedAtMs: Date.now(),
+      });
+      if (asGoalText && asGoalText.trim()) {
+        await setGoal(asGoalText);
+        dispatch({ type: 'goalTurn', turnId: response.turn.id });
+      }
+    },
+    [request, setGoal],
+  );
+
   const sendMessage = useCallback(
     async (
       text: string,
       bindings: ComposerMenuBinding[] = [],
       images: string[] = [],
-      options?: { asGoal?: boolean },
+      options?: { asGoal?: boolean; steer?: boolean },
     ) => {
       if (state.writerConflict) {
         return;
@@ -1342,9 +1400,23 @@ export function useWorkx(): WorkxController {
         );
       }
 
-      // While a turn is active the server accepts additional input as a steer.
-      // Fall back to starting a new turn when the active turn already finished.
       const activeTurnId = turnIdRef.current;
+      // A send during an active turn waits for that turn instead of steering it.
+      if (activeTurnId && !options?.steer) {
+        dispatch({
+          type: 'queueAdd',
+          message: {
+            id: `queued-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            text,
+            images: [...images],
+            input,
+            asGoal: options?.asGoal ?? false,
+          },
+        });
+        return;
+      }
+      // Steering is only attempted when the caller asked for it. Fall back to
+      // starting a new turn when the active turn already finished.
       if (activeTurnId) {
         let expectedTurnId = activeTurnId;
         for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -1384,32 +1456,44 @@ export function useWorkx(): WorkxController {
         }
       }
 
-      const response = await request<TurnStartResponse>('turn/start', {
-        threadId,
-        input,
-        runtimeWorkspaceRoots: projectWorkspaceRoots(
-          projectsRef.current,
-          activeProjectIdRef.current,
-        ),
-        model: modelRef.current ?? undefined,
-        effort: effortRef.current ?? undefined,
-      });
-      if (selection !== selectionRef.current) {
-        return;
-      }
-      turnIdRef.current = response.turn.id;
-      dispatch({
-        type: 'turnStarted',
-        turnId: response.turn.id,
-        startedAtMs: Date.now(),
-      });
-      if (options?.asGoal && text.trim()) {
-        await setGoal(text);
-        dispatch({ type: 'goalTurn', turnId: response.turn.id });
-      }
+      await startTurn(input, options?.asGoal ? text : null);
     },
-    [request, setGoal, startThread, state.writerConflict],
+    [request, setGoal, startThread, startTurn, state.writerConflict],
   );
+
+  // Queued sends run one at a time, each after the previous turn finishes.
+  // `queueSendRef` blocks a second drain while `turn/start` is still in flight, and
+  // `drainTick` re-runs this effect after that request settles.
+  const queueSendRef = useRef(false);
+  const [drainTick, setDrainTick] = useState(0);
+  useEffect(() => {
+    if (
+      queueSendRef.current ||
+      state.running ||
+      state.writerConflict ||
+      state.queuedMessages.length === 0
+    ) {
+      return;
+    }
+    const [next] = state.queuedMessages;
+    queueSendRef.current = true;
+    dispatch({ type: 'queueRemove', id: next.id });
+    dispatch({
+      type: 'steerPending',
+      steer: { id: next.id, text: next.text, images: next.images },
+    });
+    void startTurn(next.input, next.asGoal ? next.text : null)
+      .catch((error: unknown) => {
+        dispatch({
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        queueSendRef.current = false;
+        setDrainTick((tick) => tick + 1);
+      });
+  }, [drainTick, startTurn, state.queuedMessages, state.running, state.writerConflict]);
 
   const searchMentionFiles = useCallback(
     async (query: string) => {
@@ -1888,8 +1972,17 @@ export function useWorkx(): WorkxController {
         images: steer.images,
       });
     }
+    for (const message of state.queuedMessages) {
+      entries.push({
+        kind: 'user',
+        id: message.id,
+        text: message.text,
+        images: message.images,
+        queued: true,
+      });
+    }
     return entries;
-  }, [state.goalTurnIds, state.turns, state.pendingSteers, t]);
+  }, [state.goalTurnIds, state.turns, state.pendingSteers, state.queuedMessages, t]);
 
   const projects = useMemo<ProjectView[]>(() => {
     const byProject = new Map<string, Thread[]>();
@@ -1962,6 +2055,7 @@ export function useWorkx(): WorkxController {
     draft: state.draft,
     transcript,
     pendingSteers: state.pendingSteers,
+    queuedMessages: state.queuedMessages,
     running: state.running,
     approvals: state.approvals,
     warnings: state.warnings,
