@@ -1005,6 +1005,10 @@ export function useWorkx(): WorkxController {
     async (id: string, overrides?: ThreadResumeOverrides) => {
       const selection = ++selectionRef.current;
       let thread: Thread | null = null;
+      // The resume response carries the stored thread summary plus the settings the new
+      // session actually uses. The summary lags a resume that applied overrides, so the
+      // composer must read the session fields.
+      let resumedSession: { model: string; modelProvider: string; effort: string | null } | null = null;
       let writerConflict = false;
       const projectId = threadsRef.current.find((candidate) => candidate.id === id)?.projectId ?? null;
       try {
@@ -1021,6 +1025,11 @@ export function useWorkx(): WorkxController {
           model: overrides?.model ?? undefined,
         });
         thread = response.thread;
+        resumedSession = {
+          model: response.model,
+          modelProvider: response.modelProvider,
+          effort: response.reasoningEffort,
+        };
       } catch (error) {
         if (selection !== selectionRef.current) {
           return;
@@ -1057,20 +1066,25 @@ export function useWorkx(): WorkxController {
         cwdRef.current = thread.cwd;
         setCwd(thread.cwd);
       }
-      const ignoredOverride = Boolean(overrides && thread.modelProvider !== overrides.modelProvider);
+      const activeModel = resumedSession?.model ?? thread.model;
+      const activeProvider = resumedSession?.modelProvider ?? thread.modelProvider;
+      const activeEffort = resumedSession ? resumedSession.effort : (thread.reasoningEffort ?? null);
+      // Overrides only survive a resume that rebuilt the session, so a session that still
+      // reports the previous provider means the request was dropped, not deferred.
+      const ignoredOverride = Boolean(overrides && activeProvider !== overrides.modelProvider);
       // A reopened chat keeps working with the provider, model, and effort it already used
       // instead of inheriting whatever the composer last showed.
-      if (!ignoredOverride && thread.model) {
-        modelRef.current = thread.model;
-        setSelectedModelId(thread.model);
+      if (!ignoredOverride && activeModel) {
+        modelRef.current = activeModel;
+        setSelectedModelId(activeModel);
       }
       if (!ignoredOverride) {
-        effortRef.current = thread.reasoningEffort ?? null;
-        setEffortId(thread.reasoningEffort ?? null);
+        effortRef.current = activeEffort;
+        setEffortId(activeEffort);
       }
-      if (!ignoredOverride && thread.modelProvider) {
-        providerRef.current = thread.modelProvider;
-        setProviderId(thread.modelProvider);
+      if (!ignoredOverride && activeProvider) {
+        providerRef.current = activeProvider;
+        setProviderId(activeProvider);
       }
       dispatch({
         type: 'thread',
