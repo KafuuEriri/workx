@@ -1,6 +1,7 @@
 import {
   Check,
   ChevronDown,
+  Clock,
   Copy,
   FileDiff,
   GitBranch,
@@ -157,6 +158,12 @@ export function MessageList({
                 <div className="flex items-center gap-1.5 text-[12px] text-fg-tertiary">
                   <Target className="size-3.5" strokeWidth={1.75} />
                   {t('goal.sentAsGoal')}
+                </div>
+              ) : null}
+              {entry.queued ? (
+                <div className="flex items-center gap-1.5 text-[12px] text-fg-tertiary">
+                  <Clock className="size-3.5" strokeWidth={1.75} />
+                  {t('message.queued')}
                 </div>
               ) : null}
             </div>

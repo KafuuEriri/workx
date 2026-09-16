@@ -62,9 +62,13 @@ interface ComposerProps {
   searchFiles: (query: string) => Promise<FuzzyFileSearchResult[]>;
   searchChats: (query: string) => Promise<Thread[]>;
   running: boolean;
+  /// Number of messages waiting for the running turn to finish.
+  queuedCount: number;
   disabled: boolean;
   disabledPlaceholder?: string;
   onSubmit: (text: string, bindings: ComposerMenuBinding[], images: string[]) => void;
+  /// Sends the message into the running turn instead of queueing it.
+  onSteer: (text: string, bindings: ComposerMenuBinding[], images: string[]) => void;
   onCommand: (id: string, args: string) => void;
   onInterrupt: () => void;
 }
@@ -173,9 +177,11 @@ export function Composer({
   searchFiles,
   searchChats,
   running,
+  queuedCount,
   disabled,
   disabledPlaceholder,
   onSubmit,
+  onSteer,
   onCommand,
   onInterrupt,
 }: ComposerProps) {
@@ -527,7 +533,8 @@ export function Composer({
     setActiveId(flatItems[next]?.id ?? null);
   };
 
-  const submit = () => {
+  // `steer` sends the text into the running turn; otherwise the text is queued.
+  const submit = (steer: boolean) => {
     const trimmed = value.trim();
     const imagePaths = images.map((image) => image.path);
     if ((!trimmed && imagePaths.length === 0) || disabled) {
@@ -551,7 +558,11 @@ export function Composer({
     setImages([]);
     setValue('');
     setMenu(null);
-    onSubmit(trimmed, bindings, imagePaths);
+    if (steer) {
+      onSteer(trimmed, bindings, imagePaths);
+    } else {
+      onSubmit(trimmed, bindings, imagePaths);
+    }
   };
 
   return (
@@ -559,7 +570,7 @@ export function Composer({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          submit();
+          submit(false);
         }}
         className="relative mx-auto w-full max-w-[42rem] rounded-3xl border border-line bg-composer shadow-[var(--elevation-composer)] transition-colors focus-within:border-line-strong"
       >
@@ -730,6 +741,11 @@ export function Composer({
           </div>
 
           <div className="ml-auto flex items-center gap-1">
+            {queuedCount > 0 ? (
+              <span className="mr-1 text-[12px] text-fg-tertiary">
+                {t('composer.queuedCount', { count: queuedCount })}
+              </span>
+            ) : null}
             <div className="relative">
               <button
                 type="button"
@@ -802,14 +818,25 @@ export function Composer({
             {running ? (
               <>
                 {value.trim().length > 0 || images.length > 0 ? (
-                  <button
-                    type="submit"
-                    disabled={disabled}
-                    aria-label={t('composer.send')}
-                    className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
-                  >
-                    <ArrowUp className="size-4" strokeWidth={2} />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => submit(true)}
+                      className="flex h-8 items-center rounded-full border border-line px-3 text-[13px] text-fg-secondary transition-colors hover:border-line-strong hover:text-fg disabled:opacity-30"
+                    >
+                      {t('composer.steer')}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={disabled}
+                      aria-label={t('composer.queue')}
+                      title={t('composer.queue')}
+                      className="flex size-8 items-center justify-center rounded-full bg-send text-send-fg transition-opacity disabled:opacity-30"
+                    >
+                      <ArrowUp className="size-4" strokeWidth={2} />
+                    </button>
+                  </>
                 ) : null}
                 <button
                   type="button"

@@ -524,12 +524,17 @@ export function App() {
               searchFiles={workx.searchMentionFiles}
               searchChats={workx.searchMentionChats}
               running={workx.running}
+              queuedCount={workx.queuedMessages.length}
               disabled={disabled || workx.writerConflict}
               disabledPlaceholder={
                 workx.writerConflict ? t('composer.openElsewhere') : undefined
               }
               onSubmit={(text, bindings, images) => {
                 void workx.sendMessage(text, bindings, images);
+                window.requestAnimationFrame(scrollToBottom);
+              }}
+              onSteer={(text, bindings, images) => {
+                void workx.sendMessage(text, bindings, images, { steer: true });
                 window.requestAnimationFrame(scrollToBottom);
               }}
               onCommand={runCommand}
