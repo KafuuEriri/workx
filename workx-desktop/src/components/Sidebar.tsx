@@ -114,6 +114,7 @@ export function Sidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [showAllProjects, setShowAllProjects] = useState(false);
+  const [showAllProjectChats, setShowAllProjectChats] = useState<Set<string>>(new Set());
   const [projectsMenuOpen, setProjectsMenuOpen] = useState(false);
   const [organize, setOrganize] = useState<ProjectOrganize>('project');
   const [projectSort, setProjectSort] = useState<ProjectSort>('manual');
@@ -153,6 +154,18 @@ export function Sidebar({
       return next;
     });
     onSelectProject(project.id);
+  };
+
+  const toggleProjectChats = (projectId: string) => {
+    setShowAllProjectChats((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
   };
 
   const renderThread = (thread: Thread, indent = false) => (
@@ -310,6 +323,11 @@ export function Sidebar({
                   {visibleProjects.map((project) => {
                     const expanded =
                       expandedProjects.has(project.id) || draft?.projectId === project.id;
+                    const showAllChats = showAllProjectChats.has(project.id);
+                    const hasHiddenChats = project.threads.length > PROJECT_THREAD_LIMIT;
+                    const visibleThreads = showAllChats
+                      ? project.threads
+                      : project.threads.slice(0, PROJECT_THREAD_LIMIT);
                     return (
                       <div key={project.id}>
                         <ProjectRow
@@ -324,10 +342,17 @@ export function Sidebar({
 
                         {draft?.projectId === project.id ? <DraftThreadRow indent /> : null}
                         {expanded
-                          ? project.threads
-                              .slice(0, PROJECT_THREAD_LIMIT)
-                              .map((thread) => renderThread(thread, true))
+                          ? visibleThreads.map((thread) => renderThread(thread, true))
                           : null}
+                        {expanded && hasHiddenChats ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleProjectChats(project.id)}
+                            className="flex h-[30px] w-full items-center rounded-lg pl-[38px] pr-2 text-left text-[13px] text-fg-tertiary hover:bg-hover"
+                          >
+                            {showAllChats ? t('common.showLess') : t('common.showMore')}
+                          </button>
+                        ) : null}
                       </div>
                     );
                   })}
