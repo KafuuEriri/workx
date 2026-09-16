@@ -1057,15 +1057,18 @@ export function useWorkx(): WorkxController {
         cwdRef.current = thread.cwd;
         setCwd(thread.cwd);
       }
+      const ignoredOverride = Boolean(overrides && thread.modelProvider !== overrides.modelProvider);
       // A reopened chat keeps working with the provider, model, and effort it already used
       // instead of inheriting whatever the composer last showed.
-      if (thread.model) {
+      if (!ignoredOverride && thread.model) {
         modelRef.current = thread.model;
         setSelectedModelId(thread.model);
       }
-      effortRef.current = thread.reasoningEffort ?? null;
-      setEffortId(thread.reasoningEffort ?? null);
-      if (thread.modelProvider) {
+      if (!ignoredOverride) {
+        effortRef.current = thread.reasoningEffort ?? null;
+        setEffortId(thread.reasoningEffort ?? null);
+      }
+      if (!ignoredOverride && thread.modelProvider) {
         providerRef.current = thread.modelProvider;
         setProviderId(thread.modelProvider);
       }
@@ -1076,7 +1079,7 @@ export function useWorkx(): WorkxController {
         writerConflict: writerConflict ? id : null,
       });
       // The thread view resets warnings, so report the ignored override after it renders.
-      if (overrides && thread.modelProvider !== overrides.modelProvider) {
+      if (ignoredOverride) {
         dispatch({ type: 'warning', message: t('provider.switchDeferred') });
       }
       void loadGoal(thread.id);
