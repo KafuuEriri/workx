@@ -5278,17 +5278,10 @@ impl ThreadRequestProcessor {
         let mut items = Vec::with_capacity(requested_page_size);
         let mut next_cursor: Option<String> = None;
 
-        let model_provider_filter = match model_providers {
-            Some(providers) => {
-                if providers.is_empty() {
-                    None
-                } else {
-                    Some(providers)
-                }
-            }
-            None if relation_filter.is_some() => None,
-            None => Some(vec![self.config.model_provider_id.clone()]),
-        };
+        // Workx records the provider on each thread for reference only; history is
+        // global, so listing never filters by the active provider unless the caller
+        // explicitly asks for specific providers.
+        let model_provider_filter = model_providers.filter(|providers| !providers.is_empty());
         let (allowed_sources_vec, source_kind_filter) =
             if relation_filter.is_some() && source_kinds.is_none() {
                 (Vec::new(), None)

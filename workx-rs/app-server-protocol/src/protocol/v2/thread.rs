@@ -1379,7 +1379,7 @@ pub struct ThreadListParams {
     #[ts(optional = nullable)]
     pub sort_direction: Option<SortDirection>,
     /// Optional provider filter; when set, only sessions recorded under these
-    /// providers are returned. When present but empty, includes all providers.
+    /// providers are returned. When omitted or empty, all providers are included.
     #[ts(optional = nullable)]
     pub model_providers: Option<Vec<String>>,
     /// Optional source filter; when set, only sessions from these source kinds

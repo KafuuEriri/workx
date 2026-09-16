@@ -82,7 +82,7 @@
       ]
     },
     "modelProviders": {
-      "description": "Optional provider filter; when set, only sessions recorded under these providers are returned. When present but empty, includes all providers.",
+      "description": "Optional provider filter; when set, only sessions recorded under these providers are returned. When omitted or empty, all providers are included.",
       "items": {
         "type": "string"
       },

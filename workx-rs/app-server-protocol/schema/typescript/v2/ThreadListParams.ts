@@ -19,7 +19,7 @@ sortKey?: ThreadSortKey | null, /**
  */
 sortDirection?: SortDirection | null, /**
  * Optional provider filter; when set, only sessions recorded under these
- * providers are returned. When present but empty, includes all providers.
+ * providers are returned. When omitted or empty, all providers are included.
  */
 modelProviders?: Array<string> | null, /**
  * Optional source filter; when set, only sessions from these source kinds
