@@ -979,9 +979,12 @@ export function useWorkx(): WorkxController {
     applyConfigRead(await request<ConfigReadResponse>('config/read', { includeLayers: true }));
   }, [applyConfigRead, request]);
 
-  const loadModelsForActiveProvider = useCallback(async (options?: { preserveModel?: boolean }) => {
+  // Reloads the model catalog for the active provider and repairs the persisted model.
+  // A model the new provider does not list cannot be used, so it is replaced by the provider
+  // default; otherwise the previous selection is kept.
+  const loadModelsForActiveProvider = useCallback(async () => {
     const listed = await request<ModelListResponse>('model/list', {});
-    const current = options?.preserveModel ? modelRef.current : null;
+    const current = modelRef.current;
     const preferred =
       (current ? listed.data.find((model) => model.id === current) : undefined) ??
       listed.data.find((model) => model.isDefault) ??
@@ -1127,7 +1130,7 @@ export function useWorkx(): WorkxController {
       }
       if (id === providerId) {
         try {
-          await loadModelsForActiveProvider({ preserveModel: true });
+          await loadModelsForActiveProvider();
           await applyProviderToActiveThread(id);
         } catch (error) {
           dispatch({
@@ -1317,7 +1320,7 @@ export function useWorkx(): WorkxController {
           reloadUserConfig: true,
         });
         await refreshProviders();
-        await loadModelsForActiveProvider({ preserveModel: true });
+        await loadModelsForActiveProvider();
         await applyProviderToActiveThread(id);
       } catch (error) {
         dispatch({
