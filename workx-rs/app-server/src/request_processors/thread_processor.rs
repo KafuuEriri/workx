@@ -4179,17 +4179,24 @@ impl ThreadRequestProcessor {
                 let is_running =
                     matches!(existing_thread.agent_status().await, AgentStatus::Running);
 
+                // An inactive loaded thread is only a cache entry, so overrides may rebuild it.
+                // `SystemError` counts as inactive: its turn already ended, and keeping the
+                // stale session would silently drop every later provider or model switch.
+                let is_inactive_cache_entry = matches!(
+                    loaded_status,
+                    ThreadStatus::Idle | ThreadStatus::SystemError
+                );
+
                 // Parent-owned V2 children must not be rebuilt from public resume overrides.
                 if can_accept_direct_input(
                     existing_thread.multi_agent_version(),
                     &config_snapshot.session_source,
                 ) && !has_subscribers
-                    && matches!(loaded_status, ThreadStatus::Idle)
+                    && is_inactive_cache_entry
                     && !is_running
                 {
-                    // A loaded idle thread is only a cache entry. Shut it down
-                    // before removing it so cold resume cannot duplicate a
-                    // thread that timed out during shutdown.
+                    // Shut the cached thread down before removing it so cold resume
+                    // cannot duplicate a thread that timed out during shutdown.
                     match wait_for_thread_shutdown(&existing_thread).await {
                         ThreadShutdownResult::Complete => {
                             self.thread_manager.remove_thread(&existing_thread_id).await;

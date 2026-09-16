@@ -94,6 +94,8 @@ use workx_app_server_protocol::ThreadStatusChangedNotification;
 use workx_app_server_protocol::ThreadTurnsListParams;
 use workx_app_server_protocol::ThreadTurnsListResponse;
 use workx_app_server_protocol::ThreadUnsubscribeParams;
+use workx_app_server_protocol::ThreadUnsubscribeResponse;
+use workx_app_server_protocol::ThreadUnsubscribeStatus;
 use workx_app_server_protocol::TurnItemsView;
 use workx_app_server_protocol::TurnStartParams;
 use workx_app_server_protocol::TurnStartResponse;
@@ -4489,6 +4491,96 @@ async fn thread_resume_keeps_in_flight_turn_streaming() -> Result<()> {
         primary.read_stream_until_notification_message("turn/completed"),
     )
     .await??;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn thread_resume_applies_model_override_after_system_error() -> Result<()> {
+    let server = responses::start_mock_server().await;
+    let _failed_turn = responses::mount_sse_once(
+        &server,
+        responses::sse_failed("resp-1", "server_error", "simulated failure"),
+    )
+    .await;
+    let workx_home = TempDir::new()?;
+    MockResponsesConfig::new(&server.uri())
+        .with_sandbox_mode("danger-full-access")
+        .write(workx_home.path())?;
+
+    let mut mcp = TestAppServer::builder()
+        .with_workx_home(workx_home.path())
+        .build_initialized()
+        .await?;
+
+    let ThreadStartResponse { thread, .. } = mcp
+        .start_thread(ThreadStartParams {
+            model: Some("mock-model".to_string()),
+            ..Default::default()
+        })
+        .await?;
+    let thread_id = thread.id;
+
+    let _: TurnStartResponse = mcp
+        .request(|request_id| ClientRequest::TurnStart {
+            request_id,
+            params: TurnStartParams {
+                thread_id: thread_id.clone(),
+                client_user_message_id: None,
+                input: vec![UserInput::Text {
+                    text: "fail this turn".to_string(),
+                    text_elements: Vec::new(),
+                }],
+                ..Default::default()
+            },
+        })
+        .await?;
+    timeout(
+        DEFAULT_READ_TIMEOUT,
+        mcp.read_stream_until_notification_message("error"),
+    )
+    .await??;
+
+    let ThreadReadResponse { thread, .. } = mcp
+        .request(|request_id| ClientRequest::ThreadRead {
+            request_id,
+            params: ThreadReadParams {
+                thread_id: thread_id.clone(),
+                include_turns: false,
+            },
+        })
+        .await?;
+    assert_eq!(thread.status, ThreadStatus::SystemError);
+
+    // Clients drop their subscription before resuming with new settings, otherwise the
+    // resume only rejoins the running session.
+    let unsubscribe: ThreadUnsubscribeResponse = mcp
+        .request(|request_id| ClientRequest::ThreadUnsubscribe {
+            request_id,
+            params: ThreadUnsubscribeParams {
+                thread_id: thread_id.clone(),
+            },
+        })
+        .await?;
+    assert_eq!(unsubscribe.status, ThreadUnsubscribeStatus::Unsubscribed);
+
+    let resume_id = mcp
+        .send_thread_resume_request(ThreadResumeParams {
+            thread_id: thread_id.clone(),
+            model: Some("gpt-5.2-codex".to_string()),
+            ..Default::default()
+        })
+        .await?;
+    let ThreadResumeResponse {
+        thread: resumed_thread,
+        model,
+        ..
+    } = timeout(DEFAULT_READ_TIMEOUT, mcp.read_response(resume_id)).await??;
+
+    assert_eq!(model, "gpt-5.2-codex");
+    assert_eq!(resumed_thread.model.as_deref(), Some("gpt-5.2-codex"));
+    // The rebuilt session is active again instead of reporting the stale failure.
+    assert_ne!(resumed_thread.status, ThreadStatus::SystemError);
 
     Ok(())
 }
