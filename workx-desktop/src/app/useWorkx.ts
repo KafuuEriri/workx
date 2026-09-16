@@ -104,6 +104,20 @@ export interface ProviderConfig {
   customModels: CustomModelConfig[];
 }
 
+/// Provider 的展示信息：ID 是配置键，name 是用户可读名称。
+export interface ProviderOption {
+  id: string;
+  name: string;
+}
+
+/// 解析 provider 展示名称：优先使用配置里的 name，未配置时回退到 ID。
+export function providerDisplayName(
+  id: string,
+  configs: Record<string, ProviderConfig>,
+): string {
+  return configs[id]?.name?.trim() || id;
+}
+
 /// Provider-owned balance endpoint used by `modelProvider/balance/read`.
 export interface ProviderBalanceConfig {
   endpoint: string;
@@ -307,6 +321,7 @@ export interface WorkxController {
   selectModel: (id: string) => void;
   providerId: string | null;
   providers: string[];
+  providerOptions: ProviderOption[];
   providerConfigs: Record<string, ProviderConfig>;
   providerBusy: boolean;
   selectProvider: (id: string) => Promise<void>;
@@ -1846,6 +1861,12 @@ export function useWorkx(): WorkxController {
     return () => window.clearTimeout(handle);
   }, [state.searchTerm, request]);
 
+  const providerOptions = useMemo(
+    () =>
+      providers.map((id) => ({ id, name: providerDisplayName(id, providerConfigs) })),
+    [providerConfigs, providers],
+  );
+
   const transcript = useMemo(() => {
     const entries = buildTranscript(state.turns, t, new Set(state.goalTurnIds));
     for (const steer of state.pendingSteers) {
@@ -1912,6 +1933,7 @@ export function useWorkx(): WorkxController {
     },
     providerId,
     providers,
+    providerOptions,
     providerConfigs,
     providerBusy,
     selectProvider,

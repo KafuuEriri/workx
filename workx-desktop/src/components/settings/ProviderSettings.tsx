@@ -27,7 +27,6 @@ interface CustomModelDraft {
 }
 
 interface ProviderDraft {
-  id: string;
   name: string;
   baseUrl: string;
   apiKey: string;
@@ -42,7 +41,6 @@ interface ProviderDraft {
 }
 
 const EMPTY_DRAFT: ProviderDraft = {
-  id: '',
   name: '',
   baseUrl: '',
   apiKey: '',
@@ -57,6 +55,38 @@ const EMPTY_DRAFT: ProviderDraft = {
 };
 
 const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
+const PROVIDER_ID_MAX_SLUG_LENGTH = 32;
+
+/// 取名称的 FNV-1a 哈希，用于无法转成 ASCII slug 的名称生成稳定的 ID。
+function providerNameHash(name: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < name.length; index += 1) {
+    hash = Math.imul(hash ^ name.charCodeAt(index), 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+/// 由显示名生成 provider ID，保证结果合法、非内置、且不与已配置的 ID 冲突。
+function providerIdFromName(name: string, taken: string[]): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, PROVIDER_ID_MAX_SLUG_LENGTH)
+    .replace(/-+$/g, '');
+  const base =
+    slug && PROVIDER_ID_PATTERN.test(slug) && !BUILTIN_MODEL_PROVIDER_IDS.includes(slug)
+      ? slug
+      : `provider-${providerNameHash(name)}`;
+  let candidate = base;
+  let suffix = 2;
+  while (taken.includes(candidate) || BUILTIN_MODEL_PROVIDER_IDS.includes(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
 const WIRE_API_OPTIONS: ProviderWireApi[] = ['responses', 'chat', 'auto'];
 const MODALITY_OPTIONS: InputModality[] = ['text', 'image', 'audio'];
 
@@ -74,7 +104,6 @@ function parsePositiveIntegerInput(raw: string): number | null | 'invalid' {
 
 function draftFromConfig(id: string, config: ProviderConfig): ProviderDraft {
   return {
-    id,
     name: config.name,
     baseUrl: config.baseUrl,
     apiKey: config.apiKey,
@@ -112,6 +141,7 @@ export function ProviderSettings({
   const [saved, setSaved] = useState(false);
 
   const configuredIds = Object.keys(providerConfigs).sort();
+  const idPreview = draft.name.trim() ? providerIdFromName(draft.name, configuredIds) : '';
 
   useEffect(() => {
     const first = Object.keys(providerConfigs).sort()[0];
@@ -169,20 +199,9 @@ export function ProviderSettings({
   };
 
   const handleSave = async () => {
-    const id = draft.id.trim();
-    if (selectedId === null) {
-      if (!id) {
-        setError(t('provider.idRequired'));
-        return;
-      }
-      if (!PROVIDER_ID_PATTERN.test(id)) {
-        setError(t('provider.idInvalid'));
-        return;
-      }
-      if (BUILTIN_MODEL_PROVIDER_IDS.includes(id)) {
-        setError(t('provider.idReserved', { id }));
-        return;
-      }
+    if (selectedId === null && !draft.name.trim()) {
+      setError(t('provider.nameRequired'));
+      return;
     }
     if (!draft.baseUrl.trim()) {
       setError(t('provider.baseUrlRequired'));
@@ -237,7 +256,7 @@ export function ProviderSettings({
       setError(t('provider.balanceInvalidEndpoint'));
       return;
     }
-    const targetId = selectedId ?? id;
+    const targetId = selectedId ?? providerIdFromName(draft.name, configuredIds);
     const config: ProviderConfig = {
       name: draft.name.trim() || targetId,
       baseUrl: draft.baseUrl.trim(),
@@ -353,11 +372,10 @@ export function ProviderSettings({
                 hint={selectedId === null ? t('provider.idHint') : undefined}
               >
                 <input
-                  value={draft.id}
-                  disabled={selectedId !== null}
-                  onChange={(event) => setDraft({ ...draft, id: event.target.value })}
-                  placeholder="my-provider"
-                  className="h-9 w-full rounded-lg border border-line bg-app px-2.5 text-[14px] outline-none focus:border-line-strong disabled:opacity-60"
+                  value={selectedId ?? idPreview}
+                  readOnly
+                  placeholder={t('provider.idPlaceholder')}
+                  className="h-9 w-full rounded-lg border border-line bg-app px-2.5 text-[14px] text-fg-secondary outline-none"
                 />
               </Field>
 
@@ -365,7 +383,7 @@ export function ProviderSettings({
                 <input
                   value={draft.name}
                   onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                  placeholder={draft.id || 'My provider'}
+                  placeholder="My provider"
                   className="h-9 w-full rounded-lg border border-line bg-app px-2.5 text-[14px] outline-none focus:border-line-strong"
                 />
               </Field>
