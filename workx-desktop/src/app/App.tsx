@@ -184,6 +184,12 @@ export function App() {
   const activeProject = workx.projects.find((project) => project.id === activeProjectId) ?? null;
   const explorerRoots = activeProject?.roots ?? (activeCwd ? [activeCwd] : []);
   const disabled = workx.status !== 'ready';
+  const readOnlyPlaceholder =
+    workx.readOnly?.reason === 'missingProvider'
+      ? t('composer.pickProvider')
+      : workx.readOnly
+        ? t('composer.openElsewhere')
+        : undefined;
   const panel = PANEL_TITLES[activeNav ?? 'new-chat'] ? activeNav : null;
   const title =
     (panel && PANEL_TITLES[panel] ? t(PANEL_TITLES[panel]) : null) ??
@@ -484,7 +490,7 @@ export function App() {
                   warnings={workx.warnings}
                   approvals={workx.approvals}
                   cwd={activeCwd}
-                  writerConflict={workx.writerConflict}
+                  readOnly={workx.readOnly}
                   onResolveApproval={(id, decision) => void workx.resolveApproval(id, decision)}
                   onDismissError={workx.dismissError}
                   onRetryWriter={() => void workx.retryActiveThread()}
@@ -551,10 +557,8 @@ export function App() {
                   if (branch) setSideChat(branch);
                 });
               }}
-              disabled={disabled || workx.writerConflict}
-              disabledPlaceholder={
-                workx.writerConflict ? t('composer.openElsewhere') : undefined
-              }
+              disabled={disabled || workx.readOnly !== null}
+              disabledPlaceholder={readOnlyPlaceholder}
               onSubmit={(text, bindings, images) => {
                 void workx.sendMessage(text, bindings, images);
                 window.requestAnimationFrame(scrollToBottom);

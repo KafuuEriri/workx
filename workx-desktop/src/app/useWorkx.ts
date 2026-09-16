@@ -369,6 +369,19 @@ export interface SideChatBranch {
   message: QueuedMessage | null;
 }
 
+/// 会话只能只读打开的原因。
+/// - `writerBusy`：会话已被另一个 writer 占用。
+/// - `missingProvider`：会话记录的 provider 已从配置里删除，无法重建会话。
+export type ReadOnlyReason = 'writerBusy' | 'missingProvider';
+
+/// 只读会话。历史可以查看，但发送前必须解决 `reason` 对应的阻塞。
+export interface ReadOnlySession {
+  threadId: string;
+  reason: ReadOnlyReason;
+  /// 会话记录里已不存在的 provider 名称，仅 `missingProvider` 使用。
+  provider: string | null;
+}
+
 export interface WorkxController {
   status: 'connecting' | 'ready' | 'error' | 'stopped';
   statusMessage: string | null;
@@ -433,7 +446,8 @@ export interface WorkxController {
   openThread: (id: string) => Promise<void>;
   forkThread: (lastTurnId: string) => Promise<void>;
   retryActiveThread: () => Promise<void>;
-  writerConflict: boolean;
+  /// 会话只读打开的原因；null 表示会话可写。
+  readOnly: ReadOnlySession | null;
   sendMessage: (
     text: string,
     bindings?: ComposerMenuBinding[],
@@ -478,7 +492,7 @@ interface State {
   threads: Thread[];
   activeThread: Thread | null;
   draft: { projectId: string | null } | null;
-  writerConflict: string | null;
+  readOnly: ReadOnlySession | null;
   turns: TurnView[];
   pendingSteers: PendingSteer[];
   queuedMessages: QueuedMessage[];
@@ -511,7 +525,7 @@ type Action =
   | { type: 'threads'; threads: Thread[] }
   | { type: 'threadUpsert'; thread: Thread }
   | { type: 'draft'; projectId: string | null }
-  | { type: 'thread'; thread: Thread; turns: TurnView[]; writerConflict?: string | null }
+  | { type: 'thread'; thread: Thread; turns: TurnView[]; readOnly?: ReadOnlySession | null }
   | { type: 'item'; turnId: string; item: ThreadItem }
   | { type: 'delta'; turnId: string; itemId: string; delta: string }
   | { type: 'turnStarted'; turnId: string; startedAtMs: number | null }
@@ -552,7 +566,7 @@ const initialState: State = {
   threads: [],
   activeThread: null,
   draft: null,
-  writerConflict: null,
+  readOnly: null,
   turns: [],
   pendingSteers: [],
   queuedMessages: [],
@@ -638,7 +652,7 @@ function reducer(state: State, action: Action): State {
         turns: [],
         pendingSteers: [],
         queuedMessages: [],
-        writerConflict: null,
+        readOnly: null,
         running: false,
         activeTurnId: null,
         error: null,
@@ -653,8 +667,8 @@ function reducer(state: State, action: Action): State {
         turns: action.turns,
         pendingSteers: [],
         queuedMessages: [],
-        writerConflict: action.writerConflict ?? null,
-        running: action.writerConflict
+        readOnly: action.readOnly ?? null,
+        running: action.readOnly
           ? false
           : action.turns.some((turn) => turn.status === 'inProgress'),
         activeTurnId: null,
@@ -784,8 +798,8 @@ function reducer(state: State, action: Action): State {
         activeThread:
           state.activeThread?.id === action.threadId ? null : state.activeThread,
         turns: state.activeThread?.id === action.threadId ? [] : state.turns,
-        writerConflict:
-          state.activeThread?.id === action.threadId ? null : state.writerConflict,
+        readOnly:
+          state.activeThread?.id === action.threadId ? null : state.readOnly,
       };
     case 'plugins':
       return {
@@ -1047,7 +1061,7 @@ export function useWorkx(): WorkxController {
       // session actually uses. The summary lags a resume that applied overrides, so the
       // composer must read the session fields.
       let resumedSession: { model: string; modelProvider: string; effort: string | null } | null = null;
-      let writerConflict = false;
+      let readOnly: ReadOnlySession | null = null;
       const projectId = threadsRef.current.find((candidate) => candidate.id === id)?.projectId ?? null;
       try {
         if (overrides) {
@@ -1073,11 +1087,15 @@ export function useWorkx(): WorkxController {
           return;
         }
         const message = error instanceof Error ? error.message : String(error);
-        if (!message.includes('already has an active writer')) {
+        const missingProvider = /Model provider `([^`]+)` not found/.exec(message);
+        // 无法重建会话时仍展示历史：会话被另一个 writer 占用，或会话记录的 provider 已被删除。
+        if (!message.includes('already has an active writer') && !missingProvider) {
           dispatch({ type: 'error', message });
           return;
         }
-        writerConflict = true;
+        readOnly = missingProvider
+          ? { threadId: id, reason: 'missingProvider', provider: missingProvider[1] }
+          : { threadId: id, reason: 'writerBusy', provider: null };
         try {
           const response = await request<ThreadReadResponse>('thread/read', {
             threadId: id,
@@ -1110,17 +1128,19 @@ export function useWorkx(): WorkxController {
       // Overrides only survive a resume that rebuilt the session, so a session that still
       // reports the previous provider means the request was dropped, not deferred.
       const ignoredOverride = Boolean(overrides && activeProvider !== overrides.modelProvider);
+      // 只读会话不改写 composer：provider 已删除时，会话里的 provider 不能作为当前选择。
+      const adoptSession = !ignoredOverride && readOnly?.reason !== 'missingProvider';
       // A reopened chat keeps working with the provider, model, and effort it already used
       // instead of inheriting whatever the composer last showed.
-      if (!ignoredOverride && activeModel) {
+      if (adoptSession && activeModel) {
         modelRef.current = activeModel;
         setSelectedModelId(activeModel);
       }
-      if (!ignoredOverride) {
+      if (adoptSession) {
         effortRef.current = activeEffort;
         setEffortId(activeEffort);
       }
-      if (!ignoredOverride && activeProvider) {
+      if (adoptSession && activeProvider) {
         providerRef.current = activeProvider;
         setProviderId(activeProvider);
       }
@@ -1128,7 +1148,7 @@ export function useWorkx(): WorkxController {
         type: 'thread',
         thread,
         turns: thread.turns.map(turnView),
-        writerConflict: writerConflict ? id : null,
+        readOnly,
       });
       // The thread view resets warnings, so report the ignored override after it renders.
       if (ignoredOverride) {
@@ -1396,12 +1416,23 @@ export function useWorkx(): WorkxController {
     ],
   );
 
+  // 重试只读会话：provider 已删除时必须带上当前的 provider，否则服务端仍按旧 provider 重建。
   const retryActiveThread = useCallback(async () => {
     const threadId = threadIdRef.current;
-    if (threadId) {
-      await openThread(threadId);
+    const provider = providerRef.current;
+    if (!threadId) {
+      return;
     }
-  }, [openThread]);
+    if (
+      provider &&
+      state.readOnly?.threadId === threadId &&
+      state.readOnly.reason === 'missingProvider'
+    ) {
+      await openThread(threadId, { modelProvider: provider, model: modelRef.current });
+      return;
+    }
+    await openThread(threadId);
+  }, [openThread, state.readOnly]);
 
   const forkThread = useCallback(
     async (lastTurnId: string) => {
@@ -1526,7 +1557,7 @@ export function useWorkx(): WorkxController {
       images: string[],
       options?: { asGoal?: boolean; steer?: boolean },
     ) => {
-      if (state.writerConflict) {
+      if (state.readOnly) {
         return;
       }
       const selection = selectionRef.current;
@@ -1595,7 +1626,7 @@ export function useWorkx(): WorkxController {
 
       await startTurn(input, options?.asGoal ? text : null);
     },
-    [queueing, request, setGoal, startThread, startTurn, state.writerConflict],
+    [queueing, request, setGoal, startThread, startTurn, state.readOnly],
   );
 
   const sendMessage = useCallback(
@@ -1651,7 +1682,7 @@ export function useWorkx(): WorkxController {
   const sendQueued = useCallback(async (id: string, destination: 'current' | 'side') => {
     const message = state.queuedMessages.find((candidate) => candidate.id === id);
     const threadId = threadIdRef.current;
-    if (!message || !threadId || queueActionRef.current || queueSendRef.current || state.writerConflict) {
+    if (!message || !threadId || queueActionRef.current || queueSendRef.current || state.readOnly) {
       return null;
     }
     const selection = selectionRef.current;
@@ -1698,7 +1729,7 @@ export function useWorkx(): WorkxController {
       queueActionRef.current = false;
       setQueueBusy(false);
     }
-  }, [forkSideThread, request, setGoal, startTurn, state.queuedMessages, state.writerConflict]);
+  }, [forkSideThread, request, setGoal, startTurn, state.queuedMessages, state.readOnly]);
 
   // Queued sends run one at a time, each after the previous turn finishes.
   // `queueSendRef` blocks a second drain while `turn/start` is still in flight, and
@@ -1710,7 +1741,7 @@ export function useWorkx(): WorkxController {
       queueSendRef.current ||
       queueActionRef.current ||
       state.running ||
-      state.writerConflict ||
+      state.readOnly ||
       state.queuedMessages.some((message) => message.id === editingQueued) ||
       state.queuedMessages.length === 0
     ) {
@@ -1734,7 +1765,7 @@ export function useWorkx(): WorkxController {
         queueSendRef.current = false;
         setDrainTick((tick) => tick + 1);
       });
-  }, [drainTick, editingQueued, queueBusy, startTurn, state.queuedMessages, state.running, state.writerConflict]);
+  }, [drainTick, editingQueued, queueBusy, startTurn, state.queuedMessages, state.running, state.readOnly]);
 
   const searchMentionFiles = useCallback(
     async (query: string) => {
@@ -2329,7 +2360,7 @@ export function useWorkx(): WorkxController {
     openThread,
     forkThread,
     retryActiveThread,
-    writerConflict: state.writerConflict !== null,
+    readOnly: state.readOnly,
     sendMessage,
     sendInput,
     searchMentionFiles,

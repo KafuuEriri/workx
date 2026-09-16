@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
 
-import type { ApprovalRequest } from '../app/useWorkx';
+import type { ApprovalRequest, ReadOnlySession } from '../app/useWorkx';
 import type { FileUpdateChange } from '@protocol/v2/FileUpdateChange';
 import type { Activity, ActivityIcon, TranscriptEntry } from '../app/transcript';
 import { cn } from '../lib/cn';
@@ -107,7 +107,8 @@ interface MessageListProps {
   warnings: string[];
   approvals: ApprovalRequest[];
   cwd: string;
-  writerConflict: boolean;
+  /// 只读会话；非 null 时禁止发送，并展示 `reason` 对应的恢复指引。
+  readOnly: ReadOnlySession | null;
   onResolveApproval: (id: string | number, decision: 'accept' | 'decline') => void;
   onDismissError: () => void;
   onRetryWriter: () => void;
@@ -123,7 +124,7 @@ export function MessageList({
   warnings,
   approvals,
   cwd,
-  writerConflict,
+  readOnly,
   onResolveApproval,
   onDismissError,
   onRetryWriter,
@@ -134,7 +135,7 @@ export function MessageList({
   const { t } = useI18n();
   return (
     <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-7 px-6 pb-10 pt-2">
-      {writerConflict ? <WriterConflict onRetry={onRetryWriter} /> : null}
+      {readOnly ? <ReadOnlyNotice readOnly={readOnly} onRetry={onRetryWriter} /> : null}
 
       {entries.length === 0 ? <EmptyState cwd={cwd} /> : null}
 
@@ -201,8 +202,10 @@ export function MessageList({
   );
 }
 
-function WriterConflict({ onRetry }: { onRetry: () => void }) {
+/// 只读会话提示。按原因区分：另一处占用会话，或记录的 provider 已删除。
+function ReadOnlyNotice({ readOnly, onRetry }: { readOnly: ReadOnlySession; onRetry: () => void }) {
   const { t } = useI18n();
+  const missingProvider = readOnly.reason === 'missingProvider';
   return (
     <div
       role="alert"
@@ -210,15 +213,21 @@ function WriterConflict({ onRetry }: { onRetry: () => void }) {
     >
       <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" strokeWidth={1.75} />
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-medium">{t('message.openElsewhere')}</p>
-        <p className="mt-0.5 text-[13px] text-fg-secondary">{t('message.closeThere')}</p>
+        <p className="text-[14px] font-medium">
+          {missingProvider
+            ? t('message.providerRemoved', { provider: readOnly.provider ?? '' })
+            : t('message.openElsewhere')}
+        </p>
+        <p className="mt-0.5 text-[13px] text-fg-secondary">
+          {missingProvider ? t('message.pickProvider') : t('message.closeThere')}
+        </p>
       </div>
       <button
         type="button"
         onClick={onRetry}
         className="shrink-0 rounded-lg border border-line px-2.5 py-1 text-[13px] hover:bg-hover"
       >
-        {t('common.retry')}
+        {missingProvider ? t('message.continueHere') : t('common.retry')}
       </button>
     </div>
   );

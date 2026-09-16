@@ -20,6 +20,10 @@ interface ResumeScenario {
   threadProvider: string;
   /** Provider the resumed session reports. This is the value the session actually uses. */
   sessionProvider: string;
+  /** 会话记录的 provider 已删除；不带 override 的 resume 按此名称报错。 */
+  missingProvider?: string;
+  /** resume 首次因另一个 writer 占用而失败，用于覆盖只读回退与重试。 */
+  writerBusyOnce?: boolean;
 }
 
 function threadSummary(provider: string): Thread {
@@ -34,9 +38,29 @@ function threadSummary(provider: string): Thread {
   } as unknown as Thread;
 }
 
+function storedTurnThread(provider: string): Thread {
+  return {
+    ...threadSummary(provider),
+    turns: [
+      {
+        id: 'stored-turn',
+        status: 'completed',
+        items: [
+          {
+            id: 'stored-item',
+            type: 'userMessage',
+            content: [{ type: 'text', text: 'hi' }],
+          },
+        ],
+      },
+    ],
+  } as unknown as Thread;
+}
+
 function createBridge(scenario: ResumeScenario): WorkxBridge {
   // Mirrors the config file the app-server would hand back through `config/read`.
   const config = { provider: 'alpha', model: 'alpha-catalog-model' };
+  let writerBusy = scenario.writerBusyOnce === true;
   const request = async (method: string, params?: unknown): Promise<unknown> => {
     switch (method) {
       case 'config/read':
@@ -75,6 +99,15 @@ function createBridge(scenario: ResumeScenario): WorkxBridge {
         // The scenario describes the session a resume with overrides ends up with. A plain
         // resume keeps the stored thread settings.
         const requested = (params as { modelProvider?: string } | undefined)?.modelProvider;
+        if (writerBusy && !requested) {
+          writerBusy = false;
+          throw new Error(`thread ${THREAD_ID} already has an active writer`);
+        }
+        // A deleted provider only blocks a resume that would reuse it; an override rebuilds
+        // the session on the provider the caller names.
+        if (scenario.missingProvider && !requested) {
+          throw new Error(`Model provider \`${scenario.missingProvider}\` not found`);
+        }
         const sessionProvider = requested ? scenario.sessionProvider : scenario.threadProvider;
         return {
           thread: threadSummary(scenario.threadProvider),
@@ -83,6 +116,8 @@ function createBridge(scenario: ResumeScenario): WorkxBridge {
           reasoningEffort: 'high',
         };
       }
+      case 'thread/read':
+        return { thread: storedTurnThread(scenario.threadProvider) };
       case 'thread/unsubscribe':
         return {};
       case 'turn/start':
@@ -269,6 +304,76 @@ async function renderWorkx(bridge: WorkxBridge): Promise<void> {
   });
   await waitFor(() => latest?.status === 'ready', 'app-server boot');
 }
+
+describe('read-only threads', () => {
+  it('opens a thread whose provider was removed and keeps it read-only', async () => {
+    const bridge = createBridge({
+      threadProvider: 'beta',
+      sessionProvider: 'alpha',
+      missingProvider: 'beta',
+    });
+    const request = vi.spyOn(bridge.appServer, 'request');
+    await renderWorkx(bridge);
+    await act(async () => {
+      await controller().openThread(THREAD_ID);
+    });
+    expect(controller().error).toBeNull();
+    expect(controller().readOnly).toEqual({
+      threadId: THREAD_ID,
+      reason: 'missingProvider',
+      provider: 'beta',
+    });
+    // 历史仍然可见：用户消息加上该轮的汇总条目。
+    expect(controller().activeThread?.id).toBe(THREAD_ID);
+    expect(controller().transcript[0]).toMatchObject({ kind: 'user', text: 'hi' });
+    // provider 已删除时 composer 保持在配置里的 provider 上。
+    expect(controller().providerId).toBe('alpha');
+    await act(async () => {
+      await controller().sendMessage('blocked');
+    });
+    expect(request).not.toHaveBeenCalledWith('turn/start', expect.anything());
+  });
+
+  it('resumes a read-only thread on the selected provider', async () => {
+    const bridge = createBridge({
+      threadProvider: 'beta',
+      sessionProvider: 'alpha',
+      missingProvider: 'beta',
+    });
+    await renderWorkx(bridge);
+    await act(async () => {
+      await controller().openThread(THREAD_ID);
+    });
+    await act(async () => {
+      await controller().retryActiveThread();
+    });
+    expect(controller().readOnly).toBeNull();
+    expect(controller().error).toBeNull();
+  });
+
+  it('reports another writer as read-only and retries the resume', async () => {
+    const bridge = createBridge({
+      threadProvider: 'alpha',
+      sessionProvider: 'alpha',
+      writerBusyOnce: true,
+    });
+    await renderWorkx(bridge);
+    await act(async () => {
+      await controller().openThread(THREAD_ID);
+    });
+    expect(controller().readOnly).toEqual({
+      threadId: THREAD_ID,
+      reason: 'writerBusy',
+      provider: null,
+    });
+    expect(controller().transcript[0]).toMatchObject({ kind: 'user', text: 'hi' });
+    await act(async () => {
+      await controller().retryActiveThread();
+    });
+    expect(controller().readOnly).toBeNull();
+    expect(controller().providerId).toBe('alpha');
+  });
+});
 
 describe('provider switching on an open thread', () => {
   it('adopts the provider and model the resumed session reports', async () => {

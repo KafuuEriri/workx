@@ -47,7 +47,7 @@ export function SideChat({ threadId, message, onClose, onUndoFileChange, onRevie
       </header>
       <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto pt-4">
         <MessageList entries={chat.transcript} running={chat.running} error={chat.error ?? chat.statusMessage}
-          warnings={chat.warnings} approvals={chat.approvals} cwd={chat.cwd} writerConflict={chat.writerConflict}
+          warnings={chat.warnings} approvals={chat.approvals} cwd={chat.cwd} readOnly={chat.readOnly}
           onResolveApproval={(id, decision) => void chat.resolveApproval(id, decision)}
           onDismissError={chat.dismissError} onRetryWriter={() => void chat.retryActiveThread()}
           onBranch={(turnId) => void chat.forkThread(turnId)}
@@ -55,17 +55,17 @@ export function SideChat({ threadId, message, onClose, onUndoFileChange, onRevie
       </div>
       <form className="m-4 rounded-2xl border border-line bg-composer p-3" onSubmit={(event) => {
         event.preventDefault();
-        if (!text.trim() || !chat.activeThread || chat.writerConflict) return;
+        if (!text.trim() || !chat.activeThread || chat.readOnly !== null) return;
         void chat.sendMessage(text.trim(), [], [], { steer: true });
         setText('');
       }}>
         <textarea aria-label={t('composer.placeholder')} placeholder={t('composer.placeholder')}
           value={text} onChange={(event) => setText(event.target.value)}
-          disabled={!chat.activeThread || chat.writerConflict}
+          disabled={!chat.activeThread || chat.readOnly !== null}
           className="w-full resize-none bg-transparent text-sm outline-none" />
         <div className="flex justify-end gap-2">
           {chat.running ? <IconButton aria-label={t('composer.stop')} onClick={() => void chat.interrupt()}><Square className="size-4" /></IconButton> : null}
-          <button type="submit" aria-label={t('composer.send')} disabled={!text.trim() || !chat.activeThread || chat.writerConflict}
+          <button type="submit" aria-label={t('composer.send')} disabled={!text.trim() || !chat.activeThread || chat.readOnly !== null}
             className="flex size-8 items-center justify-center rounded-full bg-fg text-app disabled:opacity-30"><ArrowUp className="size-4" /></button>
         </div>
       </form>
