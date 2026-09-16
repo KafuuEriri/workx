@@ -270,6 +270,8 @@ const en = {
   'provider.saving': 'Saving…',
   'provider.customModelsUnsupported':
     'the connected Workx CLI ignored custom model IDs ({models}). Update the workx CLI to 0.0.4 or newer.',
+  'provider.switchDeferred':
+    'This chat kept its previous provider because it is still running. Reopen the chat once it stops to use the new provider.',
   'composer.dictate': 'Dictate',
   'composer.stop': 'Stop',
   'composer.send': 'Send',
@@ -639,6 +641,8 @@ const zh: Record<MessageKey, string> = {
   'provider.saving': '保存中…',
   'provider.customModelsUnsupported':
     '当前连接的 Workx CLI 忽略了自定义模型 ID（{models}），请将 workx CLI 升级到 0.0.4 或更高版本。',
+  'provider.switchDeferred':
+    '当前对话仍在运行，已保持原来的提供方。等它停止后重新打开该对话即可使用新的提供方。',
   'composer.dictate': '语音输入',
   'composer.stop': '停止',
   'composer.send': '发送',

@@ -798,6 +798,18 @@ function turnView(turn: Turn): TurnView {
   };
 }
 
+/**
+ * Resumed-thread config overrides.
+ *
+ * The app-server applies them only when the requesting connection holds no
+ * subscription for the thread, so a resume that carries overrides must
+ * unsubscribe first and cannot be retried while the thread is running.
+ */
+interface ThreadResumeOverrides {
+  modelProvider: string;
+  model: string | null;
+}
+
 export function useWorkx(): WorkxController {
   const { t } = useI18n();
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -986,33 +998,99 @@ export function useWorkx(): WorkxController {
     setEffortId(preferred?.defaultReasoningEffort ?? null);
   }, [request]);
 
-  const selectProvider = useCallback(
-    async (id: string) => {
-      if (providerBusy || id === providerId) {
+  const openThread = useCallback(
+    async (id: string, overrides?: ThreadResumeOverrides) => {
+      const selection = ++selectionRef.current;
+      let thread: Thread | null = null;
+      let writerConflict = false;
+      const projectId = threadsRef.current.find((candidate) => candidate.id === id)?.projectId ?? null;
+      try {
+        if (overrides) {
+          // Resuming with overrides rebuilds the session only when this connection is
+          // not subscribed yet. A failed unsubscribe therefore costs the override, not
+          // the resume, and the post-resume check reports it.
+          await request('thread/unsubscribe', { threadId: id }).catch(() => undefined);
+        }
+        const response = await request<ThreadResumeResponse>('thread/resume', {
+          threadId: id,
+          runtimeWorkspaceRoots: projectWorkspaceRoots(projectsRef.current, projectId),
+          modelProvider: overrides?.modelProvider,
+          model: overrides?.model ?? undefined,
+        });
+        thread = response.thread;
+      } catch (error) {
+        if (selection !== selectionRef.current) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('already has an active writer')) {
+          dispatch({ type: 'error', message });
+          return;
+        }
+        writerConflict = true;
+        try {
+          const response = await request<ThreadReadResponse>('thread/read', {
+            threadId: id,
+            includeTurns: true,
+          });
+          thread = response.thread;
+        } catch (readError) {
+          if (selection === selectionRef.current) {
+            dispatch({
+              type: 'error',
+              message: readError instanceof Error ? readError.message : String(readError),
+            });
+          }
+          return;
+        }
+      }
+      if (!thread || selection !== selectionRef.current) {
         return;
       }
-      setProviderBusy(true);
-      try {
-        await request('config/batchWrite', {
-          edits: [
-            { keyPath: 'model_provider', value: id, mergeStrategy: 'replace' },
-            { keyPath: 'model_reasoning_effort', value: null, mergeStrategy: 'replace' },
-            { keyPath: 'service_tier', value: null, mergeStrategy: 'replace' },
-          ],
-          reloadUserConfig: true,
-        });
-        await refreshProviders();
-        await loadModelsForActiveProvider();
-      } catch (error) {
-        dispatch({
-          type: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        });
-      } finally {
-        setProviderBusy(false);
+      threadIdRef.current = thread.id;
+      activeProjectIdRef.current = thread.projectId;
+      turnIdRef.current = null;
+      if (thread.cwd && thread.cwd !== cwdRef.current) {
+        cwdRef.current = thread.cwd;
+        setCwd(thread.cwd);
+      }
+      // A reopened chat keeps working with the provider, model, and effort it already used
+      // instead of inheriting whatever the composer last showed.
+      if (thread.model) {
+        modelRef.current = thread.model;
+        setSelectedModelId(thread.model);
+      }
+      effortRef.current = thread.reasoningEffort ?? null;
+      setEffortId(thread.reasoningEffort ?? null);
+      if (thread.modelProvider) {
+        providerRef.current = thread.modelProvider;
+        setProviderId(thread.modelProvider);
+      }
+      dispatch({
+        type: 'thread',
+        thread,
+        turns: thread.turns.map(turnView),
+        writerConflict: writerConflict ? id : null,
+      });
+      // The thread view resets warnings, so report the ignored override after it renders.
+      if (overrides && thread.modelProvider !== overrides.modelProvider) {
+        dispatch({ type: 'warning', message: t('provider.switchDeferred') });
+      }
+      void loadGoal(thread.id);
+    },
+    [loadGoal, request, t],
+  );
+
+  // A session keeps the provider snapshot it was created with, so provider changes only
+  // reach an open chat after its session is rebuilt.
+  const applyProviderToActiveThread = useCallback(
+    async (id: string) => {
+      const threadId = threadIdRef.current;
+      if (threadId) {
+        await openThread(threadId, { modelProvider: id, model: modelRef.current });
       }
     },
-    [loadModelsForActiveProvider, providerBusy, providerId, refreshProviders, request],
+    [openThread],
   );
 
   const saveProvider = useCallback(
@@ -1050,6 +1128,7 @@ export function useWorkx(): WorkxController {
       if (id === providerId) {
         try {
           await loadModelsForActiveProvider({ preserveModel: true });
+          await applyProviderToActiveThread(id);
         } catch (error) {
           dispatch({
             type: 'error',
@@ -1058,7 +1137,14 @@ export function useWorkx(): WorkxController {
         }
       }
     },
-    [applyConfigRead, loadModelsForActiveProvider, providerId, request, t],
+    [
+      applyConfigRead,
+      applyProviderToActiveThread,
+      loadModelsForActiveProvider,
+      providerId,
+      request,
+      t,
+    ],
   );
 
   const deleteProvider = useCallback(
@@ -1215,75 +1301,41 @@ export function useWorkx(): WorkxController {
     [request, refreshProjects, refreshThreads],
   );
 
-  const openThread = useCallback(
+  const selectProvider = useCallback(
     async (id: string) => {
-      const selection = ++selectionRef.current;
-      let thread: Thread | null = null;
-      let writerConflict = false;
-      const projectId = threadsRef.current.find((candidate) => candidate.id === id)?.projectId ?? null;
-      try {
-        const response = await request<ThreadResumeResponse>('thread/resume', {
-          threadId: id,
-          runtimeWorkspaceRoots: projectWorkspaceRoots(projectsRef.current, projectId),
-        });
-        thread = response.thread;
-      } catch (error) {
-        if (selection !== selectionRef.current) {
-          return;
-        }
-        const message = error instanceof Error ? error.message : String(error);
-        if (!message.includes('already has an active writer')) {
-          dispatch({ type: 'error', message });
-          return;
-        }
-        writerConflict = true;
-        try {
-          const response = await request<ThreadReadResponse>('thread/read', {
-            threadId: id,
-            includeTurns: true,
-          });
-          thread = response.thread;
-        } catch (readError) {
-          if (selection === selectionRef.current) {
-            dispatch({
-              type: 'error',
-              message: readError instanceof Error ? readError.message : String(readError),
-            });
-          }
-          return;
-        }
-      }
-      if (!thread || selection !== selectionRef.current) {
+      if (providerBusy || id === providerId) {
         return;
       }
-      threadIdRef.current = thread.id;
-      activeProjectIdRef.current = thread.projectId;
-      turnIdRef.current = null;
-      if (thread.cwd && thread.cwd !== cwdRef.current) {
-        cwdRef.current = thread.cwd;
-        setCwd(thread.cwd);
+      setProviderBusy(true);
+      try {
+        await request('config/batchWrite', {
+          edits: [
+            { keyPath: 'model_provider', value: id, mergeStrategy: 'replace' },
+            { keyPath: 'model_reasoning_effort', value: null, mergeStrategy: 'replace' },
+            { keyPath: 'service_tier', value: null, mergeStrategy: 'replace' },
+          ],
+          reloadUserConfig: true,
+        });
+        await refreshProviders();
+        await loadModelsForActiveProvider({ preserveModel: true });
+        await applyProviderToActiveThread(id);
+      } catch (error) {
+        dispatch({
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        setProviderBusy(false);
       }
-      // A reopened chat keeps working with the provider, model, and effort it already used
-      // instead of inheriting whatever the composer last showed.
-      if (thread.model) {
-        modelRef.current = thread.model;
-        setSelectedModelId(thread.model);
-      }
-      effortRef.current = thread.reasoningEffort ?? null;
-      setEffortId(thread.reasoningEffort ?? null);
-      if (thread.modelProvider) {
-        providerRef.current = thread.modelProvider;
-        setProviderId(thread.modelProvider);
-      }
-      dispatch({
-        type: 'thread',
-        thread,
-        turns: thread.turns.map(turnView),
-        writerConflict: writerConflict ? id : null,
-      });
-      void loadGoal(thread.id);
     },
-    [loadGoal, request],
+    [
+      applyProviderToActiveThread,
+      loadModelsForActiveProvider,
+      providerBusy,
+      providerId,
+      refreshProviders,
+      request,
+    ],
   );
 
   const retryActiveThread = useCallback(async () => {
