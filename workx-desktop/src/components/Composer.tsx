@@ -21,6 +21,7 @@ import type { Model } from '@protocol/v2/Model';
 import type { PluginSummary } from '@protocol/v2/PluginSummary';
 import type { SkillMetadata } from '@protocol/v2/SkillMetadata';
 import type { Thread } from '@protocol/v2/Thread';
+import type { ProviderOption } from '../app/useWorkx';
 import {
   commandDescription,
   commandIcon,
@@ -47,7 +48,7 @@ interface ComposerProps {
   models: Model[];
   selectedModelId: string | null;
   onModelChange: (id: string) => void;
-  providers: string[];
+  providers: ProviderOption[];
   providerId: string | null;
   providerBusy: boolean;
   onProviderChange: (id: string) => void;
@@ -207,6 +208,8 @@ export function Composer({
   }, [value]);
 
   const selectedModel = models.find((model) => model.id === selectedModelId) ?? null;
+  const selectedProvider =
+    providers.find((provider) => provider.id === providerId) ?? null;
   const imageInputSupported =
     selectedModel === null || selectedModel.inputModalities.includes('image');
 
@@ -735,18 +738,19 @@ export function Composer({
                 className="flex h-7 items-center gap-1 rounded-md px-2 text-[13px] text-fg-secondary hover:bg-hover disabled:opacity-60"
               >
                 <span className="max-w-[140px] truncate">
-                  {providerId ?? t('composer.provider')}
+                  {selectedProvider?.name ?? t('composer.provider')}
                 </span>
                 <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
               </button>
               <Menu open={providerOpen} onClose={() => setProviderOpen(false)} align="right">
-                {providers.map((id) => (
+                {providers.map((provider) => (
                   <MenuItem
-                    key={id}
-                    title={id}
-                    selected={id === providerId}
+                    key={provider.id}
+                    title={provider.name}
+                    description={provider.name === provider.id ? undefined : provider.id}
+                    selected={provider.id === providerId}
                     onClick={() => {
-                      onProviderChange(id);
+                      onProviderChange(provider.id);
                       setProviderOpen(false);
                     }}
                   />

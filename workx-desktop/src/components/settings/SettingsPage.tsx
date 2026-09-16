@@ -16,6 +16,7 @@ import type { AppInfo } from '../../preload';
 import type {
   ProviderBalanceView,
   ProviderConfig,
+  ProviderOption,
   WorkxController,
 } from '../../app/useWorkx';
 import { PERMISSION_MODES, type PermissionMode } from '../../data/workspace';
@@ -58,7 +59,7 @@ interface SettingsPageProps {
   onModelChange: (id: string) => void;
   selectedEffort: string | null;
   onEffortChange: (effort: string) => void;
-  providers: string[];
+  providers: ProviderOption[];
   providerId: string | null;
   providerBusy: boolean;
   onProviderChange: (id: string) => void;
@@ -466,7 +467,7 @@ function ModelSection({
   onModelChange: (id: string) => void;
   selectedEffort: string | null;
   onEffortChange: (effort: string) => void;
-  providers: string[];
+  providers: ProviderOption[];
   providerId: string | null;
   providerBusy: boolean;
   onProviderChange: (id: string) => void;
@@ -493,9 +494,11 @@ function ModelSection({
             disabled={providerBusy || providers.length === 0}
             onChange={onProviderChange}
           >
-            {providers.map((id) => (
-              <option key={id} value={id}>
-                {id}
+            {providers.map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.name === provider.id
+                  ? provider.id
+                  : `${provider.name} (${provider.id})`}
               </option>
             ))}
           </Select>

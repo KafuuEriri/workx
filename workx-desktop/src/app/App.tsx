@@ -510,7 +510,7 @@ export function App() {
               models={workx.models}
               selectedModelId={workx.selectedModelId}
               onModelChange={workx.selectModel}
-              providers={workx.providers}
+              providers={workx.providerOptions}
               providerId={workx.providerId}
               providerBusy={workx.providerBusy}
               onProviderChange={(id) => void workx.selectProvider(id)}
@@ -591,7 +591,7 @@ export function App() {
           onModelChange={workx.selectModel}
           selectedEffort={workx.selectedEffort}
           onEffortChange={workx.setEffort}
-          providers={workx.providers}
+          providers={workx.providerOptions}
           providerId={workx.providerId}
           providerBusy={workx.providerBusy}
           onProviderChange={(id) => void workx.selectProvider(id)}
