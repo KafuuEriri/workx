@@ -1244,7 +1244,7 @@
           "description": "A model ID plus explicit metadata."
         }
       ],
-      "description": "A custom model registered directly on a model provider.\n\nAccepts either a bare model ID or a table with per-model metadata:\n\n```toml custom_models = [ \"plain-model\", { id = \"rich-model\", context_window = 128000, input_modalities = [\"text\", \"image\"] }, ] ```"
+      "description": "A custom model registered directly on a model provider.\n\nAccepts either a bare model ID or a table with per-model metadata:\n\n```toml custom_models = [ \"plain-model\", { id = \"rich-model\", context_window = 128000, input_modalities = [\"text\", \"image\"], default_reasoning_level = \"xhigh\", supported_reasoning_levels = [\"low\", \"medium\", \"high\", \"xhigh\"], }, ] ```"
     },
     "CustomModelMetadata": {
       "additionalProperties": false,
@@ -1254,6 +1254,14 @@
           "description": "Context window advertised for the model.",
           "format": "int64",
           "type": "integer"
+        },
+        "default_reasoning_level": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ReasoningEffort"
+            }
+          ],
+          "description": "Default reasoning level applied when the model is selected. When omitted, pickers fall back to `none`."
         },
         "id": {
           "description": "Model ID used as the catalog slug.",
@@ -1270,6 +1278,13 @@
           "description": "Maximum context window allowed for config overrides.",
           "format": "int64",
           "type": "integer"
+        },
+        "supported_reasoning_levels": {
+          "description": "Reasoning levels the model accepts, in the order pickers should show them. When omitted, the model exposes no selectable level unless the bundled catalog describes it.",
+          "items": {
+            "$ref": "#/definitions/ReasoningEffort"
+          },
+          "type": "array"
         }
       },
       "required": [

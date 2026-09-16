@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import {
   BUILTIN_MODEL_PROVIDER_IDS,
+  REASONING_EFFORT_OPTIONS,
   type CustomModelConfig,
   type InputModality,
   type ProviderBalanceView,
@@ -24,6 +25,8 @@ interface CustomModelDraft {
   contextWindow: string;
   maxContextWindow: string;
   inputModalities: InputModality[];
+  defaultReasoningLevel: string;
+  supportedReasoningLevels: string[];
 }
 
 interface ProviderDraft {
@@ -90,6 +93,15 @@ function providerIdFromName(name: string, taken: string[]): string {
 const WIRE_API_OPTIONS: ProviderWireApi[] = ['responses', 'chat', 'auto'];
 const MODALITY_OPTIONS: InputModality[] = ['text', 'image', 'audio'];
 
+/// 推理强度按固定阶梯排序，让保存后的配置顺序稳定，与选择器的展示顺序一致。
+function sortReasoningLevels(levels: string[]): string[] {
+  const rank = (level: string) => {
+    const index = REASONING_EFFORT_OPTIONS.indexOf(level);
+    return index === -1 ? REASONING_EFFORT_OPTIONS.length : index;
+  };
+  return [...levels].sort((left, right) => rank(left) - rank(right));
+}
+
 function parsePositiveIntegerInput(raw: string): number | null | 'invalid' {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -120,6 +132,8 @@ function draftFromConfig(id: string, config: ProviderConfig): ProviderDraft {
       maxContextWindow:
         model.maxContextWindow === null ? '' : String(model.maxContextWindow),
       inputModalities: [...model.inputModalities],
+      defaultReasoningLevel: model.defaultReasoningLevel ?? '',
+      supportedReasoningLevels: [...model.supportedReasoningLevels],
     })),
   };
 }
@@ -234,10 +248,24 @@ export function ProviderSettings({
         setError(t('provider.customModelWindowOrder', { id: modelId }));
         return;
       }
+      if (
+        model.defaultReasoningLevel &&
+        !model.supportedReasoningLevels.includes(model.defaultReasoningLevel)
+      ) {
+        setError(t('provider.customModelReasoningDefault', { id: modelId }));
+        return;
+      }
       const inputModalities = model.inputModalities.includes('text')
         ? [...model.inputModalities]
         : (['text', ...model.inputModalities] as InputModality[]);
-      customModels.push({ id: modelId, contextWindow, maxContextWindow, inputModalities });
+      customModels.push({
+        id: modelId,
+        contextWindow,
+        maxContextWindow,
+        inputModalities,
+        defaultReasoningLevel: model.defaultReasoningLevel || null,
+        supportedReasoningLevels: sortReasoningLevels(model.supportedReasoningLevels),
+      });
     }
     const balanceEndpoint = draft.balanceEndpoint.trim();
     const balanceValuePath = draft.balanceValuePath.trim();
@@ -547,6 +575,8 @@ export function ProviderSettings({
                             contextWindow: '',
                             maxContextWindow: '',
                             inputModalities: ['text', 'image'],
+                            defaultReasoningLevel: '',
+                            supportedReasoningLevels: [],
                           },
                         ],
                       }))
@@ -692,6 +722,81 @@ export function ProviderSettings({
                         })}
                       </div>
                     </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[11px] text-fg-tertiary">
+                        {t('provider.reasoningLevels')}
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {REASONING_EFFORT_OPTIONS.map((level) => {
+                          const active = model.supportedReasoningLevels.includes(level);
+                          return (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() =>
+                                setDraft((current) => ({
+                                  ...current,
+                                  customModels: current.customModels.map((entry, entryIndex) => {
+                                    if (entryIndex !== index) {
+                                      return entry;
+                                    }
+                                    const supportedReasoningLevels = active
+                                      ? entry.supportedReasoningLevels.filter(
+                                          (candidate) => candidate !== level,
+                                        )
+                                      : [...entry.supportedReasoningLevels, level];
+                                    return {
+                                      ...entry,
+                                      supportedReasoningLevels,
+                                      defaultReasoningLevel: supportedReasoningLevels.includes(
+                                        entry.defaultReasoningLevel,
+                                      )
+                                        ? entry.defaultReasoningLevel
+                                        : '',
+                                    };
+                                  }),
+                                }))
+                              }
+                              className={cn(
+                                'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                                active
+                                  ? 'border-line-strong bg-active text-fg'
+                                  : 'border-line text-fg-tertiary hover:bg-hover',
+                              )}
+                            >
+                              {level}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] text-fg-tertiary">
+                        {t('provider.reasoningDefault')}
+                      </span>
+                      <select
+                        value={model.defaultReasoningLevel}
+                        disabled={model.supportedReasoningLevels.length === 0}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            customModels: current.customModels.map((entry, entryIndex) =>
+                              entryIndex === index
+                                ? { ...entry, defaultReasoningLevel: event.target.value }
+                                : entry,
+                            ),
+                          }))
+                        }
+                        className="h-8 w-full rounded-lg border border-line bg-elevated px-2.5 text-[13px] outline-none focus:border-line-strong disabled:opacity-60"
+                      >
+                        <option value="">{t('provider.reasoningDefaultFollow')}</option>
+                        {model.supportedReasoningLevels.map((level) => (
+                          <option key={level} value={level}>
+                            {level}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
                 ))}
               </div>

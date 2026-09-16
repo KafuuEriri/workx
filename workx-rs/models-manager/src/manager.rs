@@ -27,6 +27,7 @@ use workx_protocol::openai_models::ModelInfo;
 use workx_protocol::openai_models::ModelPreset;
 use workx_protocol::openai_models::ModelVisibility;
 use workx_protocol::openai_models::ModelsResponse;
+use workx_protocol::openai_models::ReasoningEffortPreset;
 
 const MODEL_CACHE_FILE: &str = "models_cache.json";
 const DEFAULT_MODEL_CACHE_TTL: Duration = Duration::from_secs(300);
@@ -678,6 +679,7 @@ fn append_custom_models(models: &mut Vec<ModelInfo>, custom_models: &[CustomMode
         model.supports_reasoning_summary_parameter = false;
         model.context_window = None;
         model.max_context_window = None;
+        model_info::inherit_bundled_reasoning_levels(&mut model);
         apply_custom_model_metadata(&mut model, entry.metadata());
         models.push(model);
     }
@@ -695,6 +697,19 @@ fn apply_custom_model_metadata(model: &mut ModelInfo, metadata: Option<&CustomMo
     }
     if !metadata.input_modalities.is_empty() {
         model.input_modalities = metadata.input_modalities.clone();
+    }
+    if let Some(default_reasoning_level) = metadata.default_reasoning_level.as_ref() {
+        model.default_reasoning_level = Some(default_reasoning_level.clone());
+    }
+    if !metadata.supported_reasoning_levels.is_empty() {
+        model.supported_reasoning_levels = metadata
+            .supported_reasoning_levels
+            .iter()
+            .map(|effort| ReasoningEffortPreset {
+                effort: effort.clone(),
+                description: model_info::reasoning_level_description(effort),
+            })
+            .collect();
     }
 }
 
@@ -718,24 +733,6 @@ fn requested_model_is_available(
     })
 }
 
-fn find_model_by_longest_prefix(model: &str, candidates: &[ModelInfo]) -> Option<ModelInfo> {
-    let mut best: Option<ModelInfo> = None;
-    for candidate in candidates {
-        if !model.starts_with(&candidate.slug) {
-            continue;
-        }
-        let is_better_match = if let Some(current) = best.as_ref() {
-            candidate.slug.len() > current.slug.len()
-        } else {
-            true
-        };
-        if is_better_match {
-            best = Some(candidate.clone());
-        }
-    }
-    best
-}
-
 fn find_model_by_namespaced_suffix(model: &str, candidates: &[ModelInfo]) -> Option<ModelInfo> {
     // Retry metadata lookup for a single namespaced slug like `namespace/model-name`.
     //
@@ -752,7 +749,7 @@ fn find_model_by_namespaced_suffix(model: &str, candidates: &[ModelInfo]) -> Opt
     {
         return None;
     }
-    find_model_by_longest_prefix(suffix, candidates)
+    model_info::find_longest_prefix(suffix, candidates)
 }
 
 pub(crate) fn construct_model_info_from_candidates(
@@ -762,7 +759,7 @@ pub(crate) fn construct_model_info_from_candidates(
 ) -> ModelInfo {
     // First use the normal longest-prefix match. If that misses, allow a narrowly scoped
     // retry for namespaced slugs like `custom/gpt-5.3-codex`.
-    let remote = find_model_by_longest_prefix(model, candidates)
+    let remote = model_info::find_longest_prefix(model, candidates)
         .or_else(|| find_model_by_namespaced_suffix(model, candidates));
     let model_info = if let Some(remote) = remote {
         ModelInfo {

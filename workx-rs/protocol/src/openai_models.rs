@@ -189,7 +189,13 @@ pub fn default_input_modalities() -> Vec<InputModality> {
 /// ```toml
 /// custom_models = [
 ///   "plain-model",
-///   { id = "rich-model", context_window = 128000, input_modalities = ["text", "image"] },
+///   {
+///     id = "rich-model",
+///     context_window = 128000,
+///     input_modalities = ["text", "image"],
+///     default_reasoning_level = "xhigh",
+///     supported_reasoning_levels = ["low", "medium", "high", "xhigh"],
+///   },
 /// ]
 /// ```
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
@@ -235,6 +241,14 @@ pub struct CustomModelMetadata {
     /// and images.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub input_modalities: Vec<InputModality>,
+    /// Default reasoning level applied when the model is selected. When omitted, pickers
+    /// fall back to `none`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_reasoning_level: Option<ReasoningEffort>,
+    /// Reasoning levels the model accepts, in the order pickers should show them. When
+    /// omitted, the model exposes no selectable level unless the bundled catalog describes it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supported_reasoning_levels: Vec<ReasoningEffort>,
 }
 
 /// A reasoning effort option that can be surfaced for a model.

@@ -157,6 +157,9 @@ impl OpenAiModelsEndpoint {
                 model.supports_reasoning_summary_parameter = false;
                 model.context_window = None;
                 model.max_context_window = None;
+                // OpenAI-style catalogs only carry IDs, so reasoning levels come from the
+                // bundled catalog when it describes the slug.
+                workx_models_manager::model_info::inherit_bundled_reasoning_levels(&mut model);
                 model.used_fallback_model_metadata = false;
                 models.push(model);
             }

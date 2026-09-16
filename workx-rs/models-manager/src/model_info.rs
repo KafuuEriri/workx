@@ -5,6 +5,7 @@ use workx_protocol::openai_models::ModelInfo;
 use workx_protocol::openai_models::ModelInstructionsVariables;
 use workx_protocol::openai_models::ModelMessages;
 use workx_protocol::openai_models::ModelVisibility;
+use workx_protocol::openai_models::ReasoningEffort;
 use workx_protocol::openai_models::TruncationMode;
 use workx_protocol::openai_models::TruncationPolicyConfig;
 use workx_protocol::openai_models::WebSearchToolType;
@@ -137,6 +138,68 @@ fn is_h1_heading(line: &str) -> bool {
         return false;
     };
     rest.is_empty() || rest.starts_with(' ') || rest.starts_with('\t')
+}
+
+/// Catalog entry whose slug is the longest prefix of `model`.
+pub(crate) fn find_longest_prefix(model: &str, candidates: &[ModelInfo]) -> Option<ModelInfo> {
+    let mut best: Option<ModelInfo> = None;
+    for candidate in candidates {
+        if !model.starts_with(&candidate.slug) {
+            continue;
+        }
+        let is_better_match = if let Some(current) = best.as_ref() {
+            candidate.slug.len() > current.slug.len()
+        } else {
+            true
+        };
+        if is_better_match {
+            best = Some(candidate.clone());
+        }
+    }
+    best
+}
+
+/// Bundled catalog entry that describes `slug`.
+///
+/// Matching ignores trailing variants, so `gpt-5.6-terra-preview` resolves to `gpt-5.6-terra`.
+/// Returns `None` when the bundled catalog does not describe the slug; callers keep their own
+/// defaults for those models.
+pub fn bundled_model_for_slug(slug: &str) -> Option<ModelInfo> {
+    let catalog = match crate::bundled_models_response() {
+        Ok(catalog) => catalog,
+        Err(err) => {
+            warn!("Failed to parse the bundled model catalog: {err}");
+            return None;
+        }
+    };
+    find_longest_prefix(slug, &catalog.models)
+}
+
+/// Copy the bundled catalog's reasoning levels onto a model discovered outside the catalog.
+///
+/// Models the bundled catalog does not describe keep their current levels, so externally
+/// registered models expose only the levels the user configures.
+pub fn inherit_bundled_reasoning_levels(model: &mut ModelInfo) {
+    if let Some(bundled) = bundled_model_for_slug(&model.slug) {
+        model.default_reasoning_level = bundled.default_reasoning_level;
+        model.supported_reasoning_levels = bundled.supported_reasoning_levels;
+    }
+}
+
+/// Human description shown next to a reasoning level in pickers.
+///
+/// Reuses the bundled catalog wording when the catalog documents the level, and otherwise falls
+/// back to the wire value so pickers never render an empty description.
+pub fn reasoning_level_description(effort: &ReasoningEffort) -> String {
+    let Ok(catalog) = crate::bundled_models_response() else {
+        return effort.to_string();
+    };
+    catalog
+        .models
+        .iter()
+        .flat_map(|model| model.supported_reasoning_levels.iter())
+        .find(|preset| &preset.effort == effort)
+        .map_or_else(|| effort.to_string(), |preset| preset.description.clone())
 }
 
 /// Build a minimal fallback model descriptor for missing/unknown slugs.

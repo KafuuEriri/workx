@@ -29,6 +29,8 @@ use workx_protocol::openai_models::CustomModelEntry;
 use workx_protocol::openai_models::CustomModelMetadata;
 use workx_protocol::openai_models::InputModality;
 use workx_protocol::openai_models::ModelsResponse;
+use workx_protocol::openai_models::ReasoningEffort;
+use workx_protocol::openai_models::ReasoningEffortPreset;
 
 #[path = "model_info_overrides_tests.rs"]
 mod model_info_overrides_tests;
@@ -1498,6 +1500,13 @@ async fn custom_model_metadata_applies_to_presets_and_model_info() {
             context_window: Some(128_000),
             max_context_window: Some(200_000),
             input_modalities: vec![InputModality::Text, InputModality::Image],
+            default_reasoning_level: Some(ReasoningEffort::XHigh),
+            supported_reasoning_levels: vec![
+                ReasoningEffort::Low,
+                ReasoningEffort::Medium,
+                ReasoningEffort::High,
+                ReasoningEffort::XHigh,
+            ],
         })],
         responses: Mutex::new(VecDeque::from([Vec::new()])),
         fetch_count: AtomicUsize::new(0),
@@ -1530,6 +1539,144 @@ async fn custom_model_metadata_applies_to_presets_and_model_info() {
     assert_eq!(
         info.input_modalities,
         vec![InputModality::Text, InputModality::Image]
+    );
+    assert_eq!(
+        (
+            rich.default_reasoning_effort.clone(),
+            rich.supported_reasoning_efforts.clone(),
+        ),
+        (
+            ReasoningEffort::XHigh,
+            vec![
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::Low,
+                    description: "Fast responses with lighter reasoning".to_string(),
+                },
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::Medium,
+                    description: "Balances speed and reasoning depth for everyday tasks"
+                        .to_string(),
+                },
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::High,
+                    description: "Greater reasoning depth for complex problems".to_string(),
+                },
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::XHigh,
+                    description: "Extra high reasoning depth for complex problems".to_string(),
+                },
+            ],
+        )
+    );
+    assert_eq!(info.default_reasoning_level, Some(ReasoningEffort::XHigh));
+    assert_eq!(
+        info.supported_reasoning_levels,
+        rich.supported_reasoning_efforts.clone()
+    );
+}
+
+#[tokio::test]
+async fn custom_model_inherits_bundled_reasoning_levels() {
+    let endpoint = TestModelsEndpoint {
+        has_command_auth: false,
+        uses_workx_backend: true,
+        custom_models: vec![
+            CustomModelEntry::Id("gpt-5.5".to_string()),
+            CustomModelEntry::Id("vendor-model".to_string()),
+        ],
+        responses: Mutex::new(VecDeque::from([Vec::new()])),
+        fetch_count: AtomicUsize::new(0),
+        observed_proxy_policy: Mutex::new(None),
+    };
+    let manager = OpenAiModelsManager::new_without_cache(
+        Arc::new(endpoint),
+        Some(AuthManager::from_auth_for_testing(
+            WorkxAuth::create_dummy_chatgpt_auth_for_testing(),
+        )),
+    );
+
+    let presets = manager
+        .list_models(RefreshStrategy::Online, DEFAULT_HTTP_CLIENT_FACTORY)
+        .await;
+
+    let bundled = presets
+        .iter()
+        .find(|preset| preset.model == "gpt-5.5")
+        .expect("bundled custom model should be present");
+    assert_eq!(bundled.default_reasoning_effort, ReasoningEffort::Medium);
+    assert_eq!(
+        bundled
+            .supported_reasoning_efforts
+            .iter()
+            .map(|preset| preset.effort.clone())
+            .collect::<Vec<_>>(),
+        vec![
+            ReasoningEffort::Low,
+            ReasoningEffort::Medium,
+            ReasoningEffort::High,
+            ReasoningEffort::XHigh,
+        ]
+    );
+
+    let unknown = presets
+        .iter()
+        .find(|preset| preset.model == "vendor-model")
+        .expect("unknown custom model should be present");
+    assert_eq!(unknown.default_reasoning_effort, ReasoningEffort::None);
+    assert_eq!(unknown.supported_reasoning_efforts, Vec::new());
+}
+
+#[tokio::test]
+async fn custom_model_reasoning_levels_override_remote_catalog_entries() {
+    let remote = remote_model("vendor-model", "Vendor", /*priority*/ 0);
+    let endpoint = TestModelsEndpoint {
+        has_command_auth: false,
+        uses_workx_backend: true,
+        custom_models: vec![CustomModelEntry::Metadata(CustomModelMetadata {
+            id: "vendor-model".to_string(),
+            context_window: None,
+            max_context_window: None,
+            input_modalities: Vec::new(),
+            default_reasoning_level: Some(ReasoningEffort::XHigh),
+            supported_reasoning_levels: vec![ReasoningEffort::High, ReasoningEffort::XHigh],
+        })],
+        responses: Mutex::new(VecDeque::from([vec![remote]])),
+        fetch_count: AtomicUsize::new(0),
+        observed_proxy_policy: Mutex::new(None),
+    };
+    let manager = OpenAiModelsManager::new_without_cache(
+        Arc::new(endpoint),
+        Some(AuthManager::from_auth_for_testing(
+            WorkxAuth::create_dummy_chatgpt_auth_for_testing(),
+        )),
+    );
+
+    let presets = manager
+        .list_models(RefreshStrategy::Online, DEFAULT_HTTP_CLIENT_FACTORY)
+        .await;
+
+    let vendor = presets
+        .iter()
+        .find(|preset| preset.model == "vendor-model")
+        .expect("remote catalog entry should be present");
+    assert_eq!(
+        (
+            vendor.default_reasoning_effort.clone(),
+            vendor.supported_reasoning_efforts.clone(),
+        ),
+        (
+            ReasoningEffort::XHigh,
+            vec![
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::High,
+                    description: "Greater reasoning depth for complex problems".to_string(),
+                },
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::XHigh,
+                    description: "Extra high reasoning depth for complex problems".to_string(),
+                },
+            ],
+        )
     );
 }
 

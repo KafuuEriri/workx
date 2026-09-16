@@ -10,6 +10,7 @@ use workx_http_client::OutboundProxyPolicy;
 use workx_models_manager::manager::ModelsManager;
 use workx_models_manager::manager::OpenAiModelsManager;
 use workx_models_manager::manager::RefreshStrategy;
+use workx_protocol::openai_models::ReasoningEffort;
 
 #[tokio::test]
 async fn external_catalog_uses_configured_path_and_saved_key_without_bundled_models() {
@@ -89,4 +90,71 @@ async fn external_catalog_switch_and_empty_results_do_not_reuse_other_models() {
             expected
         );
     }
+}
+
+#[tokio::test]
+async fn external_catalog_inherits_bundled_reasoning_levels() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "object": "list",
+            "data": [{"id": "gpt-5.6-terra"}, {"id": "vendor-image-model"}],
+        })))
+        .mount(&server)
+        .await;
+    let info = ModelProviderInfo {
+        name: "custom".into(),
+        base_url: Some(server.uri()),
+        balance: None,
+        ..Default::default()
+    };
+    let manager = OpenAiModelsManager::new_without_cache(
+        Arc::new(OpenAiModelsEndpoint::new(info, None)),
+        None,
+    );
+
+    let models = manager
+        .list_models(
+            RefreshStrategy::Online,
+            HttpClientFactory::new(OutboundProxyPolicy::ReqwestDefault),
+        )
+        .await;
+
+    let reasoning: Vec<(String, ReasoningEffort, Vec<ReasoningEffort>)> = models
+        .iter()
+        .map(|preset| {
+            (
+                preset.model.clone(),
+                preset.default_reasoning_effort.clone(),
+                preset
+                    .supported_reasoning_efforts
+                    .iter()
+                    .map(|option| option.effort.clone())
+                    .collect(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        reasoning,
+        vec![
+            (
+                "gpt-5.6-terra".to_string(),
+                ReasoningEffort::Medium,
+                vec![
+                    ReasoningEffort::Low,
+                    ReasoningEffort::Medium,
+                    ReasoningEffort::High,
+                    ReasoningEffort::XHigh,
+                    ReasoningEffort::Max,
+                    ReasoningEffort::Ultra,
+                ],
+            ),
+            (
+                "vendor-image-model".to_string(),
+                ReasoningEffort::None,
+                Vec::new(),
+            ),
+        ]
+    );
 }

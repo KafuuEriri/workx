@@ -87,11 +87,25 @@ export type InputModality = 'text' | 'image' | 'audio';
 
 export const DEFAULT_CUSTOM_MODEL_MODALITIES: InputModality[] = ['text', 'image'];
 
+/// 自定义模型可声明的推理强度，顺序即下拉展示顺序。
+export const REASONING_EFFORT_OPTIONS: string[] = [
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+  'ultra',
+];
+
 export interface CustomModelConfig {
   id: string;
   contextWindow: number | null;
   maxContextWindow: number | null;
   inputModalities: InputModality[];
+  defaultReasoningLevel: string | null;
+  supportedReasoningLevels: string[];
 }
 
 export interface ProviderConfig {
@@ -167,6 +181,21 @@ function normalizeInputModalities(raw: unknown): InputModality[] | null {
   return modalities.length > 0 ? [...new Set(modalities)] : null;
 }
 
+function normalizeReasoningLevels(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const levels = raw
+    .filter((level): level is string => typeof level === 'string')
+    .map((level) => level.trim())
+    .filter((level) => level.length > 0);
+  return [...new Set(levels)];
+}
+
+function normalizeReasoningLevel(raw: unknown): string | null {
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+}
+
 function normalizeCustomModel(raw: unknown): CustomModelConfig | null {
   if (typeof raw === 'string') {
     const id = raw.trim();
@@ -176,6 +205,8 @@ function normalizeCustomModel(raw: unknown): CustomModelConfig | null {
           contextWindow: null,
           maxContextWindow: null,
           inputModalities: [...DEFAULT_CUSTOM_MODEL_MODALITIES],
+          defaultReasoningLevel: null,
+          supportedReasoningLevels: [],
         }
       : null;
   }
@@ -193,6 +224,8 @@ function normalizeCustomModel(raw: unknown): CustomModelConfig | null {
     maxContextWindow: asPositiveInteger(value.max_context_window),
     inputModalities:
       normalizeInputModalities(value.input_modalities) ?? [...DEFAULT_CUSTOM_MODEL_MODALITIES],
+    defaultReasoningLevel: normalizeReasoningLevel(value.default_reasoning_level),
+    supportedReasoningLevels: normalizeReasoningLevels(value.supported_reasoning_levels),
   };
 }
 
@@ -272,7 +305,9 @@ function providerConfigToToml(config: ProviderConfig): Record<string, unknown> {
       if (
         model.contextWindow === null &&
         model.maxContextWindow === null &&
-        usesDefaultModalities
+        usesDefaultModalities &&
+        model.supportedReasoningLevels.length === 0 &&
+        model.defaultReasoningLevel === null
       ) {
         return model.id;
       }
@@ -284,6 +319,12 @@ function providerConfigToToml(config: ProviderConfig): Record<string, unknown> {
         entry.max_context_window = model.maxContextWindow;
       }
       entry.input_modalities = modalities.length > 0 ? modalities : [...DEFAULT_CUSTOM_MODEL_MODALITIES];
+      if (model.supportedReasoningLevels.length > 0) {
+        entry.supported_reasoning_levels = [...model.supportedReasoningLevels];
+        if (model.defaultReasoningLevel !== null) {
+          entry.default_reasoning_level = model.defaultReasoningLevel;
+        }
+      }
       return entry;
     });
   }
